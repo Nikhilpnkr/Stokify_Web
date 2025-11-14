@@ -24,12 +24,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow create: if isSignedIn() && isRequestingUser(userId);
       
-      allow read: if isSignedIn() && isRequestingUser(userId);
+      allow read, delete: if isSignedIn() && isRequestingUser(userId);
 
       allow update: if isSignedIn() && isRequestingUser(userId)
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'mobileNumber']);
-
-      allow delete: if isSignedIn() && isRequestingUser(userId);
     }
 
     /**
@@ -52,10 +50,10 @@ service cloud.firestore {
      * @description Controls access to crop type documents.
      */
     match /cropTypes/{cropTypeId} {
-       // Allow getting a single document if the user is the owner.
+       // Allow reading a single document if the user is the owner.
        allow get: if isSignedIn() && isOwner(resource.data.ownerId);
-       // Allow listing documents if the query is scoped to the user's ownerId.
-       allow list: if isSignedIn() && request.query.get('ownerId') == request.auth.uid;
+       // Allow listing documents only when the query is filtered by the user's ID.
+       allow list: if isSignedIn() && request.query.where.get('ownerId')[2] == request.auth.uid;
        // Allow creating/writing if the user is the owner.
        allow write: if isSignedIn() && isOwner(request.resource.data.ownerId);
        allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
