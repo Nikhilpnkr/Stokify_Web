@@ -28,10 +28,9 @@ service cloud.firestore {
       // A user can read their own profile document.
       allow read: if isSignedIn() && isRequestingUser(userId);
 
-      // A user can update their displayName and mobileNumber, but not other fields.
+      // A user can update their displayName and mobileNumber.
+      // They cannot change their uid or email.
       allow update: if isSignedIn() && isRequestingUser(userId)
-                    && request.resource.data.keys().hasAll(['uid', 'displayName', 'email', 'mobileNumber'])
-                    && request.resource.data.size() == 4
                     && request.resource.data.uid == resource.data.uid
                     && request.resource.data.email == resource.data.email;
 
