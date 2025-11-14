@@ -10,8 +10,8 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isOwner(ownerId) {
+      return request.auth.uid == ownerId;
     }
     
     function isRequestingUser(userId) {
@@ -24,7 +24,7 @@ service cloud.firestore {
     match /users/{userId} {
       // Users can create their own profile.
       allow create: if isSignedIn() && isRequestingUser(userId);
-      // Users can read their own profile. Public read might be enabled later if needed.
+      // Users can read their own profile.
       allow read: if isSignedIn() && isRequestingUser(userId);
       // Users can update their own profile.
       allow update: if isSignedIn() && isRequestingUser(userId);
