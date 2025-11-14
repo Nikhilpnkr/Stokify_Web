@@ -35,7 +35,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { getPlaceholderImage } from "@/lib/placeholder-images";
 import { useAuth, useUser } from "@/firebase";
 import {
   signInWithRedirect,
@@ -54,12 +53,16 @@ function UserNav() {
   const { user, isUserLoading } = useUser();
 
   const handleLogin = () => {
-    const provider = new GoogleAuthProvider();
-    signInWithRedirect(auth, provider);
+    if (auth) {
+      const provider = new GoogleAuthProvider();
+      signInWithRedirect(auth, provider);
+    }
   };
 
   const handleLogout = () => {
-    signOut(auth);
+    if (auth) {
+      signOut(auth);
+    }
   };
 
   if (isUserLoading) {
@@ -80,7 +83,7 @@ function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Avatar>
-            {user.photoURL && <AvatarImage src={user.photoURL} />}
+            {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User avatar'} />}
             <AvatarFallback>
               {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
             </AvatarFallback>
@@ -142,7 +145,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             {user && (
               <div className="flex items-center gap-3 p-2">
                 <Avatar>
-                  {user.photoURL && <AvatarImage src={user.photoURL} />}
+                  {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User avatar'}/>}
                   <AvatarFallback>
                     {user.displayName?.charAt(0) || "U"}
                   </AvatarFallback>
