@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from "react";
@@ -24,8 +25,7 @@ const profileFormSchema = z.object({
 });
 
 export default function ProfilePage() {
-  const { user, auth } = useFirebase();
-  const { firestore } = useFirebase();
+  const { auth, firestore, user } = useFirebase();
   const { toast } = useToast();
 
   const userProfileRef = useMemoFirebase(() => 
@@ -54,7 +54,7 @@ export default function ProfilePage() {
         form.reset({
             displayName: user.displayName || "",
             email: user.email || "",
-            mobileNumber: "",
+            mobileNumber: userProfile?.mobileNumber || "",
         })
     }
   }, [userProfile, user, form]);
@@ -68,10 +68,11 @@ export default function ProfilePage() {
         await updateProfile(auth.currentUser, { displayName: values.displayName });
       }
 
-      // Prepare the data for Firestore update with only the changed fields
-      const updatedData = {
+      // Prepare the data for Firestore update. Only include fields that should be updated.
+      // The security rule will ensure other fields are not touched.
+      const updatedData: Partial<UserProfile> = {
         displayName: values.displayName,
-        mobileNumber: values.mobileNumber,
+        mobileNumber: values.mobileNumber || '',
       };
 
       // Update Firestore document
