@@ -1,4 +1,5 @@
 
+
 import { format } from 'date-fns';
 import { Leaf } from 'lucide-react';
 import React from 'react';
@@ -113,6 +114,16 @@ const styles = {
         borderTop: '2px solid #333',
         marginTop: '10px',
     },
+    summaryBalanceDue: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '12px 0',
+        fontSize: '18px',
+        fontWeight: 'bold',
+        backgroundColor: '#fff5f5',
+        color: '#c53030',
+        marginTop: '10px',
+    },
     footer: {
         marginTop: '40px',
         paddingTop: '20px',
@@ -146,6 +157,8 @@ export interface InvoiceData {
     labourCharge?: number;
     subTotal?: number;
     total?: number;
+    amountPaid?: number;
+    balanceDue?: number;
     notes?: string;
 }
 
@@ -243,9 +256,19 @@ export function Invoice({ data }: InvoiceProps) {
                             <span>$0.00</span>
                         </div>
                         <div style={styles.summaryTotal}>
-                            <span>Total</span>
+                            <span>Total Bill</span>
                             <span>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
+                        <div style={styles.summaryRow}>
+                            <span>Amount Paid</span>
+                            <span>${(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </div>
+                         {data.balanceDue && data.balanceDue > 0 ? (
+                            <div style={styles.summaryBalanceDue}>
+                                <span>Balance Due</span>
+                                <span>${data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                         ) : null}
                     </div>
                 </section>
             )}

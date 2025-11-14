@@ -57,5 +57,13 @@ service cloud.firestore {
     match /customers/{customerId} {
       allow read, write: if isSignedIn();
     }
+
+    /**
+     * @description Controls access to outflow transaction documents.
+     * Open access for any signed-in user.
+     */
+    match /outflows/{outflowId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }

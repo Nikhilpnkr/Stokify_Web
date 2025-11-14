@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
+import { doc, collection } from "firebase/firestore";
 import type { CropBatch, CropType, AreaAllocation } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -34,6 +34,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     const { firestore, user } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
+    const [amountPaid, setAmountPaid] = useState(0);
     
     const totalQuantity = useMemo(() => {
         if (!batch) return 0;
@@ -42,23 +43,24 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
 
     useEffect(() => {
         if (isOpen && batch) {
-            setWithdrawQuantity(totalQuantity);
+            const batchTotal = batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+            setWithdrawQuantity(batchTotal);
         } else if (!isOpen) {
             // Reset state when dialog closes
             setIsProcessing(false);
             setWithdrawQuantity(0);
+            setAmountPaid(0);
         }
-    }, [isOpen, batch, totalQuantity]);
+    }, [isOpen, batch]);
 
-    const { totalMonths, finalCost, costPerBag } = useMemo(() => {
+    const { totalMonths, storageCost, costPerBag, finalBill } = useMemo(() => {
         if (!batch || !cropType || withdrawQuantity <= 0) {
-          return { totalMonths: 0, finalCost: 0, costPerBag: 0 };
+          return { totalMonths: 0, storageCost: 0, costPerBag: 0, finalBill: 0 };
         }
     
         const startDate = new Date(batch.dateAdded);
         const endDate = new Date();
         let totalMonths = differenceInMonths(endDate, startDate);
-        // If it's less than a month, count as 1 month for billing.
         if (totalMonths < 1 && startDate.getTime() < endDate.getTime()) {
             totalMonths = 1;
         }
@@ -80,18 +82,20 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     
         if (remainingMonths >= 6) {
           costPerBag += halfYearlyRate;
-          // After applying a 6-month rate, we don't charge for smaller periods within that block.
           remainingMonths = 0; 
         }
         
-        // If it was less than 6 months initially, or a remainder exists AFTER yearly calc
         if (remainingMonths > 0) {
              costPerBag += remainingMonths * monthlyRate;
         }
 
-        const finalCost = costPerBag * withdrawQuantity;
+        const storageCost = costPerBag * withdrawQuantity;
+        const finalBill = storageCost + (batch.labourCharge || 0);
+        
+        // Auto-fill amount paid when bill is calculated
+        setAmountPaid(finalBill);
 
-        return { totalMonths, finalCost, costPerBag };
+        return { totalMonths, storageCost, costPerBag, finalBill };
 
     }, [batch, cropType, withdrawQuantity]);
 
@@ -107,14 +111,26 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             });
             return;
         }
+        
+        if (amountPaid > finalBill) {
+            toast({
+                variant: "destructive",
+                title: "Invalid Payment",
+                description: "Amount paid cannot exceed the final bill.",
+            });
+            return;
+        }
 
         setIsProcessing(true);
 
         const batchRef = doc(firestore, "cropBatches", batch.id);
+        const newOutflowRef = doc(collection(firestore, "outflows"));
+
+        const balanceDue = finalBill - amountPaid;
 
         const invoiceData: InvoiceData = {
           type: 'Outflow',
-          receiptNumber: batch.id.slice(0, 8).toUpperCase(),
+          receiptNumber: newOutflowRef.id.slice(0, 8).toUpperCase(),
           date: new Date(),
           customer: {
             name: batch.customerName,
@@ -129,13 +145,31 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             quantity: withdrawQuantity,
             unit: 'bags',
             unitPrice: costPerBag,
-            total: finalCost,
+            total: storageCost,
           }],
           labourCharge: batch.labourCharge,
-          subTotal: finalCost,
-          total: finalCost + (batch.labourCharge || 0),
+          subTotal: storageCost,
+          total: finalBill,
+          amountPaid: amountPaid,
+          balanceDue: balanceDue,
           notes: `Thank you for your business! This bill covers ${totalMonths} months of storage.`,
         };
+
+        const newOutflow = {
+            id: newOutflowRef.id,
+            cropBatchId: batch.id,
+            customerId: batch.customerId,
+            ownerId: user.uid,
+            date: new Date().toISOString(),
+            quantityWithdrawn: withdrawQuantity,
+            totalBill: finalBill,
+            amountPaid: amountPaid,
+            balanceDue: balanceDue,
+            invoiceData: invoiceData,
+        };
+        
+        setDocumentNonBlocking(newOutflowRef, newOutflow, {merge: false});
+
 
         if (withdrawQuantity === totalQuantity) {
             // Full withdrawal, delete the document
@@ -151,7 +185,6 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             let remainingWithdrawal = withdrawQuantity;
             const newAllocations: AreaAllocation[] = [];
 
-            // Important: sort to ensure consistent withdrawal order
             const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
 
             for (const alloc of sortedAllocations) {
@@ -168,7 +201,6 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     remainingWithdrawal = 0;
                 } else {
                     remainingWithdrawal -= alloc.quantity;
-                    // This allocation is now empty, so we don't add it to newAllocations
                 }
             }
             
@@ -194,10 +226,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         <DialogHeader>
           <DialogTitle>Process Outflow & Bill</DialogTitle>
           <DialogDescription>
-            Enter the quantity to withdraw. The bill will be calculated based on this amount.
+            Enter the quantity to withdraw and the payment amount.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
             <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                     <p className="font-medium text-muted-foreground">Customer</p>
@@ -223,9 +255,14 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     id="quantity"
                     type="number"
                     value={withdrawQuantity}
-                    onChange={(e) => setWithdrawQuantity(Number(e.target.value))}
+                    onChange={(e) => {
+                        const val = Number(e.target.value);
+                         if (val >= 0 && val <= totalQuantity) {
+                            setWithdrawQuantity(val)
+                         }
+                    }}
                     max={totalQuantity}
-                    min={1}
+                    min={0}
                 />
             </div>
             
@@ -236,7 +273,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 </div>
                 <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Storage Cost:</p>
-                    <p className="font-semibold">${finalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="font-semibold">${storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 {batch.labourCharge && batch.labourCharge > 0 && (
                     <div className="flex justify-between items-baseline">
@@ -246,13 +283,41 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 )}
                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
                     <p className="text-lg font-bold">Final Bill:</p>
-                    <p className="text-2xl font-bold text-primary">${(finalCost + (batch.labourCharge || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-primary">${finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+            </div>
+
+             <div className="grid gap-2">
+                <Label htmlFor="amountPaid">Amount Paid</Label>
+                <Input
+                    id="amountPaid"
+                    type="number"
+                    value={amountPaid}
+                     onChange={(e) => {
+                        const val = Number(e.target.value);
+                         if (val >= 0 && val <= finalBill) {
+                            setAmountPaid(val)
+                         }
+                    }}
+                    max={finalBill}
+                    min={0}
+                />
+            </div>
+
+            <div className="rounded-lg bg-destructive/10 text-destructive-foreground p-4 space-y-2 border border-destructive/20">
+                <div className="flex justify-between items-center">
+                    <p className="text-lg font-bold">Balance Due:</p>
+                    <p className="text-2xl font-bold">${(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
-          <Button onClick={handleOutflow} disabled={isProcessing || withdrawQuantity <= 0 || withdrawQuantity > totalQuantity} className="bg-primary hover:bg-primary/90">
+          <Button 
+            onClick={handleOutflow} 
+            disabled={isProcessing || withdrawQuantity <= 0 || withdrawQuantity > totalQuantity || amountPaid > finalBill} 
+            className="bg-primary hover:bg-primary/90"
+          >
              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm Outflow
           </Button>

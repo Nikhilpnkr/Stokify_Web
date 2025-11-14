@@ -60,6 +60,19 @@ export type Customer = {
   ownerId: string;
 };
 
+export type Outflow = {
+  id: string;
+  cropBatchId: string;
+  customerId: string;
+  ownerId: string;
+  date: string;
+  quantityWithdrawn: number;
+  totalBill: number;
+  amountPaid: number;
+  balanceDue: number;
+  invoiceData: any; // Storing the data used to generate the invoice
+};
+
 
 // This can now be used as a default or fallback.
 export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {
