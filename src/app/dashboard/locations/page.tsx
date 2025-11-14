@@ -54,7 +54,7 @@ export default function LocationsPage() {
     return locations.map(location => {
       const used = batches
         .filter(b => b.storageLocationId === location.id)
-        .reduce((acc, b) => acc + b.quantity, 0);
+        .reduce((acc, b) => acc + (b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0), 0);
       const percentage = location.capacity > 0 ? (used / location.capacity) * 100 : 0;
       return { ...location, used, percentage };
     });
@@ -107,16 +107,16 @@ export default function LocationsPage() {
                   <CardTitle className="text-lg font-medium">{location.name}</CardTitle>
                   <Warehouse className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <div className="text-sm text-muted-foreground space-y-2 pt-2">
+                <div className="pt-2 space-y-1 text-sm text-muted-foreground">
                   {location.address && (
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <MapPin className="h-4 w-4" />
                       <span>{location.address}</span>
                     </div>
                   )}
                   {location.mobileNumber && (
                     <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <Phone className="h-4 w-4" />
                       <span>{location.mobileNumber}</span>
                     </div>
                   )}

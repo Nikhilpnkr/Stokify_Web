@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -38,7 +38,7 @@ export default function InventoryPage() {
     [firestore, user]
   );
 
-  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
+  const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
@@ -68,8 +68,19 @@ export default function InventoryPage() {
     if(locations) fetchAllAreas();
   }, [locations, firestore]);
 
+  const batches = useMemo(() => {
+    if (!rawBatches) return [];
+    return rawBatches.map(batch => ({
+      ...batch,
+      quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
+    }))
+  }, [rawBatches]);
+
   const getLocationName = (locationId: string) => locations?.find(l => l.id === locationId)?.name || '...';
-  const getAreaName = (areaId: string) => allAreas?.find(a => a.id === areaId)?.name || '...';
+  const getAreaNames = (allocations: {areaId: string, quantity: number}[]) => {
+    if (!allAreas || allAreas.length === 0) return '...';
+    return allocations.map(alloc => allAreas.find(a => a.id === alloc.areaId)?.name).filter(Boolean).join(', ') || 'N/A';
+  }
 
   const handleRowClick = (batch: CropBatch) => {
     setSelectedBatch(batch);
@@ -98,7 +109,7 @@ export default function InventoryPage() {
                 <TableHead>Customer</TableHead>
                 <TableHead>Crop Type</TableHead>
                 <TableHead>Location</TableHead>
-                <TableHead>Area</TableHead>
+                <TableHead>Area(s)</TableHead>
                 <TableHead className="text-right">Quantity (bags)</TableHead>
                 <TableHead>Date Added</TableHead>
               </TableRow>
@@ -115,7 +126,7 @@ export default function InventoryPage() {
                   <TableCell className="font-medium">{batch.customerName}</TableCell>
                   <TableCell>{batch.cropType}</TableCell>
                   <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
-                  <TableCell>{getAreaName(batch.storageAreaId)}</TableCell>
+                  <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
                   <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">

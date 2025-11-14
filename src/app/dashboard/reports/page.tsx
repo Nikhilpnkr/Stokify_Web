@@ -9,7 +9,8 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { CropBatch, StorageLocation } from "@/lib/data";
+import type { CropBatch, StorageLocation, CropType } from "@/lib/data";
+import { differenceInMonths } from "date-fns";
 
 export default function ReportsPage() {
   const { firestore } = useFirebase();
@@ -23,25 +24,44 @@ export default function ReportsPage() {
     user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
+  const cropTypesQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
 
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
   const { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
-    if (!batches || !locations) {
+    if (!batches || !locations || !cropTypes) {
       return { totalBatches: 0, totalQuantity: 0, potentialMonthlyRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
     }
 
     const totalBatches = batches.length;
-    const totalQuantity = batches.reduce((acc, b) => acc + b.quantity, 0);
-    const potentialMonthlyRevenue = batches.reduce((acc, b) => acc + (b.quantity * b.ratePerMonth), 0);
+    
+    const totalQuantity = batches.reduce((acc, b) => {
+        const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
+        return acc + batchQty;
+    }, 0);
+    
+    const potentialMonthlyRevenue = batches.reduce((acc, b) => {
+        const cropType = cropTypes.find(ct => ct.name === b.cropType);
+        if (!cropType) return acc;
+
+        const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
+        const monthlyRate = cropType.rates['1'];
+
+        return acc + (batchQty * monthlyRate);
+    }, 0);
+
     const totalCapacity = locations.reduce((acc, l) => acc + l.capacity, 0);
     const spaceUtilization = totalCapacity > 0 ? (totalQuantity / totalCapacity) * 100 : 0;
 
     const chartData = locations.map(location => {
       const used = batches
         .filter(b => b.storageLocationId === location.id)
-        .reduce((acc, b) => acc + b.quantity, 0);
+        .reduce((acc, b) => acc + (b.areaAllocations?.reduce((s, a) => s + a.quantity, 0) || 0), 0);
       return {
         name: location.name,
         capacity: location.capacity,
@@ -50,9 +70,9 @@ export default function ReportsPage() {
     });
 
     return { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData };
-  }, [batches, locations]);
+  }, [batches, locations, cropTypes]);
   
-  const isLoading = isLoadingLocations || isLoadingBatches;
+  const isLoading = isLoadingLocations || isLoadingBatches || isLoadingCropTypes;
 
   const chartConfig = {
     capacity: {
@@ -86,8 +106,8 @@ export default function ReportsPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${potentialMonthlyRevenue.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">From {totalBatches} active batches</p>
+            <div className="text-2xl font-bold">${potentialMonthlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            <p className="text-xs text-muted-foreground">Calculated from the 1-month rate</p>
           </CardContent>
         </Card>
         <Card>

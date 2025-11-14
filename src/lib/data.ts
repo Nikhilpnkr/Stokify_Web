@@ -1,16 +1,20 @@
 
+
+export type AreaAllocation = {
+  areaId: string;
+  quantity: number;
+}
+
 export type CropBatch = {
   id: string;
   cropType: string;
-  quantity: number; // in bags
-  storageDurationMonths: number;
-  storageCost: number;
+  areaAllocations: AreaAllocation[];
   storageLocationId: string;
-  storageAreaId: string;
   dateAdded: string;
   ownerId: string;
   customerId: string;
   customerName: string;
+  quantity: number; // This is a derived field for easier access
 };
 
 export type StorageLocation = {

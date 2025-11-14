@@ -54,8 +54,9 @@ export default function LocationDetailPage() {
     if (!areas || !batches) return [];
     return areas.map(area => {
       const used = batches
-        .filter(b => b.storageAreaId === area.id)
-        .reduce((acc, b) => acc + b.quantity, 0);
+        .flatMap(b => b.areaAllocations || [])
+        .filter(alloc => alloc.areaId === area.id)
+        .reduce((acc, alloc) => acc + alloc.quantity, 0);
       const percentage = area.capacity > 0 ? (used / area.capacity) * 100 : 0;
       return { ...area, used, percentage };
     });

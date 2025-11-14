@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -34,14 +34,19 @@ import type { CropType, StorageLocation, StorageArea, Customer } from "@/lib/dat
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import { PlusCircle, Trash2 } from "lucide-react";
+
+const areaAllocationSchema = z.object({
+    areaId: z.string().min(1, "Area is required."),
+    quantity: z.coerce.number().min(1, "Min 1."),
+});
 
 const formSchema = z.object({
   customerName: z.string().min(2, "Customer name is required."),
   customerMobile: z.string().min(10, "A valid mobile number is required."),
   cropTypeId: z.string().min(1, "Please select a crop type."),
-  quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
   locationId: z.string().min(1, "Please select a storage location."),
-  areaId: z.string().min(1, "Please select an area."),
+  areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
 });
 
 type AddBatchDialogProps = {
@@ -56,13 +61,22 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { user } = useUser();
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      quantity: 1,
+      areaAllocations: [{ areaId: "", quantity: 1 }],
     },
+  });
+  
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "areaAllocations",
+  });
+
+  const selectedLocationId = useWatch({
+    control: form.control,
+    name: "locationId"
   });
 
   const areasQuery = useMemoFirebase(() =>
@@ -71,17 +85,17 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   );
   const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
 
+  const watchedAllocations = useWatch({ control: form.control, name: 'areaAllocations' });
+  const totalQuantity = watchedAllocations.reduce((sum, alloc) => sum + (Number(alloc.quantity) || 0), 0);
 
   useEffect(() => {
     form.reset({
-        quantity: 1,
         customerName: "",
         customerMobile: "",
         cropTypeId: undefined,
         locationId: undefined,
-        areaId: undefined,
+        areaAllocations: [{ areaId: "", quantity: 1 }],
     });
-    setSelectedLocationId(null);
   }, [isOpen, form]);
 
 
@@ -97,8 +111,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         toast({ variant: "destructive", title: "Error", description: "Selected crop type not found." });
         return;
     }
-    
-    const cropRate = selectedCropType.rates?.['1'] ?? 0;
 
     let customerId = "";
     let customerName = values.customerName;
@@ -124,10 +136,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     const newBatch = {
       cropType: selectedCropType.name,
-      quantity: values.quantity,
-      storageCost: cropRate * values.quantity, // Base cost for one month
+      areaAllocations: values.areaAllocations,
       storageLocationId: values.locationId,
-      storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
       ownerId: user.uid,
       customerId,
@@ -147,13 +157,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
   const handleLocationChange = (locationId: string) => {
     form.setValue("locationId", locationId);
-    form.resetField("areaId");
-    setSelectedLocationId(locationId);
+    form.setValue('areaAllocations', [{ areaId: "", quantity: 1 }]);
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New Crop Batch</DialogTitle>
           <DialogDescription>
@@ -161,7 +170,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
              <FormField
               control={form.control}
               name="customerName"
@@ -212,19 +221,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity (bags)</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
             <FormField
               control={form.control}
               name="locationId"
@@ -249,30 +246,71 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="areaId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Storage Area</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={isLoadingAreas ? "Loading areas..." : "Select an area"} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {areas?.map((area) => (
-                        <SelectItem key={area.id} value={area.id}>
-                          {area.name} (Capacity: {area.capacity.toLocaleString()})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+            <div className="space-y-4 rounded-md border p-4">
+                <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Area Allocations</h3>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => append({ areaId: "", quantity: 1 })}
+                        disabled={!selectedLocationId}
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add Area
+                    </Button>
+                </div>
+                 {fields.map((field, index) => (
+                    <div key={field.id} className="grid grid-cols-[1fr_100px_auto] gap-2 items-start">
+                        <FormField
+                            control={form.control}
+                            name={`areaAllocations.${index}.areaId`}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={isLoadingAreas ? "Loading..." : "Select area"} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {areas?.map(area => (
+                                                <SelectItem key={area.id} value={area.id}>
+                                                    {area.name} (Cap: {area.capacity})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name={`areaAllocations.${index}.quantity`}
+                            render={({ field }) => (
+                                <FormItem>
+                                     <FormControl>
+                                        <Input type="number" placeholder="Qty" {...field} />
+                                     </FormControl>
+                                      <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                 ))}
+                 <FormMessage>{form.formState.errors.areaAllocations?.root?.message}</FormMessage>
+            </div>
+            
+            <div className="flex justify-end font-semibold text-lg p-2 rounded-md bg-muted">
+                Total Quantity: {totalQuantity.toLocaleString()} bags
+            </div>
+
+
             <DialogFooter>
               <Button type="submit">Add Batch</Button>
             </DialogFooter>

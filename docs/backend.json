@@ -5,7 +5,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CropBatch",
       "type": "object",
-      "description": "Represents a batch of crops stored in a storage location.",
+      "description": "Represents a batch of crops stored in a storage location, potentially across multiple areas.",
       "properties": {
         "id": {
           "type": "string",
@@ -15,25 +15,25 @@
           "type": "string",
           "description": "Type of crop in this batch (e.g., wheat, corn, rice)."
         },
-        "quantity": {
-          "type": "number",
-          "description": "Quantity of the crop in this batch, in bags."
-        },
-        "storageDurationMonths": {
-          "type": "number",
-          "description": "The duration of storage in months (e.g., 1, 6, 12)."
-        },
-        "storageCost": {
-          "type": "number",
-          "description": "The total calculated cost for the storage duration."
+        "areaAllocations": {
+          "type": "array",
+          "description": "An array detailing how the batch quantity is distributed across multiple storage areas.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "areaId": {
+                "type": "string"
+              },
+              "quantity": {
+                "type": "number"
+              }
+            },
+            "required": ["areaId", "quantity"]
+          }
         },
         "storageLocationId": {
           "type": "string",
           "description": "Reference to StorageLocation. (Relationship: StorageLocation 1:N CropBatch)"
-        },
-        "storageAreaId": {
-          "type": "string",
-          "description": "Reference to the specific StorageArea within a location."
         },
         "dateAdded": {
           "type": "string",
@@ -56,11 +56,8 @@
       "required": [
         "id",
         "cropType",
-        "quantity",
-        "storageDurationMonths",
-        "storageCost",
+        "areaAllocations",
         "storageLocationId",
-        "storageAreaId",
         "dateAdded",
         "ownerId",
         "customerId",

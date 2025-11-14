@@ -31,14 +31,16 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     const { toast } = useToast();
     const { firestore } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
-    const [withdrawQuantity, setWithdrawQuantity] = useState<number>(0);
-    const [error, setError] = useState<string | null>(null);
+    
+    // For now, partial withdrawal from multi-area batch is complex.
+    // Defaulting to full withdrawal.
+    const totalQuantity = useMemo(() => {
+        if (!batch) return 0;
+        return batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+    }, [batch]);
 
     useEffect(() => {
-        if (batch) {
-            setWithdrawQuantity(batch.quantity);
-            setError(null);
-        }
+        // Reset state on open/close
     }, [batch, isOpen]);
 
     const { totalMonths, finalCost } = useMemo(() => {
@@ -78,53 +80,26 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             cost = monthlyRate;
         }
     
-        const finalCost = cost * withdrawQuantity;
+        const finalCost = cost * totalQuantity;
 
         return { totalMonths, finalCost };
 
-    }, [batch, cropType, withdrawQuantity]);
+    }, [batch, cropType, totalQuantity]);
 
-    const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = Number(e.target.value);
-        if (!batch) return;
-
-        if (value > batch.quantity) {
-            setError(`Cannot withdraw more than available quantity (${batch.quantity} bags).`);
-        } else if (value < 0) {
-            setError("Withdrawal quantity cannot be negative.");
-        } else {
-            setError(null);
-        }
-        setWithdrawQuantity(value);
-    }
 
     async function handleOutflow() {
-        if (!firestore || !batch || error || withdrawQuantity <= 0) {
-            if (withdrawQuantity <= 0) {
-                setError("Withdrawal quantity must be positive.")
-            }
-            return;
-        }
+        if (!firestore || !batch) return;
+        
         setIsProcessing(true);
 
         const batchRef = doc(firestore, "cropBatches", batch.id);
 
-        if (withdrawQuantity < batch.quantity) {
-            // Partial outflow
-            const newQuantity = batch.quantity - withdrawQuantity;
-            updateDocumentNonBlocking(batchRef, { quantity: newQuantity });
-             toast({
-                title: "Partial Outflow Successful!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed. Bill generated for this withdrawal: $${finalCost.toLocaleString()}`,
-            });
-        } else {
-            // Full outflow
-            deleteDocumentNonBlocking(batchRef);
-            toast({
-                title: "Full Outflow Successful!",
-                description: `Batch for ${batch.customerName} removed. Final bill generated: $${finalCost.toLocaleString()}`,
-            });
-        }
+        // For now, always full outflow for multi-area batches
+        deleteDocumentNonBlocking(batchRef);
+        toast({
+            title: "Full Outflow Successful!",
+            description: `Batch for ${batch.customerName} removed. Final bill generated: $${finalCost.toLocaleString()}`,
+        });
         
         setIsProcessing(false);
         setIsOpen(false);
@@ -138,7 +113,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         <DialogHeader>
           <DialogTitle>Process Outflow & Bill</DialogTitle>
           <DialogDescription>
-            Confirm the removal of this batch and generate the final bill.
+            Confirm the removal of this batch and generate the final bill. Partial withdrawal is not supported for multi-area batches yet.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -152,8 +127,8 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     <p className="font-semibold">{batch.cropType}</p>
                 </div>
                  <div>
-                    <p className="font-medium text-muted-foreground">Available Quantity</p>
-                    <p className="font-semibold">{batch.quantity.toLocaleString()} bags</p>
+                    <p className="font-medium text-muted-foreground">Total Quantity</p>
+                    <p className="font-semibold">{totalQuantity.toLocaleString()} bags</p>
                 </div>
                 <div>
                     <p className="font-medium text-muted-foreground">Date Added</p>
@@ -161,38 +136,25 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 </div>
             </div>
             
-            <div className="space-y-2">
-                <Label htmlFor="withdraw-quantity">Quantity to Withdraw (bags)</Label>
-                <Input 
-                    id="withdraw-quantity"
-                    type="number"
-                    value={withdrawQuantity}
-                    onChange={handleQuantityChange}
-                    max={batch.quantity}
-                    min="0"
-                />
-                {error && <p className="text-sm text-destructive">{error}</p>}
-            </div>
-
             <div className="rounded-lg bg-muted/50 p-4">
                 <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Total Storage Duration:</p>
                     <p className="font-semibold">{totalMonths} months</p>
                 </div>
                  <div className="flex justify-between items-center mt-2">
-                    <p className="text-lg font-bold">Bill for this Withdrawal:</p>
+                    <p className="text-lg font-bold">Final Bill:</p>
                     <p className="text-2xl font-bold text-primary">${finalCost.toLocaleString()}</p>
                 </div>
             </div>
              <p className="text-xs text-muted-foreground text-center">
-              This action will permanently remove the withdrawn quantity from your inventory.
+              This action will permanently remove the entire batch from your inventory.
             </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
-          <Button onClick={handleOutflow} disabled={isProcessing || !!error} className="bg-primary hover:bg-primary/90">
+          <Button onClick={handleOutflow} disabled={isProcessing} className="bg-primary hover:bg-primary/90">
              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Outflow
+            Confirm Full Outflow
           </Button>
         </DialogFooter>
       </DialogContent>
