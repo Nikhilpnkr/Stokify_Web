@@ -35,8 +35,11 @@ export default function CustomerDetailPage() {
   );
   const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
 
-  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(collection(firestore, 'storageLocations'));
-  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(collection(firestore, 'cropTypes'));
+  const locationsQuery = useMemoFirebase(() => collection(firestore, 'storageLocations'), [firestore]);
+  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
+
+  const cropTypesQuery = useMemoFirebase(() => collection(firestore, 'cropTypes'), [firestore]);
+  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
