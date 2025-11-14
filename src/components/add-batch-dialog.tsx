@@ -42,7 +42,6 @@ const formSchema = z.object({
   quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
   locationId: z.string().min(1, "Please select a storage location."),
   areaId: z.string().min(1, "Please select an area."),
-  storageDuration: z.enum(["1", "6", "12"]).transform(v => parseInt(v) as 1 | 6 | 12),
 });
 
 type AddBatchDialogProps = {
@@ -81,7 +80,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         cropTypeId: undefined,
         locationId: undefined,
         areaId: undefined,
-        storageDuration: undefined
     });
     setSelectedLocationId(null);
   }, [isOpen, form]);
@@ -124,14 +122,10 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         customerName = existingCustomer.data().name; // Use existing name
     }
 
-    const duration = values.storageDuration;
-    const storageCost = selectedCropType.rates[duration];
-    
     const newBatch = {
       cropType: selectedCropType.name,
       quantity: values.quantity,
-      storageDurationMonths: duration,
-      storageCost,
+      ratePerMonth: selectedCropType.ratePerMonth,
       storageLocationId: values.locationId,
       storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
@@ -273,28 +267,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                           {area.name} (Capacity: {area.capacity.toLocaleString()})
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="storageDuration"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Storage Duration</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a duration" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="1">1 Month</SelectItem>
-                      <SelectItem value="6">6 Months</SelectItem>
-                      <SelectItem value="12">1 Year</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

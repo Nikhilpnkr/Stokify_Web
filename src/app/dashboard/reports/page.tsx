@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from "react";
@@ -26,14 +27,14 @@ export default function ReportsPage() {
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
 
-  const { totalBatches, totalQuantity, totalCost, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
+  const { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
     if (!batches || !locations) {
-      return { totalBatches: 0, totalQuantity: 0, totalCost: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
+      return { totalBatches: 0, totalQuantity: 0, potentialMonthlyRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
     }
 
     const totalBatches = batches.length;
     const totalQuantity = batches.reduce((acc, b) => acc + b.quantity, 0);
-    const totalCost = batches.reduce((acc, b) => acc + b.storageCost, 0);
+    const potentialMonthlyRevenue = batches.reduce((acc, b) => acc + (b.quantity * b.ratePerMonth), 0);
     const totalCapacity = locations.reduce((acc, l) => acc + l.capacity, 0);
     const spaceUtilization = totalCapacity > 0 ? (totalQuantity / totalCapacity) * 100 : 0;
 
@@ -48,7 +49,7 @@ export default function ReportsPage() {
       };
     });
 
-    return { totalBatches, totalQuantity, totalCost, totalCapacity, spaceUtilization, chartData };
+    return { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData };
   }, [batches, locations]);
   
   const isLoading = isLoadingLocations || isLoadingBatches;
@@ -81,12 +82,12 @@ export default function ReportsPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Storage Cost</CardTitle>
+            <CardTitle className="text-sm font-medium">Potential Monthly Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalCost.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across {totalBatches} batches</p>
+            <div className="text-2xl font-bold">${potentialMonthlyRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">From {totalBatches} active batches</p>
           </CardContent>
         </Card>
         <Card>

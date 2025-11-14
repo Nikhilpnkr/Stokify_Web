@@ -3,8 +3,7 @@ export type CropBatch = {
   id: string;
   cropType: string;
   quantity: number; // in bags
-  storageDurationMonths: 1 | 6 | 12; // in months
-  storageCost: number;
+  ratePerMonth: number;
   storageLocationId: string;
   storageAreaId: string;
   dateAdded: string;
@@ -40,11 +39,7 @@ export type UserProfile = {
 export type CropType = {
   id: string;
   name: string;
-  rates: {
-    '1': number;
-    '6': number;
-    '12': number;
-  };
+  ratePerMonth: number;
   ownerId: string;
 };
 

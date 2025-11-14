@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2 } from "lucide-react";
+import { PlusCircle, Loader2, Trash2, DollarSign } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
@@ -19,9 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const cropTypeFormSchema = z.object({
   name: z.string().min(2, "Crop name must be at least 2 characters."),
-  rate1: z.coerce.number().min(0, "Rate must be a positive number."),
-  rate6: z.coerce.number().min(0, "Rate must be a positive number."),
-  rate12: z.coerce.number().min(0, "Rate must be a positive number."),
+  ratePerMonth: z.coerce.number().min(0, "Rate must be a positive number."),
 });
 
 export default function CropTypesManagerPage() {
@@ -40,9 +38,7 @@ export default function CropTypesManagerPage() {
     resolver: zodResolver(cropTypeFormSchema),
     defaultValues: {
       name: "",
-      rate1: 10,
-      rate6: 50,
-      rate12: 90,
+      ratePerMonth: 10,
     },
   });
 
@@ -54,11 +50,7 @@ export default function CropTypesManagerPage() {
     const newCropType = {
       name: values.name,
       ownerId: user.uid,
-      rates: {
-        '1': values.rate1,
-        '6': values.rate6,
-        '12': values.rate12,
-      },
+      ratePerMonth: values.ratePerMonth,
     };
 
     addDocumentNonBlocking(cropTypesCol, newCropType);
@@ -102,7 +94,7 @@ export default function CropTypesManagerPage() {
             <Card>
                 <CardHeader>
                 <CardTitle>Add a New Crop Type</CardTitle>
-                <CardDescription>Define a crop and its specific storage rates per bag.</CardDescription>
+                <CardDescription>Define a crop and its storage rate per bag per month.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <Form {...form}>
@@ -120,50 +112,19 @@ export default function CropTypesManagerPage() {
                             </FormItem>
                             )}
                         />
-                        <div className="space-y-2">
-                            <FormLabel>Storage Rates (per bag)</FormLabel>
-                            <div className="grid grid-cols-3 gap-2">
-                                <FormField
-                                control={form.control}
-                                name="rate1"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel className="text-xs text-muted-foreground">1 Month</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <FormField
-                                control={form.control}
-                                name="rate6"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel className="text-xs text-muted-foreground">6 Months</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                                <FormField
-                                control={form.control}
-                                name="rate12"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel className="text-xs text-muted-foreground">12 Months</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
-                            </div>
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="ratePerMonth"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Rate per Bag per Month</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
                             {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
                             Add Crop Type
@@ -188,7 +149,7 @@ export default function CropTypesManagerPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                         {cropTypes.map(ct => (
                             <Card key={ct.id} className="bg-muted/30">
-                                <CardHeader className="flex flex-row items-start justify-between">
+                                <CardHeader className="flex flex-row items-start justify-between pb-2">
                                     <CardTitle className="text-lg">{ct.name}</CardTitle>
                                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteConfirmation(ct)}>
                                         <Trash2 className="h-4 w-4" />
@@ -196,20 +157,11 @@ export default function CropTypesManagerPage() {
                                     </Button>
                                 </CardHeader>
                                 <CardContent>
-                                    <ul className="space-y-2 text-sm">
-                                        <li className="flex justify-between items-baseline">
-                                            <span className="text-muted-foreground">1 Month:</span>
-                                            <span className="font-semibold">${ct.rates ? ct.rates['1'] : '0'}</span>
-                                        </li>
-                                        <li className="flex justify-between items-baseline">
-                                            <span className="text-muted-foreground">6 Months:</span>
-                                            <span className="font-semibold">${ct.rates ? ct.rates['6'] : '0'}</span>
-                                        </li>
-                                        <li className="flex justify-between items-baseline">
-                                            <span className="text-muted-foreground">12 Months:</span>
-                                            <span className="font-semibold">${ct.rates ? ct.rates['12'] : '0'}</span>
-                                        </li>
-                                    </ul>
+                                    <div className="flex items-baseline gap-2">
+                                        <DollarSign className="h-5 w-5 text-muted-foreground"/>
+                                        <span className="text-2xl font-bold">{ct.ratePerMonth || 0}</span>
+                                        <span className="text-sm text-muted-foreground">/ bag / month</span>
+                                    </div>
                                 </CardContent>
                             </Card>
                         ))}

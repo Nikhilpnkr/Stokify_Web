@@ -19,9 +19,9 @@
           "type": "number",
           "description": "Quantity of the crop in this batch, in bags."
         },
-        "storageDurationMonths": {
+        "ratePerMonth": {
           "type": "number",
-          "description": "The intended storage duration in months."
+          "description": "The storage rate per bag per month for this batch."
         },
         "storageLocationId": {
           "type": "string",
@@ -35,10 +35,6 @@
           "type": "string",
           "description": "Date and time when the crop batch was added to storage.",
           "format": "date-time"
-        },
-        "storageCost": {
-          "type": "number",
-          "description": "Calculated storage cost for this batch."
         },
         "ownerId": {
           "type": "string",
@@ -57,11 +53,10 @@
         "id",
         "cropType",
         "quantity",
-        "storageDurationMonths",
+        "ratePerMonth",
         "storageLocationId",
         "storageAreaId",
         "dateAdded",
-        "storageCost",
         "ownerId",
         "customerId",
         "customerName"
@@ -186,15 +181,9 @@
           "type": "string",
           "description": "Name of the crop type (e.g., Wheat, Corn)."
         },
-        "rates": {
-          "type": "object",
-          "description": "Custom storage rates per bag for different durations.",
-          "properties": {
-            "1": { "type": "number", "description": "Cost for 1 month of storage." },
-            "6": { "type": "number", "description": "Cost for 6 months of storage." },
-            "12": { "type": "number", "description": "Cost for 12 months of storage." }
-          },
-          "required": ["1", "6", "12"]
+        "ratePerMonth": {
+          "type": "number",
+          "description": "Custom storage rate per bag per month."
         },
         "ownerId": {
           "type": "string",
@@ -204,7 +193,7 @@
       "required": [
         "id",
         "name",
-        "rates",
+        "ratePerMonth",
         "ownerId"
       ]
     },
