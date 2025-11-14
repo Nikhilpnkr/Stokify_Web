@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
+import { doc, collection, query, where, writeBatch, getDocs } from "firebase/firestore";
 import type { StorageLocation, StorageArea, CropBatch } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, Warehouse, MapPin, Phone, Trash2, Edit, PlusCircle, Layers } from "lucide-react";
@@ -26,6 +26,7 @@ export default function LocationDetailPage() {
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
   const [isBulkAddAreaOpen, setIsBulkAddAreaOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const [areaToDelete, setAreaToDelete] = useState<StorageArea | null>(null);
 
   // Document reference for the specific storage location
@@ -79,6 +80,35 @@ export default function LocationDetailPage() {
     setIsDeleteDialogOpen(false);
     setAreaToDelete(null);
   }
+  
+  const executeDeleteAll = async () => {
+    if (!locationId || !firestore || !areasQuery) return;
+    
+    try {
+        const batch = writeBatch(firestore);
+        const querySnapshot = await getDocs(areasQuery);
+        querySnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        toast({
+            title: "All Areas Deleted",
+            description: `All storage areas in "${location?.name}" have been removed.`,
+        });
+
+    } catch (error) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not delete all areas. Please try again.",
+        });
+        console.error("Error deleting all areas: ", error);
+    } finally {
+        setIsDeleteAllOpen(false);
+    }
+  }
+
 
   if (isLoadingLocation || isLoadingAreas || isLoadingBatches) {
     return (
@@ -152,11 +182,19 @@ export default function LocationDetailPage() {
 
         {/* Areas Section */}
         <Card>
-            <CardHeader>
-                <CardTitle>Storage Areas</CardTitle>
-                 <CardDescription>
-                    {areas?.length || 0} areas defined in this location.
-                </CardDescription>
+            <CardHeader className="flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Storage Areas</CardTitle>
+                    <CardDescription>
+                        {areas?.length || 0} areas defined in this location.
+                    </CardDescription>
+                </div>
+                 {areas && areas.length > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteAllOpen(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Remove All
+                    </Button>
+                 )}
             </CardHeader>
             <CardContent>
                  {areasWithUsage.length > 0 ? (
@@ -214,6 +252,23 @@ export default function LocationDetailPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={executeDelete} className="bg-destructive hover:bg-destructive/90">
               Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all areas?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete all {areas?.length || 0} areas in this location.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDeleteAll} className="bg-destructive hover:bg-destructive/90">
+              Delete All
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
