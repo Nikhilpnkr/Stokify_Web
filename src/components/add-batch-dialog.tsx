@@ -41,7 +41,6 @@ const formSchema = z.object({
   customerMobile: z.string().min(10, "A valid mobile number is required."),
   cropTypeId: z.string().min(1, "Please select a crop type."),
   quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
-  storageDuration: z.enum(["1", "6", "12"]),
   locationId: z.string().min(1, "Please select a storage location."),
   areaId: z.string().min(1, "Please select an area."),
 });
@@ -64,7 +63,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     resolver: zodResolver(formSchema),
     defaultValues: {
       quantity: 1,
-      storageDuration: "1",
     },
   });
 
@@ -78,7 +76,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   useEffect(() => {
     form.reset({
         quantity: 1,
-        storageDuration: "1",
         customerName: "",
         customerMobile: "",
         cropTypeId: undefined,
@@ -96,24 +93,21 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     }
 
     const selectedCropType = cropTypes.find(ct => ct.id === values.cropTypeId);
-    const durationKey = values.storageDuration as keyof typeof STORAGE_RATES;
-
+    
     if (!selectedCropType) {
         toast({ variant: "destructive", title: "Error", description: "Selected crop type not found." });
         return;
     }
     
-    const cropRate = selectedCropType.rates?.[durationKey] ?? STORAGE_RATES[durationKey];
+    const cropRate = selectedCropType.rates?.['1'] ?? STORAGE_RATES['1'];
 
     let customerId = "";
     let customerName = values.customerName;
 
-    // Check if customer exists, otherwise create a new one
     const customerQuery = query(collection(firestore, 'customers'), where('mobileNumber', '==', values.customerMobile), where('ownerId', '==', user.uid));
     const querySnapshot = await getDocs(customerQuery);
     
     if (querySnapshot.empty) {
-        // Create new customer
         const newCustomerRef = doc(collection(firestore, "customers"));
         const newCustomer = {
             id: newCustomerRef.id,
@@ -124,17 +118,16 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         setDocumentNonBlocking(newCustomerRef, newCustomer, { merge: false });
         customerId = newCustomer.id;
     } else {
-        // Customer exists
         const existingCustomer = querySnapshot.docs[0];
         customerId = existingCustomer.id;
-        customerName = existingCustomer.data().name; // Use existing name
+        customerName = existingCustomer.data().name; 
     }
 
     const newBatch = {
       cropType: selectedCropType.name,
       quantity: values.quantity,
-      storageDurationMonths: parseInt(values.storageDuration, 10),
-      storageCost: cropRate * values.quantity,
+      storageDurationMonths: 1, // Default to 1 month for initial cost calculation
+      storageCost: cropRate * values.quantity, // Base cost
       storageLocationId: values.locationId,
       storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
@@ -221,44 +214,19 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="quantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quantity (bags)</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="storageDuration"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Storage Duration</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select duration" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="1">1 Month</SelectItem>
-                        <SelectItem value="6">6 Months</SelectItem>
-                        <SelectItem value="12">1 Year</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quantity (bags)</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="locationId"
@@ -289,7 +257,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Storage Area</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
+                  <Select onValuechange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={isLoadingAreas ? "Loading areas..." : "Select an area"} />
