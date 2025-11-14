@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import type { CropType, StorageLocation, StorageArea, Customer, CropBatch } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirebase, useUser, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { PlusCircle, Trash2 } from "lucide-react";
 
@@ -55,6 +55,35 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const { firestore } = useFirebase();
   const { user } = useUser();
   
+  // This is defined here to be used in formSchema refinement
+  const [areasWithUsage, setAreasWithUsage] = useState<any[]>([]);
+
+  const formSchema = z.object({
+    customerName: z.string().min(2, "Customer name is required."),
+    customerMobile: z.string().min(10, "A valid mobile number is required."),
+    cropTypeId: z.string().min(1, "Please select a crop type."),
+    locationId: z.string().min(1, "Please select a storage location."),
+    areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
+  }).refine((data) => {
+      const areaIds = data.areaAllocations.map(alloc => alloc.areaId);
+      return new Set(areaIds).size === areaIds.length;
+    }, {
+        message: "Each storage area can only be used once per batch.",
+        path: ["areaAllocations"],
+    })
+    .refine((data) => {
+        for(const alloc of data.areaAllocations) {
+            const area = areasWithUsage.find(a => a.id === alloc.areaId);
+            if (area && alloc.quantity > area.available) {
+                return false;
+            }
+        }
+        return true;
+    }, {
+        message: "Quantity exceeds available capacity for an area.",
+        path: ["areaAllocations"],
+    });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -73,9 +102,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   );
   const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
   
-  const areasWithUsage = useMemo(() => {
-    if (!areas) return [];
-    return areas.map(area => {
+  useEffect(() => {
+    if (!areas) {
+      setAreasWithUsage([]);
+      return;
+    }
+    const calculatedUsage = areas.map(area => {
       const used = allBatches
         .flatMap(b => b.areaAllocations || [])
         .filter(alloc => alloc.areaId === area.id)
@@ -83,35 +115,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       const available = area.capacity - used;
       return { ...area, used, available };
     });
+    setAreasWithUsage(calculatedUsage);
   }, [areas, allBatches]);
-  
-  const formSchema = z.object({
-    customerName: z.string().min(2, "Customer name is required."),
-    customerMobile: z.string().min(10, "A valid mobile number is required."),
-    cropTypeId: z.string().min(1, "Please select a crop type."),
-    locationId: z.string().min(1, "Please select a storage location."),
-    areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
-  }).refine((data) => {
-      const areaIds = data.areaAllocations.map(alloc => alloc.areaId);
-      const hasDuplicates = new Set(areaIds).size !== areaIds.length;
-      return !hasDuplicates;
-    }, {
-        message: "Each storage area can only be used once per batch.",
-        path: ["areaAllocations"],
-    })
-    .refine((data) => {
-        for(const alloc of data.areaAllocations) {
-            const area = areasWithUsage.find(a => a.id === alloc.areaId);
-            if (area && alloc.quantity > area.available) {
-                return false;
-            }
-        }
-        return true;
-    }, {
-        message: "Quantity exceeds available capacity for an area.",
-        path: ["areaAllocations"],
-    });
-
   
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -122,13 +127,15 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const totalQuantity = watchedAllocations.reduce((sum, alloc) => sum + (Number(alloc.quantity) || 0), 0);
 
   useEffect(() => {
-    form.reset({
-        customerName: "",
-        customerMobile: "",
-        cropTypeId: undefined,
-        locationId: undefined,
-        areaAllocations: [{ areaId: "", quantity: undefined }],
-    });
+    if(isOpen) {
+        form.reset({
+            customerName: "",
+            customerMobile: "",
+            cropTypeId: undefined,
+            locationId: undefined,
+            areaAllocations: [{ areaId: "", quantity: undefined }],
+        });
+    }
   }, [isOpen, form]);
 
 
@@ -167,7 +174,11 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         customerName = existingCustomer.data().name; 
     }
 
+    const cropBatchesCol = collection(firestore, "cropBatches");
+    const newDocRef = doc(cropBatchesCol);
+
     const newBatch = {
+      id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
       storageLocationId: values.locationId,
@@ -177,8 +188,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       customerName,
     };
     
-    const cropBatchesCol = collection(firestore, "cropBatches");
-    addDocumentNonBlocking(cropBatchesCol, newBatch);
+    setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
 
     toast({
       title: "Success!",
@@ -305,11 +315,11 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder={isLoadingAreas ? "Loading..." : "Select area"} />
-                                            </Trigger>
+                                            </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
                                             {areasWithUsage?.map(area => (
-                                                <SelectItem key={area.id} value={area.id}>
+                                                <SelectItem key={area.id} value={area.id} disabled={area.available <= 0 || watchedAllocations.some(a => a.areaId === area.id)}>
                                                     {area.name} (Avail: {area.available.toLocaleString()}/{area.capacity.toLocaleString()})
                                                 </SelectItem>
                                             ))}
@@ -325,7 +335,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                             render={({ field }) => (
                                 <FormItem>
                                      <FormControl>
-                                        <Input type="number" placeholder="Qty" {...field} />
+                                        <Input type="number" placeholder="Qty" {...field} value={field.value ?? ''} />
                                      </FormControl>
                                       <FormMessage />
                                 </FormItem>
@@ -353,3 +363,5 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
+
+    
