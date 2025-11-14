@@ -26,7 +26,7 @@ const profileFormSchema = z.object({
   mobileNumber: z.string().optional(),
 });
 
-export default function ProfilePage() {
+export default function SettingsPage() {
   const { auth, firestore, user } = useFirebase();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -128,7 +128,7 @@ export default function ProfilePage() {
   return (
     <>
       <PageHeader
-        title="My Profile"
+        title="Settings"
         description="View and manage your account details."
       />
       <div className="space-y-6">
