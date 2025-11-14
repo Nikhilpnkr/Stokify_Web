@@ -15,17 +15,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirebase, setDocumentNonBlocking } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 export default function SignUpPage() {
   const auth = useAuth();
+  const { firestore } = useFirebase();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   // If user is logged in, redirect to dashboard.
@@ -36,13 +39,26 @@ export default function SignUpPage() {
   }, [user, isUserLoading]);
 
   const handleSignUp = async () => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user's profile with display name
       await updateProfile(userCredential.user, {
         displayName: displayName
       });
+
+      // Create a user profile document in Firestore
+      const userRef = doc(firestore, "users", userCredential.user.uid);
+      const userProfile = {
+        uid: userCredential.user.uid,
+        displayName: displayName,
+        email: email,
+        mobileNumber: mobileNumber,
+      };
+      setDocumentNonBlocking(userRef, userProfile, { merge: false });
+
       // Redirect will be handled by the useEffect
     } catch (error: any) {
       console.error(error);
@@ -99,6 +115,17 @@ export default function SignUpPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="mobileNumber">Mobile Number</Label>
+              <Input
+                id="mobileNumber"
+                type="tel"
+                placeholder="+1234567890"
+                required
+                value={mobileNumber}
+                onChange={(e) => setMobileNumber(e.target.value)}
               />
             </div>
             <div className="grid gap-2">

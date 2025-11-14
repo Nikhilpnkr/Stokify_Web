@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "CropBatch": {
@@ -85,6 +86,36 @@
         "location",
         "ownerId"
       ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile information.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique identifier for the user, matching Firebase Auth UID."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "mobileNumber": {
+          "type": "string",
+          "description": "The user's mobile phone number."
+        }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "email"
+      ]
     }
   },
   "auth": {
@@ -125,8 +156,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores public user profile information.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The user's unique ID."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'."
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information."
   }
 }

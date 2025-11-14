@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,6 +16,18 @@ service cloud.firestore {
     
     function isRequestingUser(userId) {
       return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Controls access to user profile documents.
+     */
+    match /users/{userId} {
+      // Users can create their own profile.
+      allow create: if isSignedIn() && isRequestingUser(userId);
+      // Users can read their own profile. Public read might be enabled later if needed.
+      allow read: if isSignedIn() && isRequestingUser(userId);
+      // Users can update their own profile.
+      allow write: if isSignedIn() && isRequestingUser(userId);
     }
 
     /**
