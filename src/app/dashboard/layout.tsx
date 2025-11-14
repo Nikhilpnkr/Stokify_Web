@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -25,6 +26,7 @@ import {
   LogOut,
   Loader2,
   User as UserIcon,
+  Users,
   Wheat,
   Settings,
 } from "lucide-react";
@@ -47,6 +49,7 @@ const navItems = [
   { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
+  { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
