@@ -55,8 +55,15 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const { firestore } = useFirebase();
   const { user } = useUser();
   
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      areaAllocations: [{ areaId: "", quantity: undefined }],
+    },
+  });
+
   const selectedLocationId = useWatch({
-    // @ts-ignore
+    control: form.control,
     name: "locationId"
   });
 
@@ -105,12 +112,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         path: ["areaAllocations"],
     });
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      areaAllocations: [{ areaId: "", quantity: undefined }],
-    },
-  });
   
   const { fields, append, remove } = useFieldArray({
     control: form.control,
