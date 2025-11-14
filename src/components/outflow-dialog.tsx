@@ -85,7 +85,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         
         toast({
             title: "Outflow Successful!",
-            description: `Batch for ${batch.customerName} has been removed from inventory. Final bill: $${finalCost.toLocaleString()}`,
+            description: `Batch for ${batch.customerName} removed. Final bill generated: $${finalCost.toLocaleString()}`,
         });
 
         setIsProcessing(false);
@@ -140,11 +140,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
           <Button onClick={handleOutflow} disabled={isProcessing} className="bg-primary hover:bg-primary/90">
              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Outflow & Settle
+            Confirm Outflow
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
