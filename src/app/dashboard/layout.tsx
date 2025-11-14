@@ -21,6 +21,8 @@ import {
   BarChart,
   LayoutDashboard,
   Menu,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getPlaceholderImage } from "@/lib/placeholder-images";
+import { useAuth, useUser } from "@/firebase";
+import {
+  signInWithRedirect,
+  GoogleAuthProvider,
+  signOut,
+} from "firebase/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Inventory", icon: LayoutDashboard },
@@ -41,10 +49,63 @@ const navItems = [
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
 ];
 
+function UserNav() {
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+
+  const handleLogin = () => {
+    const provider = new GoogleAuthProvider();
+    signInWithRedirect(auth, provider);
+  };
+
+  const handleLogout = () => {
+    signOut(auth);
+  };
+
+  if (isUserLoading) {
+    return <Button variant="ghost" size="icon" className="rounded-full" disabled />;
+  }
+
+  if (!user) {
+    return (
+      <Button variant="ghost" onClick={handleLogin}>
+        <LogIn className="mr-2" />
+        Sign In
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-full">
+          <Avatar>
+            {user.photoURL && <AvatarImage src={user.photoURL} />}
+            <AvatarFallback>
+              {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
+            </AvatarFallback>
+          </Avatar>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+        <DropdownMenuItem disabled>Support</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleLogout}>
+          <LogOut className="mr-2" />
+          Logout
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const userAvatarUrl = getPlaceholderImage("user-avatar");
+  const { user } = useUser();
 
   return (
     <SidebarProvider>
@@ -78,18 +139,22 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            <div className="flex items-center gap-3 p-2">
-              <Avatar>
-                <AvatarImage src={userAvatarUrl} />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm">Demo User</span>
-                <span className="text-xs text-muted-foreground">
-                  user@cropsafe.com
-                </span>
+            {user && (
+              <div className="flex items-center gap-3 p-2">
+                <Avatar>
+                  {user.photoURL && <AvatarImage src={user.photoURL} />}
+                  <AvatarFallback>
+                    {user.displayName?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col overflow-hidden">
+                  <span className="font-semibold text-sm truncate">{user.displayName || 'Anonymous'}</span>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {user.email || 'No email'}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
@@ -98,24 +163,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <div className="flex-1">
               {/* Maybe add breadcrumbs here later */}
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarImage src={userAvatarUrl} />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Support</DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem>Logout</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <UserNav />
           </header>
           <main className="flex-1 p-4 sm:p-6">{children}</main>
         </SidebarInset>

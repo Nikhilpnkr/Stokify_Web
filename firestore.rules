@@ -1,76 +1,36 @@
-/**
- * @fileoverview Firestore Security Rules for CropSafe application.
- *
- * Core Philosophy:
- * This ruleset enforces a flexible data shape during prototyping while strictly controlling data access.
- * It leverages denormalization to ensure authorization checks are efficient and independent, avoiding
- * costly `get()` calls. The security model focuses on ownership for storage locations and uses that
- * ownership information, denormalized onto crop batches, to manage access control.
- *
- * Data Structure:
- * - /storageLocations/{storageLocationId}: Stores storage location data.
- * - /cropBatches/{cropBatchId}: Stores crop batch data, with a denormalized `storageLocationId` for authorization.
- *
- * Key Security Decisions:
- * - Public listing of all collections is disallowed. List operations are secured based on ownership.
- * - The rules prioritize authorization and relational integrity checks, omitting detailed data validation
- *   to allow for rapid prototyping.
- * - Ownership of storage locations is determined by the path, and crop batches inherit access based on their
- *   associated storage location. This avoids complex queries for authorization.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to storage location documents.
-     * @path /storageLocations/{storageLocationId}
-     * @allow (create) User with ID matching {storageLocationId} can create.
-     * @deny (create) User with ID not matching {storageLocationId} cannot create.
-     * @allow (get, list) Only the owner of the storage location can read or list it.
-     * @deny (get, list) Other users cannot read or list this storage location.
-     * @allow (update, delete) Only the owner of the storage location can update or delete it.
-     * @deny (update, delete) Other users cannot update or delete this storage location.
-     * @principle Enforces document ownership for writes and reads, restricting access to the owner.
+     * Helper Functions
      */
-    match /storageLocations/{storageLocationId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    function isRequestingUser(userId) {
+      return request.auth.uid == userId;
     }
 
     /**
-     * @description Controls access to crop batch documents, inheriting access from the parent storage location.
-     * @path /cropBatches/{cropBatchId}
-     * @allow (create) Anyone can create crop batch documents.
-     * @deny (create) No restrictions on create
-     * @allow (get, list) Anyone can read or list crop batch documents.
-     * @deny (get, list) No restrictions on read or list.
-     * @allow (update, delete) Owner can update or delete crop batch documents.
-     * @deny (update, delete) Non-owner cannot update or delete crop batch documents.
-     * @principle Denormalized authorization: Access is determined based on the denormalized `storageLocationId` and owner.
+     * @description Controls access to storage location documents.
+     */
+    match /storageLocations/{storageLocationId} {
+      allow read, write: if isSignedIn() && isOwner(resource.data.ownerId);
+      allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
+    }
+
+    /**
+     * @description Controls access to crop batch documents.
      */
     match /cropBatches/{cropBatchId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if true;
-      allow update: if true;
-      allow delete: if true;
+       allow read, write: if isSignedIn() && isOwner(resource.data.ownerId);
+       allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
     }
-  }
-
-  // Helper Functions
-  function isSignedIn() {
-    return request.auth != null;
-  }
-
-  function isOwner(userId) {
-    return request.auth.uid == userId;
-  }
-
-  function isExistingOwner(userId) {
-    return isOwner(userId) && resource != null;
   }
 }

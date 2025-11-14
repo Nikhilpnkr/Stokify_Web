@@ -1,18 +1,36 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { initialCropBatches, initialStorageLocations, CropBatch, StorageLocation } from "@/lib/data";
+import { useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Archive, Wheat } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { DollarSign, Archive, Wheat, Loader2 } from "lucide-react";
+import { BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import type { CropBatch, StorageLocation } from "@/lib/data";
 
 export default function ReportsPage() {
-  const [batches] = useState<CropBatch[]>(initialCropBatches);
-  const [locations] = useState<StorageLocation[]>(initialStorageLocations);
-  
+  const { firestore } = useFirebase();
+  const { user } = useUser();
+
+  const locationsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const batchesQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+
+  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
+  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+
   const { totalBatches, totalQuantity, totalCost, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
+    if (!batches || !locations) {
+      return { totalBatches: 0, totalQuantity: 0, totalCost: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
+    }
+
     const totalBatches = batches.length;
     const totalQuantity = batches.reduce((acc, b) => acc + b.quantity, 0);
     const totalCost = batches.reduce((acc, b) => acc + b.storageCost, 0);
@@ -21,7 +39,7 @@ export default function ReportsPage() {
 
     const chartData = locations.map(location => {
       const used = batches
-        .filter(b => b.locationId === location.id)
+        .filter(b => b.storageLocationId === location.id)
         .reduce((acc, b) => acc + b.quantity, 0);
       return {
         name: location.name,
@@ -32,6 +50,8 @@ export default function ReportsPage() {
 
     return { totalBatches, totalQuantity, totalCost, totalCapacity, spaceUtilization, chartData };
   }, [batches, locations]);
+  
+  const isLoading = isLoadingLocations || isLoadingBatches;
 
   const chartConfig = {
     capacity: {
@@ -43,6 +63,28 @@ export default function ReportsPage() {
       color: "hsl(var(--primary))",
     },
   } satisfies ChartConfig;
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <PageHeader
+          title="Storage Reports"
+          description="An overview of your storage costs and space utilization."
+        />
+        <div className="flex items-center justify-center h-64">
+           <p className="text-muted-foreground">Please sign in to view reports.</p>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
@@ -101,30 +143,32 @@ export default function ReportsPage() {
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-            <BarChart data={chartData} accessibilityLayer>
-              <XAxis
-                dataKey="name"
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-                stroke="hsl(var(--foreground))"
-                fontSize={12}
-              />
-              <YAxis
-                stroke="hsl(var(--foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `${value / 1000}k`}
-              />
-              <Tooltip
-                cursor={{ fill: "hsl(var(--card))" }}
-                content={<ChartTooltipContent />}
-              />
-              <Legend />
-              <Bar dataKey="capacity" fill="var(--color-capacity)" radius={4} />
-              <Bar dataKey="used" fill="var(--color-used)" radius={4} />
-            </BarChart>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData} accessibilityLayer>
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  stroke="hsl(var(--foreground))"
+                  fontSize={12}
+                />
+                <YAxis
+                  stroke="hsl(var(--foreground))"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${Number(value) / 1000}k`}
+                />
+                <Tooltip
+                  cursor={{ fill: "hsl(var(--card))" }}
+                  content={<ChartTooltipContent />}
+                />
+                <Legend />
+                <Bar dataKey="capacity" fill="var(--color-capacity)" radius={4} />
+                <Bar dataKey="used" fill="var(--color-used)" radius={4} />
+              </BarChart>
+            </ResponsiveContainer>
           </ChartContainer>
         </CardContent>
       </Card>

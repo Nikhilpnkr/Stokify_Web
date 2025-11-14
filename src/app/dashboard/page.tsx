@@ -1,28 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { initialCropBatches, initialStorageLocations, CropBatch, StorageLocation } from "@/lib/data";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format, formatDistanceToNow } from "date-fns";
 import { AddBatchDialog } from "@/components/add-batch-dialog";
+import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import type { CropBatch, StorageLocation } from "@/lib/data";
 
 export default function InventoryPage() {
-  const [batches, setBatches] = useState<CropBatch[]>(initialCropBatches);
-  const [locations] = useState<StorageLocation[]>(initialStorageLocations);
+  const { firestore } = useFirebase();
+  const { user } = useUser();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
-  const handleAddBatch = (newBatch: CropBatch) => {
-    setBatches((prev) => [newBatch, ...prev]);
-  };
-
+  const cropBatchesQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const storageLocationsQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  
+  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
+  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
+  
   const getLocationName = (locationId: string) => {
-    return locations.find(l => l.id === locationId)?.name || 'Unknown';
+    return locations?.find(l => l.id === locationId)?.name || 'Unknown';
   }
+
+  const isLoading = isLoadingBatches || isLoadingLocations;
 
   return (
     <>
@@ -30,7 +42,7 @@ export default function InventoryPage() {
         title="Current Inventory"
         description="A list of all crop batches currently in storage."
         action={
-          <Button onClick={() => setIsAddDialogOpen(true)}>
+          <Button onClick={() => setIsAddDialogOpen(true)} disabled={!user}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add New Batch
           </Button>
@@ -50,7 +62,19 @@ export default function InventoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {batches.length > 0 ? batches.map((batch) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                  </TableCell>
+                </TableRow>
+              ) : !user ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center">
+                    Please sign in to view your inventory.
+                  </TableCell>
+                </TableRow>
+              ) : batches && batches.length > 0 ? batches.map((batch) => (
                 <TableRow key={batch.id}>
                   <TableCell className="font-medium">{batch.cropType}</TableCell>
                   <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
@@ -64,7 +88,7 @@ export default function InventoryPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline">{batch.storageDuration} month{batch.storageDuration > 1 ? 's' : ''}</Badge>
+                    <Badge variant="outline">{batch.storageDurationMonths} month{batch.storageDurationMonths > 1 ? 's' : ''}</Badge>
                   </TableCell>
                   <TableCell className="text-right">${batch.storageCost.toLocaleString()}</TableCell>
                 </TableRow>
@@ -82,8 +106,7 @@ export default function InventoryPage() {
       <AddBatchDialog
         isOpen={isAddDialogOpen}
         setIsOpen={setIsAddDialogOpen}
-        onAddBatch={handleAddBatch}
-        locations={locations}
+        locations={locations || []}
       />
     </>
   );

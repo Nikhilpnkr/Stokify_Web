@@ -21,8 +21,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { StorageLocation } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
+import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
+import { doc, collection } from "firebase/firestore";
 
 const formSchema = z.object({
   name: z.string().min(2, "Location name must be at least 2 characters."),
@@ -32,11 +33,13 @@ const formSchema = z.object({
 type AddLocationDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onAddLocation: (location: StorageLocation) => void;
 };
 
-export function AddLocationDialog({ isOpen, setIsOpen, onAddLocation }: AddLocationDialogProps) {
+export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps) {
     const { toast } = useToast();
+    const { firestore } = useFirebase();
+    const { user } = useUser();
+
     const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -46,12 +49,28 @@ export function AddLocationDialog({ isOpen, setIsOpen, onAddLocation }: AddLocat
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    const newLocation: StorageLocation = {
-      id: `loc-${Date.now()}`,
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be signed in to add a location."
+      });
+      return;
+    }
+
+    const storageLocationsCol = collection(firestore, "storageLocations");
+    const newDocRef = doc(storageLocationsCol);
+    
+    const newLocation = {
+      id: newDocRef.id,
       name: values.name,
       capacity: values.capacity,
+      ownerId: user.uid,
+      location: '' // Added to satisfy schema, can be updated later
     };
-    onAddLocation(newLocation);
+
+    setDocumentNonBlocking(newDocRef, newLocation, { merge: false });
+    
     toast({
         title: "Success!",
         description: `New location "${values.name}" has been created.`,

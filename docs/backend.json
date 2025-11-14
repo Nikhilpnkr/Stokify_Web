@@ -34,6 +34,10 @@
         "storageCost": {
           "type": "number",
           "description": "Calculated storage cost for this batch."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns this crop batch."
         }
       },
       "required": [
@@ -43,7 +47,8 @@
         "storageDurationMonths",
         "storageLocationId",
         "dateAdded",
-        "storageCost"
+        "storageCost",
+        "ownerId"
       ]
     },
     "StorageLocation": {
@@ -67,20 +72,24 @@
         "location": {
           "type": "string",
           "description": "Geographic location of storage (e.g., latitude, longitude)."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns this storage location."
         }
       },
       "required": [
         "id",
         "name",
         "capacity",
-        "location"
+        "location",
+        "ownerId"
       ]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "google.com"
     ]
   },
   "firestore": {
@@ -92,7 +101,7 @@
           "schema": {
             "$ref": "#/backend/entities/StorageLocation"
           },
-          "description": "Stores storage location information.  Owned by the user via path `/users/{userId}/storageLocations/{storageLocationId}`.",
+          "description": "Stores storage location information owned by a user.",
           "params": [
             {
               "name": "storageLocationId",
@@ -108,7 +117,7 @@
           "schema": {
             "$ref": "#/backend/entities/CropBatch"
           },
-          "description": "Stores crop batch information. Includes denormalized 'storageLocationId' for authorization independence.",
+          "description": "Stores crop batch information owned by a user.",
           "params": [
             {
               "name": "cropBatchId",
@@ -118,6 +127,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging path-based ownership for storage locations which is then denormalized onto crop batches, and all documents in a collection are homogeneous ensuring the collection has the same security requirements.  This structure supports secure `list` operations by ensuring that the security rules do not act as filters. Denormalization also supports the integrity of ownership and timestamps."
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'."
   }
 }

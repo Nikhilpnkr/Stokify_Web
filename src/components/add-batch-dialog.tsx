@@ -31,6 +31,8 @@ import {
 import type { CropBatch, StorageLocation } from "@/lib/data";
 import { STORAGE_RATES } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
+import { useFirebase, useUser, addDocumentNonBlocking } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 const formSchema = z.object({
   cropType: z.string().min(2, "Crop type must be at least 2 characters."),
@@ -42,12 +44,14 @@ const formSchema = z.object({
 type AddBatchDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onAddBatch: (batch: CropBatch) => void;
   locations: StorageLocation[];
 };
 
-export function AddBatchDialog({ isOpen, setIsOpen, onAddBatch, locations }: AddBatchDialogProps) {
+export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogProps) {
   const { toast } = useToast();
+  const { firestore } = useFirebase();
+  const { user } = useUser();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -57,6 +61,15 @@ export function AddBatchDialog({ isOpen, setIsOpen, onAddBatch, locations }: Add
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "You must be signed in to add a batch."
+      });
+      return;
+    }
+
     const duration = parseInt(values.storageDuration) as keyof typeof STORAGE_RATES;
     const storageCost = STORAGE_RATES[duration];
     const location = locations.find(l => l.id === values.locationId);
@@ -70,7 +83,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, onAddBatch, locations }: Add
         return;
     }
 
-    const currentUsage = 0; // In a real app, calculate this by summing quantities
+    const currentUsage = 0; // Simplified for now. A real app would query this.
     if(values.quantity + currentUsage > location.capacity) {
         toast({
             variant: "destructive",
@@ -80,17 +93,19 @@ export function AddBatchDialog({ isOpen, setIsOpen, onAddBatch, locations }: Add
         return;
     }
 
-    const newBatch: CropBatch = {
-      id: `batch-${Date.now()}`,
+    const newBatch = {
       cropType: values.cropType,
       quantity: values.quantity,
-      storageDuration: duration,
+      storageDurationMonths: duration,
       storageCost,
-      locationId: values.locationId,
+      storageLocationId: values.locationId,
       dateAdded: new Date().toISOString(),
+      ownerId: user.uid,
     };
+    
+    const cropBatchesCol = collection(firestore, "cropBatches");
+    addDocumentNonBlocking(cropBatchesCol, newBatch);
 
-    onAddBatch(newBatch);
     toast({
       title: "Success!",
       description: `New batch of ${values.cropType} has been added.`,
