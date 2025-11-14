@@ -46,7 +46,7 @@ export default function InventoryPage() {
   return (
     <>
       <PageHeader
-        title="Current Inventory"
+        title="Crop Inflow / Inventory"
         description="A list of all crop batches currently in storage."
         action={
           <Button onClick={() => setIsAddDialogOpen(true)} disabled={!user}>
