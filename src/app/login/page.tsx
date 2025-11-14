@@ -1,6 +1,8 @@
 "use client";
 
-import { Leaf } from "lucide-react";
+import { useEffect } from "react";
+import { redirect } from 'next/navigation';
+import { Leaf, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,12 +11,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useAuth } from "@/firebase";
+import { useAuth, useUser } from "@/firebase";
 import { signInWithRedirect, GoogleAuthProvider } from "firebase/auth";
 import { FcGoogle } from "react-icons/fc";
 
 export default function LoginPage() {
   const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+
+  useEffect(() => {
+    if (user) {
+      redirect('/dashboard');
+    }
+  }, [user]);
 
   const handleGoogleSignIn = () => {
     if (auth) {
@@ -22,6 +31,14 @@ export default function LoginPage() {
       signInWithRedirect(auth, provider);
     }
   };
+
+  if (isUserLoading) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </main>
+    )
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -42,8 +59,13 @@ export default function LoginPage() {
               variant="outline"
               className="w-full"
               onClick={handleGoogleSignIn}
+              disabled={isUserLoading}
             >
-              <FcGoogle className="mr-2 h-5 w-5" />
+              {isUserLoading ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <FcGoogle className="mr-2 h-5 w-5" />
+              )}
               Sign in with Google
             </Button>
             <div className="relative">

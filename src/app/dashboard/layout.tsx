@@ -120,7 +120,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    redirect('/login');
+    return redirect('/login');
   }
 
   return (
