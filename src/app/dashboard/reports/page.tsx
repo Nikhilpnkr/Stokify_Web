@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Archive, Wheat, Loader2 } from "lucide-react";
-import { BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
@@ -70,20 +70,6 @@ export default function ReportsPage() {
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (!user) {
-    return (
-      <>
-        <PageHeader
-          title="Storage Reports"
-          description="An overview of your storage costs and space utilization."
-        />
-        <div className="flex items-center justify-center h-64">
-           <p className="text-muted-foreground">Please sign in to view reports.</p>
-        </div>
-      </>
-    )
   }
 
   return (

@@ -73,11 +73,7 @@ export default function LocationsPage() {
         }
       />
       
-      {!user ? (
-         <div className="flex items-center justify-center h-64">
-           <p className="text-muted-foreground">Please sign in to manage locations.</p>
-         </div>
-      ) : locationsWithUsage.length > 0 ? (
+      {locationsWithUsage.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {locationsWithUsage.map((location) => (
             <Card key={location.id}>

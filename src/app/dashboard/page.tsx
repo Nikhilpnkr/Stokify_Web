@@ -68,17 +68,11 @@ export default function InventoryPage() {
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                   </TableCell>
                 </TableRow>
-              ) : !user ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    Please sign in to view your inventory.
-                  </TableCell>
-                </TableRow>
               ) : batches && batches.length > 0 ? batches.map((batch) => (
                 <TableRow key={batch.id}>
                   <TableCell className="font-medium">{batch.cropType}</TableCell>
                   <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
-                  <TableCell>{getLocationName(batch.locationId)}</TableCell>
+                  <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
