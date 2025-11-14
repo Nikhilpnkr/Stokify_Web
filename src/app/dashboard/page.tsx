@@ -71,13 +71,12 @@ export default function InventoryPage() {
                 <TableHead className="text-right">Quantity (bags)</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Date Added</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                   </TableCell>
                 </TableRow>
@@ -95,11 +94,10 @@ export default function InventoryPage() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">${batch.storageCost.toLocaleString()}</TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     No crop batches found.
                   </TableCell>
                 </TableRow>
