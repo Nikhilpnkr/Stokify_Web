@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Warehouse, Loader2, Phone, MapPin, Edit } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -13,12 +14,16 @@ import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase
 import { collection, query, where } from "firebase/firestore";
 import type { StorageLocation, CropBatch } from "@/lib/data";
 
-function EmptyState() {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center h-full">
       <Warehouse className="mx-auto h-12 w-12 text-muted-foreground" />
       <h3 className="mt-4 text-lg font-semibold text-foreground">No Locations Found</h3>
       <p className="mt-2 text-sm text-muted-foreground">Get started by adding a new storage location.</p>
+      <Button onClick={onAdd} className="mt-6">
+        <PlusCircle className="mr-2 h-4 w-4" />
+        Add New Location
+      </Button>
     </div>
   )
 }
@@ -26,6 +31,7 @@ function EmptyState() {
 export default function LocationsPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
+  const router = useRouter();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -54,10 +60,16 @@ export default function LocationsPage() {
     });
   }, [locations, batches]);
 
-  const handleEditClick = (location: StorageLocation) => {
+  const handleEditClick = (e: React.MouseEvent, location: StorageLocation) => {
+    e.stopPropagation();
     setSelectedLocation(location);
     setIsEditDialogOpen(true);
   }
+  
+  const handleCardClick = (locationId: string) => {
+    router.push(`/dashboard/locations/${locationId}`);
+  };
+
 
   const isLoading = isLoadingLocations || isLoadingBatches;
 
@@ -85,7 +97,11 @@ export default function LocationsPage() {
       {locationsWithUsage.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {locationsWithUsage.map((location) => (
-            <Card key={location.id} className="flex flex-col">
+            <Card 
+              key={location.id} 
+              className="flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
+              onClick={() => handleCardClick(location.id)}
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <CardTitle className="text-lg font-medium">{location.name}</CardTitle>
@@ -116,7 +132,7 @@ export default function LocationsPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                 <Button variant="outline" size="sm" className="w-full" onClick={() => handleEditClick(location)}>
+                 <Button variant="outline" size="sm" className="w-full" onClick={(e) => handleEditClick(e, location)}>
                     <Edit className="mr-2 h-4 w-4" />
                     Edit Location
                 </Button>
@@ -125,7 +141,7 @@ export default function LocationsPage() {
           ))}
         </div>
       ) : (
-        <EmptyState />
+        <EmptyState onAdd={() => setIsAddDialogOpen(true)} />
       )}
 
       <AddLocationDialog

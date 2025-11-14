@@ -27,6 +27,10 @@
           "type": "string",
           "description": "Reference to StorageLocation. (Relationship: StorageLocation 1:N CropBatch)"
         },
+        "storageAreaId": {
+          "type": "string",
+          "description": "Reference to the specific StorageArea within a location."
+        },
         "dateAdded": {
           "type": "string",
           "description": "Date and time when the crop batch was added to storage.",
@@ -47,6 +51,7 @@
         "quantity",
         "storageDurationMonths",
         "storageLocationId",
+        "storageAreaId",
         "dateAdded",
         "storageCost",
         "ownerId"
@@ -90,6 +95,41 @@
         "ownerId",
         "mobileNumber",
         "address"
+      ]
+    },
+    "StorageArea": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StorageArea",
+      "type": "object",
+      "description": "Represents a specific area within a StorageLocation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StorageArea."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the area (e.g., Section A-1, Bin 5)."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "Maximum capacity of the area, in bags."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who owns this area."
+        },
+        "storageLocationId": {
+          "type": "string",
+          "description": "The ID of the parent StorageLocation."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "capacity",
+        "ownerId",
+        "storageLocationId"
       ]
     },
     "UserProfile": {
@@ -183,6 +223,26 @@
         }
       },
       {
+        "path": "/storageLocations/{storageLocationId}/areas/{areaId}",
+        "definition": {
+          "entityName": "StorageArea",
+          "schema": {
+            "$ref": "#/backend/entities/StorageArea"
+          },
+          "description": "Stores specific areas within a storage location.",
+          "params": [
+            {
+              "name": "storageLocationId",
+              "description": "ID of the parent storage location."
+            },
+            {
+              "name": "areaId",
+              "description": "Unique identifier for the storage area."
+            }
+          ]
+        }
+      },
+      {
         "path": "/cropBatches/{cropBatchId}",
         "definition": {
           "entityName": "CropBatch",
@@ -231,6 +291,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates."
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse."
   }
 }

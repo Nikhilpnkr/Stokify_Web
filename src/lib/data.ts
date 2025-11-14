@@ -6,6 +6,7 @@ export type CropBatch = {
   storageDurationMonths: 1 | 6 | 12; // in months
   storageCost: number;
   storageLocationId: string;
+  storageAreaId: string;
   dateAdded: string;
   ownerId: string;
 };
@@ -17,6 +18,14 @@ export type StorageLocation = {
   ownerId: string;
   mobileNumber: string;
   address: string;
+};
+
+export type StorageArea = {
+  id: string;
+  name: string;
+  capacity: number; // in bags
+  storageLocationId: string;
+  ownerId: string;
 };
 
 export type UserProfile = {

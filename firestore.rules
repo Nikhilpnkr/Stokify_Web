@@ -24,6 +24,14 @@ service cloud.firestore {
      */
     match /storageLocations/{storageLocationId} {
       allow read, write: if isSignedIn();
+
+      /**
+       * @description Controls access to storage area subcollection.
+       * Open access for any signed-in user.
+       */
+       match /areas/{areaId} {
+         allow read, write: if isSignedIn();
+       }
     }
 
     /**

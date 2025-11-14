@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,15 +30,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CropType, StorageLocation } from "@/lib/data";
+import type { CropType, StorageLocation, StorageArea } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, useUser, addDocumentNonBlocking } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { useFirebase, useUser, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 
 const formSchema = z.object({
   cropTypeId: z.string().min(1, "Please select a crop type."),
   quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
   locationId: z.string().min(1, "Please select a storage location."),
+  areaId: z.string().min(1, "Please select an area."),
   storageDuration: z.enum(["1", "6", "12"]).transform(v => parseInt(v) as 1 | 6 | 12),
 });
 
@@ -52,6 +54,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { user } = useUser();
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,6 +62,25 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
       quantity: 1,
     },
   });
+
+  const areasQuery = useMemoFirebase(() =>
+    selectedLocationId ? collection(firestore, "storageLocations", selectedLocationId, "areas") : null,
+    [firestore, selectedLocationId]
+  );
+  const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
+
+
+  useEffect(() => {
+    form.reset({
+        quantity: 1,
+        cropTypeId: undefined,
+        locationId: undefined,
+        areaId: undefined,
+        storageDuration: undefined
+    });
+    setSelectedLocationId(null);
+  }, [isOpen, form]);
+
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
@@ -79,29 +101,13 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
     const duration = values.storageDuration;
     const storageCost = selectedCropType.rates[duration];
     
-    const location = locations.find(l => l.id === values.locationId);
-    if (!location) {
-        toast({ variant: "destructive", title: "Error", description: "Selected location not found." });
-        return;
-    }
-    
-    // In a real app, you would fetch current usage from Firestore to prevent race conditions.
-    const currentUsage = 0; 
-    if(values.quantity + currentUsage > location.capacity) {
-        toast({
-            variant: "destructive",
-            title: "Capacity Exceeded",
-            description: `Adding this batch exceeds the capacity of ${location.name}.`,
-        });
-        return;
-    }
-
     const newBatch = {
       cropType: selectedCropType.name,
       quantity: values.quantity,
       storageDurationMonths: duration,
       storageCost,
       storageLocationId: values.locationId,
+      storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
       ownerId: user.uid,
     };
@@ -115,6 +121,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
     });
     setIsOpen(false);
     form.reset();
+  }
+
+  const handleLocationChange = (locationId: string) => {
+    form.setValue("locationId", locationId);
+    form.resetField("areaId");
+    setSelectedLocationId(locationId);
   }
 
   return (
@@ -171,7 +183,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Storage Location</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={handleLocationChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a location" />
@@ -180,7 +192,31 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
                     <SelectContent>
                       {locations.map((loc) => (
                         <SelectItem key={loc.id} value={loc.id}>
-                          {loc.name} (Capacity: {loc.capacity.toLocaleString()})
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="areaId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Storage Area</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isLoadingAreas ? "Loading areas..." : "Select an area"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {areas?.map((area) => (
+                        <SelectItem key={area.id} value={area.id}>
+                          {area.name} (Capacity: {area.capacity.toLocaleString()})
                         </SelectItem>
                       ))}
                     </SelectContent>
