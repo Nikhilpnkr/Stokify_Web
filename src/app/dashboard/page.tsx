@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -47,9 +47,9 @@ export default function InventoryPage() {
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
 
   // Fetch all areas from all locations
-  useState(() => {
+  useEffect(() => {
     async function fetchAllAreas() {
-      if (!locations || locations.length === 0) {
+      if (!locations || locations.length === 0 || !firestore) {
         setAllAreas([]);
         return;
       };

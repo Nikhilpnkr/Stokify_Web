@@ -46,7 +46,7 @@ export function AddAreaDialog({ isOpen, setIsOpen, locationId }: AddAreaDialogPr
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      capacity: 100,
+      capacity: undefined,
     },
   });
 
@@ -112,7 +112,7 @@ export function AddAreaDialog({ isOpen, setIsOpen, locationId }: AddAreaDialogPr
                 <FormItem>
                   <FormLabel>Area Capacity (in bags)</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Input type="number" placeholder="e.g., 1000" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -65,7 +65,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      areaAllocations: [{ areaId: "", quantity: 1 }],
+      areaAllocations: [{ areaId: "", quantity: undefined }],
     },
   });
   
@@ -94,7 +94,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         customerMobile: "",
         cropTypeId: undefined,
         locationId: undefined,
-        areaAllocations: [{ areaId: "", quantity: 1 }],
+        areaAllocations: [{ areaId: "", quantity: undefined }],
     });
   }, [isOpen, form]);
 
@@ -157,7 +157,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
   const handleLocationChange = (locationId: string) => {
     form.setValue("locationId", locationId);
-    form.setValue('areaAllocations', [{ areaId: "", quantity: 1 }]);
+    form.setValue('areaAllocations', [{ areaId: "", quantity: undefined }]);
   }
 
   return (
@@ -254,7 +254,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                         type="button"
                         size="sm"
                         variant="ghost"
-                        onClick={() => append({ areaId: "", quantity: 1 })}
+                        onClick={() => append({ areaId: "", quantity: undefined })}
                         disabled={!selectedLocationId}
                     >
                         <PlusCircle className="mr-2 h-4 w-4" />
