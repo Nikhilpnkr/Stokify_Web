@@ -22,13 +22,13 @@ service cloud.firestore {
      * @description Controls access to user profile documents.
      */
     match /users/{userId} {
-      // Users can create their own profile.
+      // A user can create their own profile document.
       allow create: if isSignedIn() && isRequestingUser(userId);
-      // Users can read their own profile.
-      allow read: if isSignedIn() && isRequestingUser(userId);
-      // Users can update their own profile.
-      allow update: if isSignedIn() && isRequestingUser(userId);
-      // Disallow delete for now to prevent accidental account data removal.
+      
+      // A user can read and update their own profile document.
+      allow read, update: if isSignedIn() && request.auth.uid == userId;
+
+      // Deleting a user profile is not allowed.
       allow delete: if false;
     }
 
