@@ -27,7 +27,9 @@ service cloud.firestore {
       // Users can read their own profile. Public read might be enabled later if needed.
       allow read: if isSignedIn() && isRequestingUser(userId);
       // Users can update their own profile.
-      allow write: if isSignedIn() && isRequestingUser(userId);
+      allow update: if isSignedIn() && isRequestingUser(userId);
+      // Disallow delete for now to prevent accidental account data removal.
+      allow delete: if false;
     }
 
     /**
