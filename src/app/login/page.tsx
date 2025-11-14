@@ -48,6 +48,7 @@ export default function LoginPage() {
   }
   
   // If not loading and no user, show the full login page.
+  // This part will only be rendered if there is no user and we are not in the middle of a sign-in redirect.
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="flex items-center gap-3 mb-8">
@@ -90,3 +91,4 @@ export default function LoginPage() {
     </main>
   );
 }
+
