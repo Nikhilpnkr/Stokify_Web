@@ -14,6 +14,7 @@ export type CropBatch = {
   ownerId: string;
   customerId: string;
   customerName: string;
+  labourCharge?: number;
   quantity: number; // This is a derived field for easier access
 };
 

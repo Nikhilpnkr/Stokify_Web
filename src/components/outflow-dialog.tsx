@@ -43,6 +43,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     useEffect(() => {
         if (isOpen && batch) {
             setWithdrawQuantity(totalQuantity);
+        } else if (!isOpen) {
+            // Reset state when dialog closes
+            setIsProcessing(false);
+            setWithdrawQuantity(0);
         }
     }, [isOpen, batch, totalQuantity]);
 
@@ -127,8 +131,9 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             unitPrice: costPerBag,
             total: finalCost,
           }],
+          labourCharge: batch.labourCharge,
           subTotal: finalCost,
-          total: finalCost,
+          total: finalCost + (batch.labourCharge || 0),
           notes: `Thank you for your business! This bill covers ${totalMonths} months of storage.`,
         };
 
@@ -224,14 +229,24 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 />
             </div>
             
-            <div className="rounded-lg bg-muted/50 p-4">
-                <div className="flex justify-between items-baseline">
+            <div className="rounded-lg bg-muted/50 p-4 space-y-2">
+                 <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Storage Duration:</p>
                     <p className="font-semibold">{totalMonths} months</p>
                 </div>
-                 <div className="flex justify-between items-center mt-2">
+                <div className="flex justify-between items-baseline">
+                    <p className="text-muted-foreground">Storage Cost:</p>
+                    <p className="font-semibold">${finalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+                {batch.labourCharge && batch.labourCharge > 0 && (
+                    <div className="flex justify-between items-baseline">
+                        <p className="text-muted-foreground">Inflow Labour Charge:</p>
+                        <p className="font-semibold">${batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                )}
+                 <div className="flex justify-between items-center mt-2 pt-2 border-t">
                     <p className="text-lg font-bold">Final Bill:</p>
-                    <p className="text-2xl font-bold text-primary">${finalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-primary">${(finalCost + (batch.labourCharge || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
         </div>

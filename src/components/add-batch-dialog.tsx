@@ -63,6 +63,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     cropTypeId: z.string().min(1, "Please select a crop type."),
     locationId: z.string().min(1, "Please select a storage location."),
     areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
+    labourChargePerBag: z.coerce.number().optional(),
   }).refine((data) => {
       const areaIds = data.areaAllocations.map(alloc => alloc.areaId);
       return new Set(areaIds).size === areaIds.length;
@@ -91,6 +92,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       cropTypeId: undefined,
       locationId: undefined,
       areaAllocations: [{ areaId: "", quantity: 0 }],
+      labourChargePerBag: 0,
     },
   });
   
@@ -129,7 +131,9 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   });
 
   const watchedAllocations = useWatch({ control: form.control, name: 'areaAllocations' });
+  const watchedLabourCharge = useWatch({ control: form.control, name: 'labourChargePerBag' });
   const totalQuantity = watchedAllocations.reduce((sum, alloc) => sum + (Number(alloc.quantity) || 0), 0);
+  const totalLabourCharge = (totalQuantity * (watchedLabourCharge || 0));
 
   useEffect(() => {
     if(isOpen) {
@@ -139,6 +143,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             cropTypeId: undefined,
             locationId: undefined,
             areaAllocations: [{ areaId: "", quantity: 0 }],
+            labourChargePerBag: 0,
         });
     }
   }, [isOpen, form]);
@@ -192,6 +197,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       ownerId: user.uid,
       customerId,
       customerName,
+      labourCharge: totalLabourCharge
     };
     
     setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
@@ -214,6 +220,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         unit: 'bags'
       }],
       location: selectedLocation.name,
+      labourCharge: totalLabourCharge,
     };
 
     toast({
@@ -376,8 +383,29 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                  <FormMessage>{form.formState.errors.areaAllocations?.root?.message || form.formState.errors.areaAllocations?.message}</FormMessage>
             </div>
             
-            <div className="flex justify-end font-semibold text-lg p-2 rounded-md bg-muted">
-                Total Quantity: {totalQuantity.toLocaleString()} bags
+            <FormField
+              control={form.control}
+              name="labourChargePerBag"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Labour Charge per Bag (Optional)</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-2 font-semibold p-2 rounded-md bg-muted">
+                <div className="flex justify-between">
+                    <span>Total Quantity:</span>
+                    <span>{totalQuantity.toLocaleString()} bags</span>
+                </div>
+                <div className="flex justify-between">
+                    <span>Total Labour Charge:</span>
+                    <span>${totalLabourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
             </div>
 
 

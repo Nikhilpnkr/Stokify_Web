@@ -143,6 +143,7 @@ export interface InvoiceData {
         total?: number;
     }[];
     location?: string;
+    labourCharge?: number;
     subTotal?: number;
     total?: number;
     notes?: string;
@@ -155,6 +156,18 @@ interface InvoiceProps {
 
 export function Invoice({ data }: InvoiceProps) {
     const isOutflow = data.type === 'Outflow';
+    const isChargeable = isOutflow || (data.labourCharge && data.labourCharge > 0);
+    
+    let subTotal = data.subTotal || 0;
+    if (data.type === 'Inflow' && data.labourCharge) {
+        subTotal = data.labourCharge;
+    }
+
+    let total = data.total || 0;
+    if (data.type === 'Inflow' && data.labourCharge) {
+        total = data.labourCharge;
+    }
+
 
     return (
         <div style={styles.container}>
@@ -190,8 +203,8 @@ export function Invoice({ data }: InvoiceProps) {
                         <tr>
                             <th style={styles.th}>Description</th>
                             <th style={{...styles.th, ...styles.textRight}}>Quantity</th>
-                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Unit Price</th>}
-                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Total</th>}
+                            {isChargeable && <th style={{...styles.th, ...styles.textRight}}>Unit Price</th>}
+                            {isChargeable && <th style={{...styles.th, ...styles.textRight}}>Total</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -202,28 +215,36 @@ export function Invoice({ data }: InvoiceProps) {
                                     {data.location && <div style={{ fontSize: '12px', color: '#666' }}>at {data.location}</div>}
                                 </td>
                                 <td style={{...styles.td, ...styles.textRight}}>{item.quantity.toLocaleString()} {item.unit}</td>
-                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>${item.unitPrice?.toFixed(2) || '0.00'}</td>}
-                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>${item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>}
+                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>${isOutflow ? (item.unitPrice?.toFixed(2) || '0.00') : '-'}</td>}
+                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>${isOutflow ? (item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00') : '-'}</td>}
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </section>
             
-            {isOutflow && (
+            {isChargeable && (
                 <section style={styles.summarySection}>
                     <div style={styles.summaryContainer}>
-                        <div style={styles.summaryRow}>
-                            <span>Subtotal</span>
-                            <span>${data.subTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
-                        </div>
+                        {isOutflow && (
+                            <div style={styles.summaryRow}>
+                                <span>Subtotal</span>
+                                <span>${subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                            </div>
+                        )}
+                         {data.labourCharge && data.labourCharge > 0 ? (
+                           <div style={styles.summaryRow}>
+                             <span>Labour Charges</span>
+                             <span>${data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                           </div>
+                         ) : null}
                          <div style={styles.summaryRow}>
                             <span>Taxes</span>
                             <span>$0.00</span>
                         </div>
                         <div style={styles.summaryTotal}>
                             <span>Total</span>
-                            <span>${data.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                            <span>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
                     </div>
                 </section>

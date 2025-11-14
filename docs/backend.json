@@ -51,6 +51,10 @@
         "customerName": {
           "type": "string",
           "description": "The name of the customer for display purposes."
+        },
+        "labourCharge": {
+            "type": "number",
+            "description": "Total labour charge for the inflow of this batch."
         }
       },
       "required": [
