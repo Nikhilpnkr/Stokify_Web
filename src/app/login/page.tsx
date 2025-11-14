@@ -48,9 +48,9 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl">Get Started</CardTitle>
           <CardDescription>
-            Sign in to access your crop inventory dashboard.
+            Sign in or create an account to access your dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -62,7 +62,7 @@ export default function LoginPage() {
               disabled={isUserLoading}
             >
               <FcGoogle className="mr-2 h-5 w-5" />
-              Sign in with Google
+              Continue with Google
             </Button>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -70,12 +70,12 @@ export default function LoginPage() {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">
-                  Or continue with
+                  CropSafe Demo
                 </span>
               </div>
             </div>
             <p className="px-8 text-center text-sm text-muted-foreground">
-              This is a demo application. More sign-in options would be here.
+              Using Google OAuth is the only sign-in method for this demo.
             </p>
           </div>
         </CardContent>
