@@ -19,9 +19,13 @@
           "type": "number",
           "description": "Quantity of the crop in this batch, in bags."
         },
-        "ratePerMonth": {
+        "storageDurationMonths": {
           "type": "number",
-          "description": "The storage rate per bag per month for this batch."
+          "description": "The duration of storage in months (e.g., 1, 6, 12)."
+        },
+        "storageCost": {
+          "type": "number",
+          "description": "The total calculated cost for the storage duration."
         },
         "storageLocationId": {
           "type": "string",
@@ -53,7 +57,8 @@
         "id",
         "cropType",
         "quantity",
-        "ratePerMonth",
+        "storageDurationMonths",
+        "storageCost",
         "storageLocationId",
         "storageAreaId",
         "dateAdded",
@@ -181,9 +186,15 @@
           "type": "string",
           "description": "Name of the crop type (e.g., Wheat, Corn)."
         },
-        "ratePerMonth": {
-          "type": "number",
-          "description": "Custom storage rate per bag per month."
+        "rates": {
+          "type": "object",
+          "description": "Storage rates for different durations.",
+          "properties": {
+            "1": { "type": "number", "description": "Rate for 1 month." },
+            "6": { "type": "number", "description": "Rate for 6 months." },
+            "12": { "type": "number", "description": "Rate for 12 months (1 year)." }
+          },
+          "required": ["1", "6", "12"]
         },
         "ownerId": {
           "type": "string",
@@ -193,7 +204,7 @@
       "required": [
         "id",
         "name",
-        "ratePerMonth",
+        "rates",
         "ownerId"
       ]
     },

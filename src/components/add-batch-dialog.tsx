@@ -34,12 +34,14 @@ import type { CropType, StorageLocation, StorageArea, Customer } from "@/lib/dat
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import { STORAGE_RATES } from "@/lib/data";
 
 const formSchema = z.object({
   customerName: z.string().min(2, "Customer name is required."),
   customerMobile: z.string().min(10, "A valid mobile number is required."),
   cropTypeId: z.string().min(1, "Please select a crop type."),
   quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
+  storageDuration: z.enum(["1", "6", "12"]),
   locationId: z.string().min(1, "Please select a storage location."),
   areaId: z.string().min(1, "Please select an area."),
 });
@@ -62,6 +64,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     resolver: zodResolver(formSchema),
     defaultValues: {
       quantity: 1,
+      storageDuration: "1",
     },
   });
 
@@ -75,6 +78,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   useEffect(() => {
     form.reset({
         quantity: 1,
+        storageDuration: "1",
         customerName: "",
         customerMobile: "",
         cropTypeId: undefined,
@@ -92,10 +96,14 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     }
 
     const selectedCropType = cropTypes.find(ct => ct.id === values.cropTypeId);
+    const durationKey = values.storageDuration as keyof typeof STORAGE_RATES;
+
     if (!selectedCropType) {
         toast({ variant: "destructive", title: "Error", description: "Selected crop type not found." });
         return;
     }
+    
+    const cropRate = selectedCropType.rates?.[durationKey] ?? STORAGE_RATES[durationKey];
 
     let customerId = "";
     let customerName = values.customerName;
@@ -125,7 +133,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     const newBatch = {
       cropType: selectedCropType.name,
       quantity: values.quantity,
-      ratePerMonth: selectedCropType.ratePerMonth,
+      storageDurationMonths: parseInt(values.storageDuration, 10),
+      storageCost: cropRate * values.quantity,
       storageLocationId: values.locationId,
       storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
@@ -212,19 +221,44 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="quantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Quantity (in bags)</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="quantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantity (bags)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="storageDuration"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Storage Duration</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select duration" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="1">1 Month</SelectItem>
+                        <SelectItem value="6">6 Months</SelectItem>
+                        <SelectItem value="12">1 Year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="locationId"

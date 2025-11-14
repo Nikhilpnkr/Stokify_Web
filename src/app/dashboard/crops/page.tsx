@@ -6,20 +6,23 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2, DollarSign } from "lucide-react";
+import { PlusCircle, Loader2, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { CropType } from "@/lib/data";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { STORAGE_RATES } from "@/lib/data";
 
 const cropTypeFormSchema = z.object({
   name: z.string().min(2, "Crop name must be at least 2 characters."),
-  ratePerMonth: z.coerce.number().min(0, "Rate must be a positive number."),
+  rate1: z.coerce.number().min(0, "Rate must be a positive number."),
+  rate6: z.coerce.number().min(0, "Rate must be a positive number."),
+  rate12: z.coerce.number().min(0, "Rate must be a positive number."),
 });
 
 export default function CropTypesManagerPage() {
@@ -38,7 +41,9 @@ export default function CropTypesManagerPage() {
     resolver: zodResolver(cropTypeFormSchema),
     defaultValues: {
       name: "",
-      ratePerMonth: 10,
+      rate1: STORAGE_RATES[1],
+      rate6: STORAGE_RATES[6],
+      rate12: STORAGE_RATES[12],
     },
   });
 
@@ -50,7 +55,11 @@ export default function CropTypesManagerPage() {
     const newCropType = {
       name: values.name,
       ownerId: user.uid,
-      ratePerMonth: values.ratePerMonth,
+      rates: {
+        '1': values.rate1,
+        '6': values.rate6,
+        '12': values.rate12,
+      }
     };
 
     addDocumentNonBlocking(cropTypesCol, newCropType);
@@ -94,7 +103,7 @@ export default function CropTypesManagerPage() {
             <Card>
                 <CardHeader>
                 <CardTitle>Add a New Crop Type</CardTitle>
-                <CardDescription>Define a crop and its storage rate per bag per month.</CardDescription>
+                <CardDescription>Define a crop and its storage rates for different durations.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <Form {...form}>
@@ -112,19 +121,48 @@ export default function CropTypesManagerPage() {
                             </FormItem>
                             )}
                         />
-                        <FormField
-                            control={form.control}
-                            name="ratePerMonth"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Rate per Bag per Month</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-3 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="rate1"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>1 Month</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="rate6"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>6 Months</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="rate12"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>1 Year</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+
                         <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
                             {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
                             Add Crop Type
@@ -149,19 +187,31 @@ export default function CropTypesManagerPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                         {cropTypes.map(ct => (
                             <Card key={ct.id} className="bg-muted/30">
-                                <CardHeader className="flex flex-row items-start justify-between pb-2">
-                                    <CardTitle className="text-lg">{ct.name}</CardTitle>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteConfirmation(ct)}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Delete {ct.name}</span>
-                                    </Button>
+                                <CardHeader>
+                                    <div className="flex flex-row items-start justify-between pb-2">
+                                        <CardTitle className="text-lg">{ct.name}</CardTitle>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteConfirmation(ct)}>
+                                            <Trash2 className="h-4 w-4" />
+                                            <span className="sr-only">Delete {ct.name}</span>
+                                        </Button>
+                                    </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex items-baseline gap-2">
-                                        <DollarSign className="h-5 w-5 text-muted-foreground"/>
-                                        <span className="text-2xl font-bold">{ct.ratePerMonth || 0}</span>
-                                        <span className="text-sm text-muted-foreground">/ bag / month</span>
-                                    </div>
+                                    <p className="text-sm font-medium mb-2">Storage Rates (per bag)</p>
+                                    <ul className="text-sm space-y-1">
+                                        <li className="flex justify-between items-baseline">
+                                            <span className="text-muted-foreground">1 Month:</span>
+                                            <span className="font-semibold">${ct.rates ? ct.rates['1'] : '0'}</span>
+                                        </li>
+                                        <li className="flex justify-between items-baseline">
+                                            <span className="text-muted-foreground">6 Months:</span>
+                                            <span className="font-semibold">${ct.rates ? ct.rates['6'] : '0'}</span>
+                                        </li>
+                                        <li className="flex justify-between items-baseline">
+                                            <span className="text-muted-foreground">1 Year:</span>
+                                            <span className="font-semibold">${ct.rates ? ct.rates['12'] : '0'}</span>
+                                        </li>
+                                    </ul>
                                 </CardContent>
                             </Card>
                         ))}
