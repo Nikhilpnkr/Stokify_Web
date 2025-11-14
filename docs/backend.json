@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "CropBatch": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CropBatch",
+      "type": "object",
+      "description": "Represents a batch of crops stored in a storage location.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CropBatch entity."
+        },
+        "cropType": {
+          "type": "string",
+          "description": "Type of crop in this batch (e.g., wheat, corn, rice)."
+        },
+        "quantity": {
+          "type": "number",
+          "description": "Quantity of the crop in this batch, in bags."
+        },
+        "storageDurationMonths": {
+          "type": "number",
+          "description": "The intended storage duration in months."
+        },
+        "storageLocationId": {
+          "type": "string",
+          "description": "Reference to StorageLocation. (Relationship: StorageLocation 1:N CropBatch)"
+        },
+        "dateAdded": {
+          "type": "string",
+          "description": "Date and time when the crop batch was added to storage.",
+          "format": "date-time"
+        },
+        "storageCost": {
+          "type": "number",
+          "description": "Calculated storage cost for this batch."
+        }
+      },
+      "required": [
+        "id",
+        "cropType",
+        "quantity",
+        "storageDurationMonths",
+        "storageLocationId",
+        "dateAdded",
+        "storageCost"
+      ]
+    },
+    "StorageLocation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StorageLocation",
+      "type": "object",
+      "description": "Represents a storage location with a specific capacity.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StorageLocation entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the storage location (e.g., Warehouse A, Silo 1)."
+        },
+        "capacity": {
+          "type": "number",
+          "description": "Maximum capacity of the storage location, in bags."
+        },
+        "location": {
+          "type": "string",
+          "description": "Geographic location of storage (e.g., latitude, longitude)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "capacity",
+        "location"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/storageLocations/{storageLocationId}",
+        "definition": {
+          "entityName": "StorageLocation",
+          "schema": {
+            "$ref": "#/backend/entities/StorageLocation"
+          },
+          "description": "Stores storage location information.  Owned by the user via path `/users/{userId}/storageLocations/{storageLocationId}`.",
+          "params": [
+            {
+              "name": "storageLocationId",
+              "description": "Unique identifier for the storage location."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/cropBatches/{cropBatchId}",
+        "definition": {
+          "entityName": "CropBatch",
+          "schema": {
+            "$ref": "#/backend/entities/CropBatch"
+          },
+          "description": "Stores crop batch information. Includes denormalized 'storageLocationId' for authorization independence.",
+          "params": [
+            {
+              "name": "cropBatchId",
+              "description": "Unique identifier for the crop batch."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging path-based ownership for storage locations which is then denormalized onto crop batches, and all documents in a collection are homogeneous ensuring the collection has the same security requirements.  This structure supports secure `list` operations by ensuring that the security rules do not act as filters. Denormalization also supports the integrity of ownership and timestamps."
+  }
+}
