@@ -2,9 +2,9 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Warehouse, Loader2 } from "lucide-react";
+import { PlusCircle, Warehouse, Loader2, MapPin } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AddLocationDialog } from "@/components/add-location-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
@@ -76,17 +76,27 @@ export default function LocationsPage() {
       {locationsWithUsage.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {locationsWithUsage.map((location) => (
-            <Card key={location.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">{location.name}</CardTitle>
-                <Warehouse className="h-6 w-6 text-muted-foreground" />
+            <Card key={location.id} className="flex flex-col">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-lg font-medium">{location.name}</CardTitle>
+                  <Warehouse className="h-6 w-6 text-muted-foreground" />
+                </div>
+                {location.location && (
+                    <CardDescription className="flex items-start pt-2">
+                        <MapPin className="h-4 w-4 mr-2 mt-1 shrink-0" />
+                        <span className="flex-grow">{location.location}</span>
+                    </CardDescription>
+                )}
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{location.used.toLocaleString()} / {location.capacity.toLocaleString()} bags</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round(location.percentage)}% capacity used
-                </p>
-                <Progress value={location.percentage} className="mt-4 h-2" />
+              <CardContent className="flex-grow flex flex-col justify-end">
+                <div>
+                    <div className="text-2xl font-bold">{location.used.toLocaleString()} / {location.capacity.toLocaleString()} bags</div>
+                    <p className="text-xs text-muted-foreground">
+                    {Math.round(location.percentage)}% capacity used
+                    </p>
+                    <Progress value={location.percentage} className="mt-4 h-2" />
+                </div>
               </CardContent>
             </Card>
           ))}

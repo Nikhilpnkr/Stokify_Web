@@ -24,10 +24,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
+import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z.object({
   name: z.string().min(2, "Location name must be at least 2 characters."),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1."),
+  location: z.string().min(10, "Please enter a valid address."),
 });
 
 type AddLocationDialogProps = {
@@ -44,7 +46,8 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      capacity: 100,
+      capacity: 1000,
+      location: "",
     },
   });
 
@@ -65,8 +68,8 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
       id: newDocRef.id,
       name: values.name,
       capacity: values.capacity,
+      location: values.location,
       ownerId: user.uid,
-      location: '' // Added to satisfy schema, can be updated later
     };
 
     setDocumentNonBlocking(newDocRef, newLocation, { merge: false });
@@ -85,7 +88,7 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
         <DialogHeader>
           <DialogTitle>Add New Storage Location</DialogTitle>
           <DialogDescription>
-            Create a new storage area and define its capacity.
+            Create a new storage area and define its capacity and address.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -103,7 +106,7 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
               name="capacity"
               render={({ field }) => (
@@ -111,6 +114,22 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
                   <FormLabel>Total Capacity (in bags)</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter the full address of the location"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
