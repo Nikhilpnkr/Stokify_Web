@@ -53,7 +53,7 @@ service cloud.firestore {
        // Allow reading a single document if the user is the owner.
        allow get: if isSignedIn() && isOwner(resource.data.ownerId);
        // Allow listing documents only when the query is filtered by the user's ID.
-       allow list: if isSignedIn() && request.query.where.get('ownerId')[2] == request.auth.uid;
+       allow list: if isSignedIn() && request.query.where[0][2] == request.auth.uid;
        // Allow creating/writing if the user is the owner.
        allow write: if isSignedIn() && isOwner(request.resource.data.ownerId);
        allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
