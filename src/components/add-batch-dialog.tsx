@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -28,26 +29,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CropBatch, StorageLocation } from "@/lib/data";
-import { STORAGE_RATES } from "@/lib/data";
+import type { CropType, StorageLocation } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, addDocumentNonBlocking } from "@/firebase";
 import { collection } from "firebase/firestore";
 
 const formSchema = z.object({
-  cropType: z.string().min(2, "Crop type must be at least 2 characters."),
+  cropTypeId: z.string().min(1, "Please select a crop type."),
   quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
   locationId: z.string().min(1, "Please select a storage location."),
-  storageDuration: z.enum(["1", "6", "12"]),
+  storageDuration: z.enum(["1", "6", "12"]).transform(v => parseInt(v) as 1 | 6 | 12),
 });
 
 type AddBatchDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   locations: StorageLocation[];
+  cropTypes: CropType[];
 };
 
-export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogProps) {
+export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddBatchDialogProps) {
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { user } = useUser();
@@ -55,7 +56,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogP
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      cropType: "",
       quantity: 1,
     },
   });
@@ -70,20 +70,23 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogP
       return;
     }
 
-    const duration = parseInt(values.storageDuration) as keyof typeof STORAGE_RATES;
-    const storageCost = STORAGE_RATES[duration];
-    const location = locations.find(l => l.id === values.locationId);
-    
-    if (!location) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Selected location not found."
-        });
+    const selectedCropType = cropTypes.find(ct => ct.id === values.cropTypeId);
+    if (!selectedCropType) {
+        toast({ variant: "destructive", title: "Error", description: "Selected crop type not found." });
         return;
     }
 
-    const currentUsage = 0; // Simplified for now. A real app would query this.
+    const duration = values.storageDuration;
+    const storageCost = selectedCropType.rates[duration];
+    
+    const location = locations.find(l => l.id === values.locationId);
+    if (!location) {
+        toast({ variant: "destructive", title: "Error", description: "Selected location not found." });
+        return;
+    }
+    
+    // In a real app, you would fetch current usage from Firestore to prevent race conditions.
+    const currentUsage = 0; 
     if(values.quantity + currentUsage > location.capacity) {
         toast({
             variant: "destructive",
@@ -94,7 +97,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogP
     }
 
     const newBatch = {
-      cropType: values.cropType,
+      cropType: selectedCropType.name,
       quantity: values.quantity,
       storageDurationMonths: duration,
       storageCost,
@@ -108,7 +111,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogP
 
     toast({
       title: "Success!",
-      description: `New batch of ${values.cropType} has been added.`,
+      description: `New batch of ${selectedCropType.name} has been added.`,
     });
     setIsOpen(false);
     form.reset();
@@ -127,13 +130,24 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogP
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="cropType"
+              name="cropTypeId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Crop Type</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Wheat, Corn" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a crop type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {cropTypes.map((ct) => (
+                        <SelectItem key={ct.id} value={ct.id}>
+                          {ct.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -181,7 +195,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations }: AddBatchDialogP
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Storage Duration</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a duration" />

@@ -1,3 +1,4 @@
+
 export type CropBatch = {
   id: string;
   cropType: string;
@@ -27,10 +28,16 @@ export type UserProfile = {
 export type CropType = {
   id: string;
   name: string;
+  rates: {
+    '1': number;
+    '6': number;
+    '12': number;
+  };
   ownerId: string;
 };
 
-export const STORAGE_RATES: { [key in CropBatch['storageDurationMonths']]: number } = {
+// This can now be used as a default or fallback.
+export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {
   1: 10,
   6: 36,
   12: 56,

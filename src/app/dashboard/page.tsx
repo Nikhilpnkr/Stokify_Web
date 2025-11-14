@@ -5,15 +5,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format, formatDistanceToNow } from "date-fns";
 import { AddBatchDialog } from "@/components/add-batch-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { CropBatch, StorageLocation } from "@/lib/data";
-import { STORAGE_RATES } from "@/lib/data";
+import type { CropBatch, StorageLocation, CropType } from "@/lib/data";
 
 
 export default function InventoryPage() {
@@ -29,15 +28,20 @@ export default function InventoryPage() {
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
+  const cropTypesQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
   
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
+  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   
   const getLocationName = (locationId: string) => {
     return locations?.find(l => l.id === locationId)?.name || 'Unknown';
   }
 
-  const isLoading = isLoadingBatches || isLoadingLocations;
+  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes;
 
   return (
     <>
@@ -51,21 +55,6 @@ export default function InventoryPage() {
           </Button>
         }
       />
-      <div className="grid gap-6 mb-6">
-        <Card>
-            <CardHeader>
-                <CardTitle>Storage Rates</CardTitle>
-                <CardDescription>Per bag for specified durations.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ul className="space-y-2 text-sm">
-                    <li className="flex justify-between"><span>1 Month:</span> <strong>${STORAGE_RATES[1]}</strong></li>
-                    <li className="flex justify-between"><span>6 Months:</span> <strong>${STORAGE_RATES[6]}</strong></li>
-                    <li className="flex justify-between"><span>12 Months:</span> <strong>${STORAGE_RATES[12]}</strong></li>
-                </ul>
-            </CardContent>
-        </Card>
-      </div>
       <Card>
         <CardContent className="pt-6">
           <Table>
@@ -119,6 +108,7 @@ export default function InventoryPage() {
         isOpen={isAddDialogOpen}
         setIsOpen={setIsAddDialogOpen}
         locations={locations || []}
+        cropTypes={cropTypes || []}
       />
     </>
   );

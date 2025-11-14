@@ -121,7 +121,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CropType",
       "type": "object",
-      "description": "Represents a type of crop that can be stored.",
+      "description": "Represents a type of crop that can be stored, with custom storage rates.",
       "properties": {
         "id": {
           "type": "string",
@@ -131,6 +131,16 @@
           "type": "string",
           "description": "Name of the crop type (e.g., Wheat, Corn)."
         },
+        "rates": {
+          "type": "object",
+          "description": "Custom storage rates per bag for different durations.",
+          "properties": {
+            "1": { "type": "number", "description": "Cost for 1 month of storage." },
+            "6": { "type": "number", "description": "Cost for 6 months of storage." },
+            "12": { "type": "number", "description": "Cost for 12 months of storage." }
+          },
+          "required": ["1", "6", "12"]
+        },
         "ownerId": {
           "type": "string",
           "description": "The UID of the user who created this crop type."
@@ -139,6 +149,7 @@
       "required": [
         "id",
         "name",
+        "rates",
         "ownerId"
       ]
     }
@@ -215,6 +226,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications."
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates."
   }
 }
