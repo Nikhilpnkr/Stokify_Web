@@ -26,7 +26,9 @@ import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
 
 const formSchema = z.object({
-  name: z.string().min(2, "Location name must be at least 2 characters."),
+  name: z.string().min(2, "Warehouse name must be at least 2 characters."),
+  mobileNumber: z.string().min(10, "Please enter a valid mobile number."),
+  address: z.string().min(5, "Please enter a valid address."),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1."),
 });
 
@@ -44,6 +46,8 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      mobileNumber: "",
+      address: "",
       capacity: 1000,
     },
   });
@@ -66,6 +70,8 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
       name: values.name,
       capacity: values.capacity,
       ownerId: user.uid,
+      mobileNumber: values.mobileNumber,
+      address: values.address,
     };
 
     setDocumentNonBlocking(newDocRef, newLocation, { merge: false });
@@ -94,9 +100,35 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Location Name</FormLabel>
+                  <FormLabel>Warehouse Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g., Warehouse B, Silo-03" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="mobileNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Warehouse Owner No.</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter mobile number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Warehouse Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter full address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -15,7 +15,8 @@ export type StorageLocation = {
   name: string;
   capacity: number; // in bags
   ownerId: string;
-  location?: string;
+  mobileNumber: string;
+  address: string;
 };
 
 export type UserProfile = {

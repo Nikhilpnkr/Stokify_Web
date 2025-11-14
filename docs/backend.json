@@ -73,13 +73,23 @@
         "ownerId": {
           "type": "string",
           "description": "The UID of the user who owns this storage location."
+        },
+        "mobileNumber": {
+          "type": "string",
+          "description": "Contact mobile number for the warehouse."
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical address of the storage location."
         }
       },
       "required": [
         "id",
         "name",
         "capacity",
-        "ownerId"
+        "ownerId",
+        "mobileNumber",
+        "address"
       ]
     },
     "UserProfile": {
