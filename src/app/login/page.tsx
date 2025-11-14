@@ -32,7 +32,7 @@ export default function LoginPage() {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || user) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -61,11 +61,7 @@ export default function LoginPage() {
               onClick={handleGoogleSignIn}
               disabled={isUserLoading}
             >
-              {isUserLoading ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <FcGoogle className="mr-2 h-5 w-5" />
-              )}
+              <FcGoogle className="mr-2 h-5 w-5" />
               Sign in with Google
             </Button>
             <div className="relative">
