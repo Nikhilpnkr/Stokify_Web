@@ -25,8 +25,15 @@ service cloud.firestore {
       // A user can create their own profile document.
       allow create: if isSignedIn() && isRequestingUser(userId);
       
-      // A user can read and update their own profile document.
-      allow read, update: if isSignedIn() && request.auth.uid == userId;
+      // A user can read their own profile document.
+      allow read: if isSignedIn() && isRequestingUser(userId);
+
+      // A user can update their displayName and mobileNumber, but not other fields.
+      allow update: if isSignedIn() && isRequestingUser(userId)
+                    && request.resource.data.keys().hasAll(['uid', 'displayName', 'email', 'mobileNumber'])
+                    && request.resource.data.size() == 4
+                    && request.resource.data.uid == resource.data.uid
+                    && request.resource.data.email == resource.data.email;
 
       // Deleting a user profile is not allowed.
       allow delete: if false;
