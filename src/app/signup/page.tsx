@@ -16,10 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth, useUser } from "@/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 
-export default function LoginPage() {
+export default function SignUpPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -34,17 +34,17 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading]);
 
-  const handleSignIn = async () => {
+  const handleSignUp = async () => {
     if (!auth) return;
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await createUserWithEmailAndPassword(auth, email, password);
       // Redirect will be handled by the useEffect
     } catch (error: any) {
       console.error(error);
       toast({
         variant: "destructive",
-        title: "Sign in failed",
+        title: "Sign up failed",
         description: error.message || "An unknown error occurred.",
       });
       setIsLoading(false);
@@ -68,9 +68,9 @@ export default function LoginPage() {
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your email and password to sign in to your account.
+            Enter your email and password to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,15 +96,15 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button onClick={handleSignIn} disabled={isLoading} className="w-full">
+            <Button onClick={handleSignUp} disabled={isLoading} className="w-full">
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Create Account
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">
-            Don't have an account?{" "}
-            <Link href="/signup" className="underline">
-              Sign up
+            Already have an account?{" "}
+            <Link href="/login" className="underline">
+              Sign in
             </Link>
           </div>
         </CardContent>

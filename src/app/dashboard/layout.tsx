@@ -37,11 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth, useUser } from "@/firebase";
-import {
-  signInWithRedirect,
-  GoogleAuthProvider,
-  signOut,
-} from "firebase/auth";
+import { signOut } from "firebase/auth";
 
 const navItems = [
   { href: "/dashboard", label: "Inventory", icon: LayoutDashboard },
@@ -52,13 +48,6 @@ const navItems = [
 function UserNav() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
-
-  const handleLogin = () => {
-    if (auth) {
-      const provider = new GoogleAuthProvider();
-      signInWithRedirect(auth, provider);
-    }
-  };
 
   const handleLogout = () => {
     if (auth) {
@@ -72,9 +61,11 @@ function UserNav() {
 
   if (!user) {
     return (
-      <Button variant="ghost" onClick={handleLogin}>
-        <LogIn className="mr-2" />
-        Sign In
+      <Button asChild variant="ghost">
+        <Link href="/login">
+          <LogIn className="mr-2" />
+          Sign In
+        </Link>
       </Button>
     );
   }
@@ -86,7 +77,7 @@ function UserNav() {
           <Avatar>
             {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User avatar'} />}
             <AvatarFallback>
-              {user.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
+              {user.displayName?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
         </Button>
@@ -163,7 +154,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Avatar>
                   {user.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || 'User avatar'}/>}
                   <AvatarFallback>
-                    {user.displayName?.charAt(0) || "U"}
+                    {user.email?.charAt(0)?.toUpperCase() || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col overflow-hidden">
