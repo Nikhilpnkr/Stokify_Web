@@ -72,7 +72,7 @@
         },
         "location": {
           "type": "string",
-          "description": "Physical address of the storage location."
+          "description": "Physical location of the storage location."
         },
         "ownerId": {
           "type": "string",

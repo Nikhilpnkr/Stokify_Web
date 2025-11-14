@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Warehouse, Loader2, MapPin } from "lucide-react";
+import { PlusCircle, Warehouse, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -83,10 +83,7 @@ export default function LocationsPage() {
                   <Warehouse className="h-6 w-6 text-muted-foreground" />
                 </div>
                 {location.location && (
-                    <CardDescription className="flex items-start pt-2">
-                        <MapPin className="h-4 w-4 mr-2 mt-1 shrink-0" />
-                        <span className="flex-grow">{location.location}</span>
-                    </CardDescription>
+                    <CardDescription className="pt-2">{location.location}</CardDescription>
                 )}
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-end">

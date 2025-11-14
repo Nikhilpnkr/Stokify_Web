@@ -24,12 +24,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z.object({
   name: z.string().min(2, "Location name must be at least 2 characters."),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1."),
-  location: z.string().min(10, "Please enter a valid address."),
+  location: z.string().min(3, "Please enter a location."),
 });
 
 type AddLocationDialogProps = {
@@ -88,7 +87,7 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
         <DialogHeader>
           <DialogTitle>Add New Storage Location</DialogTitle>
           <DialogDescription>
-            Create a new storage area and define its capacity and address.
+            Create a new storage area and define its capacity and location.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -124,10 +123,10 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
               name="location"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>Location</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Enter the full address of the location"
+                    <Input
+                      placeholder="Enter the location"
                       {...field}
                     />
                   </FormControl>
