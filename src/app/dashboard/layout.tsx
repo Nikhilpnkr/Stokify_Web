@@ -111,6 +111,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const isMobile = useIsMobile();
   const { user, isUserLoading } = useUser();
 
+  // While checking for user auth, show a full-screen loader.
   if (isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -119,10 +120,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // After loading, if no user is found, redirect to the login page.
   if (!user) {
     return redirect('/login');
   }
 
+  // If user is found, render the dashboard.
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
