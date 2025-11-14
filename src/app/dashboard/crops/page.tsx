@@ -1,19 +1,21 @@
 
 "use client";
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from "@/firebase";
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { CropType } from "@/lib/data";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const cropTypeFormSchema = z.object({
   name: z.string().min(2, "Crop name must be at least 2 characters."),
@@ -25,6 +27,8 @@ const cropTypeFormSchema = z.object({
 export default function CropTypesManagerPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [cropTypeToDelete, setCropTypeToDelete] = useState<CropType | null>(null);
   
   const cropTypesQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
@@ -65,6 +69,27 @@ export default function CropTypesManagerPage() {
     });
     form.reset();
   }
+
+  function handleDeleteConfirmation(cropType: CropType) {
+    setCropTypeToDelete(cropType);
+    setIsDeleteDialogOpen(true);
+  }
+
+  function executeDelete() {
+    if (!cropTypeToDelete || !firestore) return;
+
+    const cropTypeRef = doc(firestore, "cropTypes", cropTypeToDelete.id);
+    deleteDocumentNonBlocking(cropTypeRef);
+
+    toast({
+      title: "Crop Type Deleted",
+      description: `"${cropTypeToDelete.name}" has been removed.`,
+    });
+    
+    setIsDeleteDialogOpen(false);
+    setCropTypeToDelete(null);
+  }
+
 
   return (
     <>
@@ -163,8 +188,12 @@ export default function CropTypesManagerPage() {
                     <div className="grid gap-4 md:grid-cols-2">
                         {cropTypes.map(ct => (
                             <Card key={ct.id} className="bg-muted/30">
-                                <CardHeader>
+                                <CardHeader className="flex flex-row items-start justify-between">
                                     <CardTitle className="text-lg">{ct.name}</CardTitle>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteConfirmation(ct)}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Delete {ct.name}</span>
+                                    </Button>
                                 </CardHeader>
                                 <CardContent>
                                     <ul className="space-y-2 text-sm">
@@ -194,6 +223,22 @@ export default function CropTypesManagerPage() {
             </Card>
         </div>
       </div>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the crop type "{cropTypeToDelete?.name}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDelete} className="bg-destructive hover:bg-destructive/90">
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
