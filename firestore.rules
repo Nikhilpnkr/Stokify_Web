@@ -1,10 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read and write access to all documents for all users.
-    // WARNING: This is insecure and should not be used in production.
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Helper function to check ownership
+    function isOwner(resource) {
+      return request.auth.uid == resource.data.ownerId;
+    }
+
+    // Secure all collections by checking for ownerId on documents
+    match /{collection}/{docId} {
+      // Allow read, update, delete only if the user is the owner
+      allow get, update, delete: if isOwner(get(/databases/$(database)/documents/$(collection)/$(docId)));
+
+      // Allow creating a document if the user is setting themselves as the owner
+      allow create: if request.auth.uid == request.resource.data.ownerId;
+
+      // Securely allow list operations ONLY when the query filters by ownerId
+      allow list: if request.auth.uid != null && request.query.get('ownerId') == request.auth.uid;
+    }
+    
+    // Special rule for the 'users' collection to allow users to create their own profile
+    match /users/{userId} {
+      allow read: if request.auth.uid != null;
+      allow create: if request.auth.uid == userId;
+      allow update, delete: if request.auth.uid == userId;
+    }
+    
+    // Secure the 'areas' subcollection
+    match /storageLocations/{locationId}/areas/{areaId} {
+       allow read, write: if get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
     }
   }
 }
