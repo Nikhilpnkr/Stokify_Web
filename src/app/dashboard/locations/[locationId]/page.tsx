@@ -7,10 +7,11 @@ import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase"
 import { doc, collection, query, where } from "firebase/firestore";
 import type { StorageLocation, StorageArea, CropBatch } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, Warehouse, MapPin, Phone, Trash2, Edit } from "lucide-react";
+import { Loader2, Warehouse, MapPin, Phone, Trash2, Edit, PlusCircle, Layers } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AddAreaDialog } from "@/components/add-area-dialog";
+import { BulkAddAreasDialog } from "@/components/bulk-add-areas-dialog";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -23,6 +24,7 @@ export default function LocationDetailPage() {
   const { toast } = useToast();
 
   const [isAddAreaOpen, setIsAddAreaOpen] = useState(false);
+  const [isBulkAddAreaOpen, setIsBulkAddAreaOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [areaToDelete, setAreaToDelete] = useState<StorageArea | null>(null);
 
@@ -105,9 +107,16 @@ export default function LocationDetailPage() {
         title={location.name}
         description="Manage the specific storage areas within this location."
         action={
-          <Button onClick={() => setIsAddAreaOpen(true)}>
-            Add New Area
-          </Button>
+            <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsBulkAddAreaOpen(true)}>
+                    <Layers className="mr-2 h-4 w-4" />
+                    Bulk Add Areas
+                </Button>
+                <Button onClick={() => setIsAddAreaOpen(true)}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Single Area
+                </Button>
+            </div>
         }
       />
       
@@ -121,16 +130,16 @@ export default function LocationDetailPage() {
                         <span>Warehouse Summary</span>
                     </CardTitle>
                 </div>
-                 <CardDescription className="pt-2 space-y-1">
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                 <div className="pt-2 space-y-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
                       <span>{location.address}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
                       <span>{location.mobileNumber}</span>
                     </div>
-                </CardDescription>
+                </div>
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{totalUsed.toLocaleString()} / {totalCapacity.toLocaleString()} bags</div>
@@ -145,10 +154,13 @@ export default function LocationDetailPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Storage Areas</CardTitle>
+                 <CardDescription>
+                    {areas?.length || 0} areas defined in this location.
+                </CardDescription>
             </CardHeader>
             <CardContent>
                  {areasWithUsage.length > 0 ? (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {areasWithUsage.map(area => (
                             <Card key={area.id} className="bg-muted/30">
                                 <CardHeader>
@@ -184,6 +196,11 @@ export default function LocationDetailPage() {
         setIsOpen={setIsAddAreaOpen}
         locationId={locationId}
       />
+      <BulkAddAreasDialog
+        isOpen={isBulkAddAreaOpen}
+        setIsOpen={setIsBulkAddAreaOpen}
+        locationId={locationId}
+       />
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
