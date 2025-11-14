@@ -10,53 +10,36 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(ownerId) {
-      return request.auth.uid == ownerId;
-    }
-    
-    function isRequestingUser(userId) {
-      return request.auth.uid == userId;
-    }
-
     /**
      * @description Controls access to user profile documents.
+     * Open access for any signed-in user.
      */
     match /users/{userId} {
-      allow create: if isSignedIn() && isRequestingUser(userId);
-      
-      allow read, delete: if isSignedIn() && isRequestingUser(userId);
-
-      allow update: if isSignedIn() && isRequestingUser(userId)
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'mobileNumber']);
+      allow read, write: if isSignedIn();
     }
 
     /**
      * @description Controls access to storage location documents.
+     * Open access for any signed-in user.
      */
     match /storageLocations/{storageLocationId} {
-      allow read, write: if isSignedIn() && isOwner(resource.data.ownerId);
-      allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
+      allow read, write: if isSignedIn();
     }
 
     /**
      * @description Controls access to crop batch documents.
+     * Open access for any signed-in user.
      */
     match /cropBatches/{cropBatchId} {
-       allow read, write: if isSignedIn() && isOwner(resource.data.ownerId);
-       allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
+       allow read, write: if isSignedIn();
     }
     
     /**
      * @description Controls access to crop type documents.
+     * Open access for any signed-in user.
      */
     match /cropTypes/{cropTypeId} {
-       // Allow reading a single document if the user is the owner.
-       allow get: if isSignedIn() && isOwner(resource.data.ownerId);
-       // Allow listing documents only when the query is filtered by the user's ID.
-       allow list: if isSignedIn() && request.query.where[0][0] == 'ownerId' && request.query.where[0][1] == '==' && request.query.where[0][2] == request.auth.uid;
-       // Allow creating/writing if the user is the owner.
-       allow write: if isSignedIn() && isOwner(request.resource.data.ownerId);
-       allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
+       allow read, write: if isSignedIn();
     }
   }
 }
