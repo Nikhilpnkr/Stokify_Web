@@ -41,10 +41,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     }, [batch]);
 
     useEffect(() => {
-        if (batch) {
+        if (isOpen && batch) {
             setWithdrawQuantity(totalQuantity);
         }
-    }, [batch, totalQuantity, isOpen]);
+    }, [isOpen, batch, totalQuantity]);
 
     const { totalMonths, finalCost, costPerBag } = useMemo(() => {
         if (!batch || !cropType || withdrawQuantity <= 0) {
