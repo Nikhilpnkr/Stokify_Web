@@ -60,7 +60,7 @@ export default function ProfilePage() {
   }, [userProfile, user, form]);
 
   async function onSubmit(values: z.infer<typeof profileFormSchema>) {
-    if (!user || !userProfileRef || !userProfile) return;
+    if (!user || !userProfileRef) return;
 
     try {
       // Update Firebase Auth display name
@@ -68,9 +68,8 @@ export default function ProfilePage() {
         await updateProfile(auth.currentUser, { displayName: values.displayName });
       }
 
-      // Prepare the data for Firestore update, including immutable fields
+      // Prepare the data for Firestore update with only the changed fields
       const updatedData = {
-        ...userProfile, // Start with existing profile data
         displayName: values.displayName,
         mobileNumber: values.mobileNumber,
       };
