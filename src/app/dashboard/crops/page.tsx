@@ -170,15 +170,15 @@ export default function CropTypesManagerPage() {
                                     <ul className="space-y-2 text-sm">
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">1 Month:</span>
-                                            <span className="font-semibold">${ct.rates['1']}</span>
+                                            <span className="font-semibold">${ct.rates ? ct.rates['1'] : '0'}</span>
                                         </li>
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">6 Months:</span>
-                                            <span className="font-semibold">${ct.rates['6']}</span>
+                                            <span className="font-semibold">${ct.rates ? ct.rates['6'] : '0'}</span>
                                         </li>
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">12 Months:</span>
-                                            <span className="font-semibold">${ct.rates['12']}</span>
+                                            <span className="font-semibold">${ct.rates ? ct.rates['12'] : '0'}</span>
                                         </li>
                                     </ul>
                                 </CardContent>
