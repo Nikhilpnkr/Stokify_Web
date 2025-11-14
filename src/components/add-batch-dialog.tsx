@@ -35,6 +35,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { PlusCircle, Trash2 } from "lucide-react";
+import { generateInvoicePdf } from "@/lib/pdf";
+import type { InvoiceData } from "@/components/invoice";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),
@@ -52,8 +54,7 @@ type AddBatchDialogProps = {
 
 export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, customers, allBatches }: AddBatchDialogProps) {
   const { toast } = useToast();
-  const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { firestore, user } = useFirebase();
   const [areasWithUsage, setAreasWithUsage] = useState<any[]>([]);
 
   const formSchema = z.object({
@@ -89,10 +90,10 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       customerMobile: "",
       cropTypeId: undefined,
       locationId: undefined,
-      areaAllocations: [{ areaId: "", quantity: undefined }],
+      areaAllocations: [{ areaId: "", quantity: 0 }],
     },
   });
-
+  
   const selectedLocationId = useWatch({
     control: form.control,
     name: "locationId"
@@ -137,7 +138,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             customerMobile: "",
             cropTypeId: undefined,
             locationId: undefined,
-            areaAllocations: [{ areaId: "", quantity: undefined }],
+            areaAllocations: [{ areaId: "", quantity: 0 }],
         });
     }
   }, [isOpen, form]);
@@ -150,9 +151,10 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     }
 
     const selectedCropType = cropTypes.find(ct => ct.id === values.cropTypeId);
+    const selectedLocation = locations.find(l => l.id === values.locationId);
     
-    if (!selectedCropType) {
-        toast({ variant: "destructive", title: "Error", description: "Selected crop type not found." });
+    if (!selectedCropType || !selectedLocation) {
+        toast({ variant: "destructive", title: "Error", description: "Selected crop type or location not found." });
         return;
     }
 
@@ -194,9 +196,30 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     
     setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
 
+    const invoiceData: InvoiceData = {
+      type: 'Inflow',
+      receiptNumber: newDocRef.id.slice(0, 8).toUpperCase(),
+      date: new Date(),
+      customer: {
+        name: customerName,
+        mobile: values.customerMobile,
+      },
+      user: {
+        name: user.displayName || 'N/A',
+        email: user.email || 'N/A'
+      },
+      items: [{
+        description: `Storage for ${selectedCropType.name}`,
+        quantity: totalQuantity,
+        unit: 'bags'
+      }],
+      location: selectedLocation.name,
+    };
+
     toast({
-      title: "Success!",
+      title: "Success! Batch Added.",
       description: `New batch for ${customerName} has been added.`,
+      action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>
     });
     setIsOpen(false);
     form.reset();
@@ -204,7 +227,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
   const handleLocationChange = (locationId: string) => {
     form.setValue("locationId", locationId);
-    form.setValue('areaAllocations', [{ areaId: "", quantity: undefined }]);
+    form.setValue('areaAllocations', [{ areaId: "", quantity: 0 }]);
   }
 
   return (
@@ -301,7 +324,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                         type="button"
                         size="sm"
                         variant="ghost"
-                        onClick={() => append({ areaId: "", quantity: undefined })}
+                        onClick={() => append({ areaId: "", quantity: 0 })}
                         disabled={!selectedLocationId}
                     >
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -323,7 +346,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                                         </FormControl>
                                         <SelectContent>
                                             {areasWithUsage?.map(area => (
-                                                <SelectItem key={area.id} value={area.id} disabled={area.available <= 0 || watchedAllocations.some(a => a.areaId === area.id)}>
+                                                <SelectItem key={area.id} value={area.id} disabled={area.available <= 0 || watchedAllocations.some((a, i) => i !== index && a.areaId === area.id)}>
                                                     {area.name} (Avail: {area.available.toLocaleString()}/{area.capacity.toLocaleString()})
                                                 </SelectItem>
                                             ))}
@@ -367,5 +390,3 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
-
-    

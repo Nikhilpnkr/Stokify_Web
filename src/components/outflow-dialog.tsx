@@ -19,6 +19,8 @@ import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { generateInvoicePdf } from "@/lib/pdf";
+import type { InvoiceData } from "@/components/invoice";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -29,7 +31,7 @@ type OutflowDialogProps = {
 
 export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDialogProps) {
     const { toast } = useToast();
-    const { firestore } = useFirebase();
+    const { firestore, user } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     
@@ -44,9 +46,9 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         }
     }, [batch, totalQuantity, isOpen]);
 
-    const { totalMonths, finalCost } = useMemo(() => {
+    const { totalMonths, finalCost, costPerBag } = useMemo(() => {
         if (!batch || !cropType || withdrawQuantity <= 0) {
-          return { totalMonths: 0, finalCost: 0 };
+          return { totalMonths: 0, finalCost: 0, costPerBag: 0 };
         }
     
         const startDate = new Date(batch.dateAdded);
@@ -85,13 +87,13 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
 
         const finalCost = costPerBag * withdrawQuantity;
 
-        return { totalMonths, finalCost };
+        return { totalMonths, finalCost, costPerBag };
 
     }, [batch, cropType, withdrawQuantity]);
 
 
     async function handleOutflow() {
-        if (!firestore || !batch || withdrawQuantity <= 0) return;
+        if (!firestore || !batch || !user || !cropType || withdrawQuantity <= 0) return;
         
         if (withdrawQuantity > totalQuantity) {
             toast({
@@ -106,19 +108,48 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
 
         const batchRef = doc(firestore, "cropBatches", batch.id);
 
+        const invoiceData: InvoiceData = {
+          type: 'Outflow',
+          receiptNumber: batch.id.slice(0, 8).toUpperCase(),
+          date: new Date(),
+          customer: {
+            name: batch.customerName,
+            mobile: 'N/A', // Mobile not available on batch, could be added
+          },
+          user: {
+            name: user.displayName || 'N/A',
+            email: user.email || 'N/A'
+          },
+          items: [{
+            description: `Storage for ${batch.cropType} (${totalMonths} months)`,
+            quantity: withdrawQuantity,
+            unit: 'bags',
+            unitPrice: costPerBag,
+            total: finalCost,
+          }],
+          subTotal: finalCost,
+          total: finalCost,
+          notes: `Thank you for your business! This bill covers ${totalMonths} months of storage.`,
+        };
+
         if (withdrawQuantity === totalQuantity) {
             // Full withdrawal, delete the document
             deleteDocumentNonBlocking(batchRef);
             toast({
                 title: "Full Outflow Successful!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed. Final bill: $${finalCost.toLocaleString()}`,
+                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                duration: 10000,
             });
         } else {
             // Partial withdrawal, update the allocations
             let remainingWithdrawal = withdrawQuantity;
             const newAllocations: AreaAllocation[] = [];
 
-            for (const alloc of batch.areaAllocations) {
+            // Important: sort to ensure consistent withdrawal order
+            const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
+
+            for (const alloc of sortedAllocations) {
                 if (remainingWithdrawal <= 0) {
                     newAllocations.push(alloc);
                     continue;
@@ -140,7 +171,9 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             updateDocumentNonBlocking(batchRef, updatedData);
              toast({
                 title: "Partial Outflow Successful!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed. Final bill: $${finalCost.toLocaleString()}`,
+                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                duration: 10000,
             });
         }
         
@@ -213,5 +246,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     </Dialog>
   );
 }
-
-    
