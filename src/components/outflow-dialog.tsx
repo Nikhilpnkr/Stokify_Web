@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
-import type { CropBatch, CropType } from "@/lib/data";
+import type { CropBatch, CropType, AreaAllocation } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
@@ -31,29 +31,36 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     const { toast } = useToast();
     const { firestore } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     
-    // For now, partial withdrawal from multi-area batch is complex.
-    // Defaulting to full withdrawal.
     const totalQuantity = useMemo(() => {
         if (!batch) return 0;
         return batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
     }, [batch]);
 
     useEffect(() => {
-        // Reset state on open/close
-    }, [batch, isOpen]);
+        if (batch) {
+            setWithdrawQuantity(totalQuantity);
+        }
+    }, [batch, totalQuantity, isOpen]);
 
     const { totalMonths, finalCost } = useMemo(() => {
-        if (!batch || !cropType) {
+        if (!batch || !cropType || withdrawQuantity <= 0) {
           return { totalMonths: 0, finalCost: 0 };
         }
     
         const startDate = new Date(batch.dateAdded);
         const endDate = new Date();
-        const totalMonths = differenceInMonths(endDate, startDate);
-    
+        let totalMonths = differenceInMonths(endDate, startDate);
+        // If it's less than a month, count as 1 month for billing.
+        if (totalMonths < 1 && startDate.getTime() < endDate.getTime()) {
+            totalMonths = 1;
+        }
+        if (totalMonths <= 0) totalMonths = 1;
+
+
         let remainingMonths = totalMonths;
-        let cost = 0;
+        let costPerBag = 0;
     
         const yearlyRate = cropType.rates['12'];
         const halfYearlyRate = cropType.rates['6'];
@@ -61,45 +68,81 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     
         if (remainingMonths >= 12) {
           const years = Math.floor(remainingMonths / 12);
-          cost += years * yearlyRate;
+          costPerBag += years * yearlyRate;
           remainingMonths %= 12;
         }
     
         if (remainingMonths >= 6) {
-          cost += halfYearlyRate;
+          costPerBag += halfYearlyRate;
+          // After applying a 6-month rate, we don't charge for smaller periods within that block.
           remainingMonths = 0; 
         }
         
-        if (remainingMonths > 0 && totalMonths < 6) {
-             cost += remainingMonths * monthlyRate;
-        } else if (remainingMonths > 0) {
-            cost += halfYearlyRate;
+        // If it was less than 6 months initially, or a remainder exists AFTER yearly calc
+        if (remainingMonths > 0) {
+             costPerBag += remainingMonths * monthlyRate;
         }
 
-        if (totalMonths < 1) {
-            cost = monthlyRate;
-        }
-    
-        const finalCost = cost * totalQuantity;
+        const finalCost = costPerBag * withdrawQuantity;
 
         return { totalMonths, finalCost };
 
-    }, [batch, cropType, totalQuantity]);
+    }, [batch, cropType, withdrawQuantity]);
 
 
     async function handleOutflow() {
-        if (!firestore || !batch) return;
+        if (!firestore || !batch || withdrawQuantity <= 0) return;
         
+        if (withdrawQuantity > totalQuantity) {
+            toast({
+                variant: "destructive",
+                title: "Invalid Quantity",
+                description: "Withdrawal quantity cannot exceed the total quantity in the batch.",
+            });
+            return;
+        }
+
         setIsProcessing(true);
 
         const batchRef = doc(firestore, "cropBatches", batch.id);
 
-        // For now, always full outflow for multi-area batches
-        deleteDocumentNonBlocking(batchRef);
-        toast({
-            title: "Full Outflow Successful!",
-            description: `Batch for ${batch.customerName} removed. Final bill generated: $${finalCost.toLocaleString()}`,
-        });
+        if (withdrawQuantity === totalQuantity) {
+            // Full withdrawal, delete the document
+            deleteDocumentNonBlocking(batchRef);
+            toast({
+                title: "Full Outflow Successful!",
+                description: `${withdrawQuantity} bags for ${batch.customerName} removed. Final bill: $${finalCost.toLocaleString()}`,
+            });
+        } else {
+            // Partial withdrawal, update the allocations
+            let remainingWithdrawal = withdrawQuantity;
+            const newAllocations: AreaAllocation[] = [];
+
+            for (const alloc of batch.areaAllocations) {
+                if (remainingWithdrawal <= 0) {
+                    newAllocations.push(alloc);
+                    continue;
+                }
+
+                if (alloc.quantity > remainingWithdrawal) {
+                    newAllocations.push({
+                        ...alloc,
+                        quantity: alloc.quantity - remainingWithdrawal,
+                    });
+                    remainingWithdrawal = 0;
+                } else {
+                    remainingWithdrawal -= alloc.quantity;
+                    // This allocation is now empty, so we don't add it to newAllocations
+                }
+            }
+            
+            const updatedData = { areaAllocations: newAllocations };
+            updateDocumentNonBlocking(batchRef, updatedData);
+             toast({
+                title: "Partial Outflow Successful!",
+                description: `${withdrawQuantity} bags for ${batch.customerName} removed. Final bill: $${finalCost.toLocaleString()}`,
+            });
+        }
         
         setIsProcessing(false);
         setIsOpen(false);
@@ -113,7 +156,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         <DialogHeader>
           <DialogTitle>Process Outflow & Bill</DialogTitle>
           <DialogDescription>
-            Confirm the removal of this batch and generate the final bill. Partial withdrawal is not supported for multi-area batches yet.
+            Enter the quantity to withdraw. The bill will be calculated based on this amount.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -127,7 +170,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     <p className="font-semibold">{batch.cropType}</p>
                 </div>
                  <div>
-                    <p className="font-medium text-muted-foreground">Total Quantity</p>
+                    <p className="font-medium text-muted-foreground">Total Stored</p>
                     <p className="font-semibold">{totalQuantity.toLocaleString()} bags</p>
                 </div>
                 <div>
@@ -135,29 +178,40 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     <p className="font-semibold">{format(new Date(batch.dateAdded), "MMM d, yyyy")}</p>
                 </div>
             </div>
+
+            <div className="grid gap-2">
+                <Label htmlFor="quantity">Quantity to Withdraw (bags)</Label>
+                <Input
+                    id="quantity"
+                    type="number"
+                    value={withdrawQuantity}
+                    onChange={(e) => setWithdrawQuantity(Number(e.target.value))}
+                    max={totalQuantity}
+                    min={1}
+                />
+            </div>
             
             <div className="rounded-lg bg-muted/50 p-4">
                 <div className="flex justify-between items-baseline">
-                    <p className="text-muted-foreground">Total Storage Duration:</p>
+                    <p className="text-muted-foreground">Storage Duration:</p>
                     <p className="font-semibold">{totalMonths} months</p>
                 </div>
                  <div className="flex justify-between items-center mt-2">
                     <p className="text-lg font-bold">Final Bill:</p>
-                    <p className="text-2xl font-bold text-primary">${finalCost.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-primary">${finalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
             </div>
-             <p className="text-xs text-muted-foreground text-center">
-              This action will permanently remove the entire batch from your inventory.
-            </p>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
-          <Button onClick={handleOutflow} disabled={isProcessing} className="bg-primary hover:bg-primary/90">
+          <Button onClick={handleOutflow} disabled={isProcessing || withdrawQuantity <= 0 || withdrawQuantity > totalQuantity} className="bg-primary hover:bg-primary/90">
              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Full Outflow
+            Confirm Outflow
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+    
