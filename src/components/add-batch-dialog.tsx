@@ -34,7 +34,6 @@ import type { CropType, StorageLocation, StorageArea, Customer } from "@/lib/dat
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import { STORAGE_RATES } from "@/lib/data";
 
 const formSchema = z.object({
   customerName: z.string().min(2, "Customer name is required."),
@@ -99,7 +98,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         return;
     }
     
-    const cropRate = selectedCropType.rates?.['1'] ?? STORAGE_RATES['1'];
+    const cropRate = selectedCropType.rates?.['1'] ?? 0;
 
     let customerId = "";
     let customerName = values.customerName;
@@ -126,8 +125,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     const newBatch = {
       cropType: selectedCropType.name,
       quantity: values.quantity,
-      storageDurationMonths: 1, // Default to 1 month for initial cost calculation
-      storageCost: cropRate * values.quantity, // Base cost
+      storageCost: cropRate * values.quantity, // Base cost for one month
       storageLocationId: values.locationId,
       storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
@@ -257,7 +255,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Storage Area</FormLabel>
-                  <Select onValuechange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={isLoadingAreas ? "Loading areas..." : "Select an area"} />
