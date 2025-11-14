@@ -43,6 +43,14 @@
         "ownerId": {
           "type": "string",
           "description": "The UID of the user who owns this crop batch."
+        },
+        "customerId": {
+          "type": "string",
+          "description": "The ID of the customer who owns this batch."
+        },
+        "customerName": {
+          "type": "string",
+          "description": "The name of the customer for display purposes."
         }
       },
       "required": [
@@ -54,7 +62,9 @@
         "storageAreaId",
         "dateAdded",
         "storageCost",
-        "ownerId"
+        "ownerId",
+        "customerId",
+        "customerName"
       ]
     },
     "StorageLocation": {
@@ -197,6 +207,31 @@
         "rates",
         "ownerId"
       ]
+    },
+    "Customer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Customer",
+      "type": "object",
+      "description": "Represents a customer who stores crops.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Customer."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the customer."
+        },
+        "mobileNumber": {
+          "type": "string",
+          "description": "Contact mobile number for the customer."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who manages this customer."
+        }
+      },
+      "required": ["id", "name", "mobileNumber", "ownerId"]
     }
   },
   "auth": {
@@ -289,8 +324,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/customers/{customerId}",
+        "definition": {
+          "entityName": "Customer",
+          "schema": {
+            "$ref": "#/backend/entities/Customer"
+          },
+          "description": "Stores customer information managed by a user.",
+          "params": [
+            {
+              "name": "customerId",
+              "description": "Unique identifier for the customer."
+            }
+          ]
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse."
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A `customers` collection is added to store information about the clients who own the crops. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse."
   }
 }

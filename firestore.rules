@@ -49,5 +49,13 @@ service cloud.firestore {
     match /cropTypes/{cropTypeId} {
        allow read, write: if isSignedIn();
     }
+
+    /**
+     * @description Controls access to customer documents.
+     * Open access for any signed-in user.
+     */
+    match /customers/{customerId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }

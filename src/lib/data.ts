@@ -9,6 +9,8 @@ export type CropBatch = {
   storageAreaId: string;
   dateAdded: string;
   ownerId: string;
+  customerId: string;
+  customerName: string;
 };
 
 export type StorageLocation = {
@@ -45,6 +47,14 @@ export type CropType = {
   };
   ownerId: string;
 };
+
+export type Customer = {
+  id: string;
+  name: string;
+  mobileNumber: string;
+  ownerId: string;
+};
+
 
 // This can now be used as a default or fallback.
 export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {

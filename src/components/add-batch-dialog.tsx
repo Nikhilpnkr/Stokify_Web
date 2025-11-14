@@ -30,12 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CropType, StorageLocation, StorageArea } from "@/lib/data";
+import type { CropType, StorageLocation, StorageArea, Customer } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, useUser, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
 
 const formSchema = z.object({
+  customerName: z.string().min(2, "Customer name is required."),
+  customerMobile: z.string().min(10, "A valid mobile number is required."),
   cropTypeId: z.string().min(1, "Please select a crop type."),
   quantity: z.coerce.number().min(1, "Quantity must be at least 1."),
   locationId: z.string().min(1, "Please select a storage location."),
@@ -48,9 +50,10 @@ type AddBatchDialogProps = {
   setIsOpen: (open: boolean) => void;
   locations: StorageLocation[];
   cropTypes: CropType[];
+  customers: Customer[];
 };
 
-export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddBatchDialogProps) {
+export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, customers }: AddBatchDialogProps) {
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { user } = useUser();
@@ -73,6 +76,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
   useEffect(() => {
     form.reset({
         quantity: 1,
+        customerName: "",
+        customerMobile: "",
         cropTypeId: undefined,
         locationId: undefined,
         areaId: undefined,
@@ -82,13 +87,9 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
   }, [isOpen, form]);
 
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Error",
-        description: "You must be signed in to add a batch."
-      });
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!user || !firestore) {
+      toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in." });
       return;
     }
 
@@ -96,6 +97,31 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
     if (!selectedCropType) {
         toast({ variant: "destructive", title: "Error", description: "Selected crop type not found." });
         return;
+    }
+
+    let customerId = "";
+    let customerName = values.customerName;
+
+    // Check if customer exists, otherwise create a new one
+    const customerQuery = query(collection(firestore, 'customers'), where('mobileNumber', '==', values.customerMobile), where('ownerId', '==', user.uid));
+    const querySnapshot = await getDocs(customerQuery);
+    
+    if (querySnapshot.empty) {
+        // Create new customer
+        const newCustomerRef = doc(collection(firestore, "customers"));
+        const newCustomer = {
+            id: newCustomerRef.id,
+            name: values.customerName,
+            mobileNumber: values.customerMobile,
+            ownerId: user.uid
+        };
+        setDocumentNonBlocking(newCustomerRef, newCustomer, { merge: false });
+        customerId = newCustomer.id;
+    } else {
+        // Customer exists
+        const existingCustomer = querySnapshot.docs[0];
+        customerId = existingCustomer.id;
+        customerName = existingCustomer.data().name; // Use existing name
     }
 
     const duration = values.storageDuration;
@@ -110,6 +136,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
       storageAreaId: values.areaId,
       dateAdded: new Date().toISOString(),
       ownerId: user.uid,
+      customerId,
+      customerName,
     };
     
     const cropBatchesCol = collection(firestore, "cropBatches");
@@ -117,7 +145,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
 
     toast({
       title: "Success!",
-      description: `New batch of ${selectedCropType.name} has been added.`,
+      description: `New batch for ${customerName} has been added.`,
     });
     setIsOpen(false);
     form.reset();
@@ -140,6 +168,32 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes }: AddB
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+             <FormField
+              control={form.control}
+              name="customerName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter customer's full name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="customerMobile"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Customer Mobile Number</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter customer's mobile" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="cropTypeId"

@@ -12,7 +12,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { AddBatchDialog } from "@/components/add-batch-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { CropBatch, StorageLocation, CropType } from "@/lib/data";
+import type { CropBatch, StorageLocation, CropType, Customer } from "@/lib/data";
 
 
 export default function InventoryPage() {
@@ -32,16 +32,22 @@ export default function InventoryPage() {
     user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
+  const customersQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
   
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
+  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+
   
   const getLocationName = (locationId: string) => {
     return locations?.find(l => l.id === locationId)?.name || 'Unknown';
   }
 
-  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes;
+  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers;
 
   return (
     <>
@@ -60,6 +66,7 @@ export default function InventoryPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Customer</TableHead>
                 <TableHead>Crop Type</TableHead>
                 <TableHead className="text-right">Quantity (bags)</TableHead>
                 <TableHead>Location</TableHead>
@@ -71,13 +78,14 @@ export default function InventoryPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                   </TableCell>
                 </TableRow>
               ) : batches && batches.length > 0 ? batches.map((batch) => (
                 <TableRow key={batch.id}>
-                  <TableCell className="font-medium">{batch.cropType}</TableCell>
+                  <TableCell className="font-medium">{batch.customerName}</TableCell>
+                  <TableCell>{batch.cropType}</TableCell>
                   <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
                   <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
                   <TableCell>
@@ -95,7 +103,7 @@ export default function InventoryPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     No crop batches found.
                   </TableCell>
                 </TableRow>
@@ -109,6 +117,7 @@ export default function InventoryPage() {
         setIsOpen={setIsAddDialogOpen}
         locations={locations || []}
         cropTypes={cropTypes || []}
+        customers={customers || []}
       />
     </>
   );
