@@ -107,20 +107,20 @@ export default function LocationsPage() {
                   <CardTitle className="text-lg font-medium">{location.name}</CardTitle>
                   <Warehouse className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <CardDescription className="space-y-2 pt-2">
+                <div className="text-sm text-muted-foreground space-y-2 pt-2">
                   {location.address && (
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                       <span>{location.address}</span>
                     </div>
                   )}
                   {location.mobileNumber && (
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <span>{location.mobileNumber}</span>
                     </div>
                   )}
-                </CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-end">
                 <div>
