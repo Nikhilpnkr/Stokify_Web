@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2 } from "lucide-react";
+import { PlusCircle, Loader2, Receipt } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -95,7 +95,7 @@ export default function InventoryPage() {
     <>
       <PageHeader
         title="Crop Inflow / Inventory"
-        description="A list of all crop batches currently in storage. Click a row to process outflow."
+        description="A list of all crop batches currently in storage. Click the receipt icon to process outflow."
         action={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setIsAddDialogOpen(true)} disabled={!user}>
@@ -117,17 +117,18 @@ export default function InventoryPage() {
                 <TableHead>Area(s)</TableHead>
                 <TableHead className="text-right">Quantity (bags)</TableHead>
                 <TableHead>Date Added</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                   </TableCell>
                 </TableRow>
               ) : batches && batches.length > 0 ? batches.map((batch) => (
-                <TableRow key={batch.id} onClick={() => handleRowClick(batch)} className="cursor-pointer">
+                <TableRow key={batch.id}>
                   <TableCell className="font-medium">{batch.customerName}</TableCell>
                   <TableCell>{getCustomerMobile(batch.customerId)}</TableCell>
                   <TableCell>{batch.cropType}</TableCell>
@@ -142,10 +143,16 @@ export default function InventoryPage() {
                       </span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => handleRowClick(batch)}>
+                      <Receipt className="h-5 w-5" />
+                      <span className="sr-only">Process Outflow for {batch.customerName}</span>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
+                  <TableCell colSpan={8} className="h-24 text-center">
                     No crop batches found.
                   </TableCell>
                 </TableRow>
