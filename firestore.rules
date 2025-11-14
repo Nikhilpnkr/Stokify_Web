@@ -33,8 +33,8 @@ service cloud.firestore {
       allow update: if isSignedIn() && isRequestingUser(userId)
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'mobileNumber']);
 
-      // Deleting a user profile is not allowed.
-      allow delete: if false;
+      // A user can delete their own profile document.
+      allow delete: if isSignedIn() && isRequestingUser(userId);
     }
 
     /**
