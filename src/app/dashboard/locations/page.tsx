@@ -1,12 +1,14 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Warehouse, Loader2, Phone, MapPin } from "lucide-react";
+import { PlusCircle, Warehouse, Loader2, Phone, MapPin, Edit } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AddLocationDialog } from "@/components/add-location-dialog";
+import { EditLocationDialog } from "@/components/edit-location-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { StorageLocation, CropBatch } from "@/lib/data";
@@ -26,6 +28,8 @@ export default function LocationsPage() {
   const { user } = useUser();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<StorageLocation | null>(null);
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -49,6 +53,11 @@ export default function LocationsPage() {
       return { ...location, used, percentage };
     });
   }, [locations, batches]);
+
+  const handleEditClick = (location: StorageLocation) => {
+    setSelectedLocation(location);
+    setIsEditDialogOpen(true);
+  }
 
   const isLoading = isLoadingLocations || isLoadingBatches;
 
@@ -106,6 +115,12 @@ export default function LocationsPage() {
                     <Progress value={location.percentage} className="mt-4 h-2" />
                 </div>
               </CardContent>
+              <CardFooter>
+                 <Button variant="outline" size="sm" className="w-full" onClick={() => handleEditClick(location)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Location
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>
@@ -117,6 +132,13 @@ export default function LocationsPage() {
         isOpen={isAddDialogOpen}
         setIsOpen={setIsAddDialogOpen}
       />
+      {selectedLocation && (
+        <EditLocationDialog
+          isOpen={isEditDialogOpen}
+          setIsOpen={setIsEditDialogOpen}
+          location={selectedLocation}
+        />
+      )}
     </>
   );
 }
