@@ -31,7 +31,7 @@ service cloud.firestore {
       // A user can update their displayName and mobileNumber.
       // They cannot change their uid or email.
       allow update: if isSignedIn() && isRequestingUser(userId)
-                    && request.resource.data.keys().hasOnly(['displayName', 'mobileNumber', 'uid', 'email']);
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'mobileNumber']);
 
       // Deleting a user profile is not allowed.
       allow delete: if false;

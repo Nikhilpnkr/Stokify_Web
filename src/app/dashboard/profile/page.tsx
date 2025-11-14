@@ -68,8 +68,6 @@ export default function ProfilePage() {
         await updateProfile(auth.currentUser, { displayName: values.displayName });
       }
 
-      // Prepare the data for Firestore update. Only include fields that should be updated.
-      // The security rule will ensure other fields are not touched.
       const updatedData: Partial<UserProfile> = {
         displayName: values.displayName,
         mobileNumber: values.mobileNumber || '',
