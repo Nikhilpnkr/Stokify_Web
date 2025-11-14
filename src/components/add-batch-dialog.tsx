@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CropType, StorageLocation, StorageArea, Customer } from "@/lib/data";
+import type { CropType, StorageLocation, StorageArea, Customer, CropBatch } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
@@ -41,27 +41,70 @@ const areaAllocationSchema = z.object({
     quantity: z.coerce.number().min(1, "Min 1."),
 });
 
-const formSchema = z.object({
-  customerName: z.string().min(2, "Customer name is required."),
-  customerMobile: z.string().min(10, "A valid mobile number is required."),
-  cropTypeId: z.string().min(1, "Please select a crop type."),
-  locationId: z.string().min(1, "Please select a storage location."),
-  areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
-});
-
 type AddBatchDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   locations: StorageLocation[];
   cropTypes: CropType[];
   customers: Customer[];
+  allBatches: CropBatch[];
 };
 
-export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, customers }: AddBatchDialogProps) {
+export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, customers, allBatches }: AddBatchDialogProps) {
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { user } = useUser();
   
+  const selectedLocationId = useWatch({
+    // @ts-ignore
+    name: "locationId"
+  });
+
+  const areasQuery = useMemoFirebase(() =>
+    selectedLocationId ? collection(firestore, "storageLocations", selectedLocationId, "areas") : null,
+    [firestore, selectedLocationId]
+  );
+  const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
+  
+  const areasWithUsage = useMemo(() => {
+    if (!areas) return [];
+    return areas.map(area => {
+      const used = allBatches
+        .flatMap(b => b.areaAllocations || [])
+        .filter(alloc => alloc.areaId === area.id)
+        .reduce((acc, alloc) => acc + alloc.quantity, 0);
+      const available = area.capacity - used;
+      return { ...area, used, available };
+    });
+  }, [areas, allBatches]);
+  
+  const formSchema = z.object({
+    customerName: z.string().min(2, "Customer name is required."),
+    customerMobile: z.string().min(10, "A valid mobile number is required."),
+    cropTypeId: z.string().min(1, "Please select a crop type."),
+    locationId: z.string().min(1, "Please select a storage location."),
+    areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
+  }).refine((data) => {
+      const areaIds = data.areaAllocations.map(alloc => alloc.areaId);
+      const hasDuplicates = new Set(areaIds).size !== areaIds.length;
+      return !hasDuplicates;
+    }, {
+        message: "Each storage area can only be used once per batch.",
+        path: ["areaAllocations"],
+    })
+    .refine((data) => {
+        for(const alloc of data.areaAllocations) {
+            const area = areasWithUsage.find(a => a.id === alloc.areaId);
+            if (area && alloc.quantity > area.available) {
+                return false;
+            }
+        }
+        return true;
+    }, {
+        message: "Quantity exceeds available capacity for an area.",
+        path: ["areaAllocations"],
+    });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -73,17 +116,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     control: form.control,
     name: "areaAllocations",
   });
-
-  const selectedLocationId = useWatch({
-    control: form.control,
-    name: "locationId"
-  });
-
-  const areasQuery = useMemoFirebase(() =>
-    selectedLocationId ? collection(firestore, "storageLocations", selectedLocationId, "areas") : null,
-    [firestore, selectedLocationId]
-  );
-  const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
 
   const watchedAllocations = useWatch({ control: form.control, name: 'areaAllocations' });
   const totalQuantity = watchedAllocations.reduce((sum, alloc) => sum + (Number(alloc.quantity) || 0), 0);
@@ -272,12 +304,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder={isLoadingAreas ? "Loading..." : "Select area"} />
-                                            </SelectTrigger>
+                                            </Trigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {areas?.map(area => (
+                                            {areasWithUsage?.map(area => (
                                                 <SelectItem key={area.id} value={area.id}>
-                                                    {area.name} (Cap: {area.capacity})
+                                                    {area.name} (Avail: {area.available.toLocaleString()}/{area.capacity.toLocaleString()})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -303,7 +335,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                         </Button>
                     </div>
                  ))}
-                 <FormMessage>{form.formState.errors.areaAllocations?.root?.message}</FormMessage>
+                 <FormMessage>{form.formState.errors.areaAllocations?.root?.message || form.formState.errors.areaAllocations?.message}</FormMessage>
             </div>
             
             <div className="flex justify-end font-semibold text-lg p-2 rounded-md bg-muted">

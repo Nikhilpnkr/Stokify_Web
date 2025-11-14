@@ -154,6 +154,7 @@ export default function InventoryPage() {
         locations={locations || []}
         cropTypes={cropTypes || []}
         customers={customers || []}
+        allBatches={rawBatches || []}
       />
       {selectedBatch && (
         <OutflowDialog
