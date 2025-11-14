@@ -70,10 +70,6 @@
           "type": "number",
           "description": "Maximum capacity of the storage location, in bags."
         },
-        "location": {
-          "type": "string",
-          "description": "Physical location of the storage location."
-        },
         "ownerId": {
           "type": "string",
           "description": "The UID of the user who owns this storage location."
@@ -83,7 +79,6 @@
         "id",
         "name",
         "capacity",
-        "location",
         "ownerId"
       ]
     },

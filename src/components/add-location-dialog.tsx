@@ -28,7 +28,6 @@ import { doc, collection } from "firebase/firestore";
 const formSchema = z.object({
   name: z.string().min(2, "Location name must be at least 2 characters."),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1."),
-  location: z.string().min(3, "Please enter a location."),
 });
 
 type AddLocationDialogProps = {
@@ -46,7 +45,6 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
     defaultValues: {
       name: "",
       capacity: 1000,
-      location: "",
     },
   });
 
@@ -67,7 +65,6 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
       id: newDocRef.id,
       name: values.name,
       capacity: values.capacity,
-      location: values.location,
       ownerId: user.uid,
     };
 
@@ -87,7 +84,7 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
         <DialogHeader>
           <DialogTitle>Add New Storage Location</DialogTitle>
           <DialogDescription>
-            Create a new storage area and define its capacity and location.
+            Create a new storage area and define its capacity.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -113,22 +110,6 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
                   <FormLabel>Total Capacity (in bags)</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Enter the location"
-                      {...field}
-                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
