@@ -54,8 +54,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const { toast } = useToast();
   const { firestore } = useFirebase();
   const { user } = useUser();
-  
-  // This is defined here to be used in formSchema refinement
   const [areasWithUsage, setAreasWithUsage] = useState<any[]>([]);
 
   const formSchema = z.object({
@@ -87,6 +85,10 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      customerName: "",
+      customerMobile: "",
+      cropTypeId: undefined,
+      locationId: undefined,
       areaAllocations: [{ areaId: "", quantity: undefined }],
     },
   });
@@ -107,14 +109,16 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       setAreasWithUsage([]);
       return;
     }
-    const calculatedUsage = areas.map(area => {
-      const used = allBatches
-        .flatMap(b => b.areaAllocations || [])
-        .filter(alloc => alloc.areaId === area.id)
-        .reduce((acc, alloc) => acc + alloc.quantity, 0);
-      const available = area.capacity - used;
-      return { ...area, used, available };
-    });
+    const calculatedUsage = areas
+      .map(area => {
+        const used = allBatches
+          .flatMap(b => b.areaAllocations || [])
+          .filter(alloc => alloc.areaId === area.id)
+          .reduce((acc, alloc) => acc + alloc.quantity, 0);
+        const available = area.capacity - used;
+        return { ...area, used, available };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
     setAreasWithUsage(calculatedUsage);
   }, [areas, allBatches]);
   
@@ -246,7 +250,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Crop Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a crop type" />
@@ -271,7 +275,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Storage Location</FormLabel>
-                  <Select onValueChange={handleLocationChange} defaultValue={field.value}>
+                  <Select onValueChange={handleLocationChange} value={field.value} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a location" />
@@ -311,7 +315,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                             name={`areaAllocations.${index}.areaId`}
                             render={({ field }) => (
                                 <FormItem>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
+                                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value} disabled={!selectedLocationId || isLoadingAreas}>
                                         <FormControl>
                                             <SelectTrigger>
                                                 <SelectValue placeholder={isLoadingAreas ? "Loading..." : "Select area"} />
