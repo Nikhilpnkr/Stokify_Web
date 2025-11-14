@@ -1,6 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // No rules defined. All reads and writes to the database will be denied by default.
+    // Allow read and write access to all documents for all users.
+    // WARNING: This is insecure and should not be used in production.
+    match /{document=**} {
+      allow read, write: if true;
+    }
   }
 }
