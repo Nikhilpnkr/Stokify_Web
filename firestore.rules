@@ -52,5 +52,13 @@ service cloud.firestore {
        allow read, write: if isSignedIn() && isOwner(resource.data.ownerId);
        allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
     }
+    
+    /**
+     * @description Controls access to crop type documents.
+     */
+    match /cropTypes/{cropTypeId} {
+       allow read, write: if isSignedIn() && isOwner(resource.data.ownerId);
+       allow create: if isSignedIn() && isOwner(request.resource.data.ownerId);
+    }
   }
 }

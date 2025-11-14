@@ -24,6 +24,12 @@ export type UserProfile = {
   mobileNumber?: string;
 };
 
+export type CropType = {
+  id: string;
+  name: string;
+  ownerId: string;
+};
+
 export const STORAGE_RATES: { [key in CropBatch['storageDurationMonths']]: number } = {
   1: 10,
   6: 36,
