@@ -24,6 +24,7 @@ import {
   LogIn,
   LogOut,
   Loader2,
+  User as UserIcon,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,12 @@ function UserNav() {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>My Account</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Settings</DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/profile">
+            <UserIcon className="mr-2" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem disabled>Support</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>

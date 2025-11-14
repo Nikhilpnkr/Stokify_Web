@@ -17,6 +17,13 @@ export type StorageLocation = {
   location: string;
 };
 
+export type UserProfile = {
+  uid: string;
+  displayName: string;
+  email: string;
+  mobileNumber?: string;
+};
+
 export const STORAGE_RATES: { [key in CropBatch['storageDurationMonths']]: number } = {
   1: 10,
   6: 36,
