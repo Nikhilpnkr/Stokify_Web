@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2 } from "lucide-react";
+import { PlusCircle, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,20 +11,16 @@ import { format, formatDistanceToNow } from "date-fns";
 import { AddBatchDialog } from "@/components/add-batch-dialog";
 import { OutflowDialog } from "@/components/outflow-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import type { CropBatch, StorageLocation, CropType, Customer, StorageArea } from "@/lib/data";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 
 
 export default function InventoryPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
-  const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
-  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
 
   const cropBatchesQuery = useMemoFirebase(() =>
     user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
@@ -92,34 +88,6 @@ export default function InventoryPage() {
     setSelectedBatch(batch);
     setIsOutflowDialogOpen(true);
   };
-
-  const executeDeleteAllBatches = async () => {
-    if (!firestore || !cropBatchesQuery) return;
-    
-    try {
-        const batch = writeBatch(firestore);
-        const querySnapshot = await getDocs(cropBatchesQuery);
-        querySnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-
-        toast({
-            title: "All Batches Deleted",
-            description: `All crop batches have been removed from your inventory.`,
-        });
-
-    } catch (error) {
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Could not delete all batches. Please try again.",
-        });
-        console.error("Error deleting all batches: ", error);
-    } finally {
-        setIsDeleteAllOpen(false);
-    }
-  }
   
   const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas;
 
@@ -134,12 +102,6 @@ export default function InventoryPage() {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Batch
             </Button>
-             {batches && batches.length > 0 && (
-                <Button variant="destructive" onClick={() => setIsDeleteAllOpen(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete All
-                </Button>
-             )}
           </div>
         }
       />
@@ -208,22 +170,6 @@ export default function InventoryPage() {
             cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
         />
       )}
-       <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete all {batches?.length || 0} crop batches from your inventory.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={executeDeleteAllBatches} className="bg-destructive hover:bg-destructive/90">
-              Continue
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }
