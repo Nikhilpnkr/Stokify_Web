@@ -16,7 +16,7 @@ import { OutflowDialog } from "@/components/outflow-dialog";
 
 export default function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
-  const { firestore } = useFirebase();
+  const { firestore, user } = useFirebase();
 
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
@@ -35,10 +35,16 @@ export default function CustomerDetailPage() {
   );
   const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
 
-  const locationsQuery = useMemoFirebase(() => collection(firestore, 'storageLocations'), [firestore]);
+  const locationsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
 
-  const cropTypesQuery = useMemoFirebase(() => collection(firestore, 'cropTypes'), [firestore]);
+  const cropTypesQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
