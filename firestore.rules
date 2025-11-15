@@ -18,8 +18,8 @@ service cloud.firestore {
     match /users/{userId} {
       // Admins can read/write any profile to change roles.
       allow write: if isAdmin();
-      // Admins and Managers can list all users.
-      allow list: if isManagerOrAdmin();
+      // TEMPORARILY allow any authenticated user to list users to set up the first admin.
+      allow list: if request.auth.uid != null;
       // Users can only read their own profile, but admins can read any.
       allow get: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
