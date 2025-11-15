@@ -37,6 +37,7 @@ import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { PlusCircle, Trash2 } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/pdf";
 import type { InvoiceData } from "@/components/invoice";
+import { Combobox } from "@/components/ui/combobox";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),
@@ -56,10 +57,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const [areasWithUsage, setAreasWithUsage] = useState<any[]>([]);
+  const [isNewCustomer, setIsNewCustomer] = useState(true);
 
   const formSchema = z.object({
+    customerId: z.string(), // Can be an existing ID or a placeholder for a new customer
     customerName: z.string().min(2, "Customer name is required."),
-    customerMobile: z.string().min(10, "A valid mobile number is required."),
+    customerMobile: z.string().min(10, "A valid mobile number is required.").refine(val => !customers.some(c => c.mobileNumber === val && c.id !== form.getValues('customerId')), { message: "This mobile number is already taken."}),
     cropTypeId: z.string().min(1, "Please select a crop type."),
     locationId: z.string().min(1, "Please select a storage location."),
     areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
@@ -87,6 +90,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      customerId: 'new_customer',
       customerName: "",
       customerMobile: "",
       cropTypeId: undefined,
@@ -100,6 +104,32 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     control: form.control,
     name: "locationId"
   });
+
+  const selectedCustomerId = useWatch({
+      control: form.control,
+      name: "customerId",
+  });
+
+  useEffect(() => {
+    if (selectedCustomerId && selectedCustomerId !== 'new_customer') {
+        const customer = customers.find(c => c.id === selectedCustomerId);
+        if (customer) {
+            form.setValue('customerName', customer.name);
+            form.setValue('customerMobile', customer.mobileNumber);
+            setIsNewCustomer(false);
+        }
+    } else {
+        form.setValue('customerName', '');
+        form.setValue('customerMobile', '');
+        setIsNewCustomer(true);
+    }
+  }, [selectedCustomerId, customers, form]);
+
+  const customerOptions = useMemo(() => {
+    const options = customers.map(c => ({ value: c.id, label: `${c.name} - ${c.mobileNumber}` }));
+    options.unshift({ value: 'new_customer', label: 'Add a new customer' });
+    return options;
+  }, [customers]);
 
   const areasQuery = useMemoFirebase(() =>
     selectedLocationId ? collection(firestore, "storageLocations", selectedLocationId, "areas") : null,
@@ -138,6 +168,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   useEffect(() => {
     if(isOpen) {
         form.reset({
+            customerId: 'new_customer',
             customerName: "",
             customerMobile: "",
             cropTypeId: undefined,
@@ -163,13 +194,18 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         return;
     }
 
-    let customerId = "";
+    let customerId = values.customerId;
     let customerName = values.customerName;
 
-    const customerQuery = query(collection(firestore, 'customers'), where('mobileNumber', '==', values.customerMobile), where('ownerId', '==', user.uid));
-    const querySnapshot = await getDocs(customerQuery);
-    
-    if (querySnapshot.empty) {
+    if (isNewCustomer) {
+        const customerQuery = query(collection(firestore, 'customers'), where('mobileNumber', '==', values.customerMobile), where('ownerId', '==', user.uid));
+        const querySnapshot = await getDocs(customerQuery);
+        
+        if (!querySnapshot.empty) {
+            form.setError("customerMobile", { message: "A customer with this mobile number already exists."});
+            return;
+        }
+
         const newCustomerRef = doc(collection(firestore, "customers"));
         const newCustomer = {
             id: newCustomerRef.id,
@@ -180,10 +216,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         setDocumentNonBlocking(newCustomerRef, newCustomer, { merge: false });
         customerId = newCustomer.id;
     } else {
-        const existingCustomer = querySnapshot.docs[0];
-        customerId = existingCustomer.id;
-        customerName = existingCustomer.data().name; 
+        const existingCustomer = customers.find(c => c.id === customerId);
+        if (existingCustomer) {
+            customerName = existingCustomer.name;
+        }
     }
+
 
     const cropBatchesCol = collection(firestore, "cropBatches");
     const newDocRef = doc(cropBatchesCol);
@@ -250,31 +288,53 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
              <FormField
-              control={form.control}
-              name="customerName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Customer Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter customer's full name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+                control={form.control}
+                name="customerId"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                        <FormLabel>Customer</FormLabel>
+                        <Combobox
+                            options={customerOptions}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select an existing customer..."
+                            searchPlaceholder="Search customers..."
+                            emptyPlaceholder="No customer found. Type to add a new one."
+                        />
+                        <FormMessage />
+                    </FormItem>
+                )}
             />
-             <FormField
-              control={form.control}
-              name="customerMobile"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Customer Mobile Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter customer's mobile" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {isNewCustomer && (
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                    control={form.control}
+                    name="customerName"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>New Customer Name</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter full name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name="customerMobile"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>New Customer Mobile</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Enter mobile" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
+            )}
             <FormField
               control={form.control}
               name="cropTypeId"
