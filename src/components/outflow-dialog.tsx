@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useCollection } from "@/firebase";
+import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import type { CropBatch, CropType, AreaAllocation, StorageLocation } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
@@ -36,10 +36,11 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     const [amountPaid, setAmountPaid] = useState(0);
     
-    const locationsQuery = useCollection<StorageLocation>(
+    const locationsQueryRef = useMemoFirebase(() => 
         user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null
-    );
-    const location = locationsQuery.data?.find(l => l.id === batch?.storageLocationId);
+    , [firestore, user]);
+    const { data: locations } = useCollection<StorageLocation>(locationsQueryRef);
+    const location = locations?.find(l => l.id === batch?.storageLocationId);
 
     const totalQuantity = useMemo(() => {
         if (!batch) return 0;
@@ -132,7 +133,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             return;
         }
         
-        if (finalBill <= 0) {
+        if (finalBill <= 0 && withdrawQuantity <= 0) {
             toast({
                 variant: "destructive",
                 title: "No Bill",
@@ -148,7 +149,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
 
         const balanceDue = finalBill - amountPaid;
 
-        const customer = await (await fetch(`/api/customers/${batch.customerId}`)).json();
+        const customer = batch.customerName;
 
         const invoiceData: InvoiceData = {
           type: 'Outflow',
@@ -156,7 +157,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
           date: new Date(),
           customer: {
             name: batch.customerName,
-            mobile: customer?.mobileNumber || 'N/A',
+            mobile: 'N/A', // Customer mobile is not directly on batch, would need another query
           },
           user: {
             name: user.displayName || 'N/A',
@@ -227,10 +228,15 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 }
             }
             
-            // If only paying for labor, determine the remaining labor charge.
-            let remainingLabourCharge = batch.labourCharge || 0;
-            if (withdrawQuantity === 0 && storageCost === 0) {
-                 remainingLabourCharge = Math.max(0, (batch.labourCharge || 0) - amountPaid);
+            // If paying for labor, determine the remaining labor charge.
+            const totalBillForLaborOnly = batch.labourCharge || 0;
+            const amountPaidForLabor = Math.min(amountPaid, totalBillForLaborOnly);
+            let remainingLabourCharge = Math.max(0, (batch.labourCharge || 0) - amountPaidForLabor);
+            
+            // if storage cost was also paid, remaining labour charge should be 0 if covered
+            if(storageCost > 0 && amountPaid > storageCost) {
+                const remainingPayment = amountPaid - storageCost;
+                remainingLabourCharge = Math.max(0, (batch.labourCharge || 0) - remainingPayment);
             }
 
 
@@ -361,7 +367,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
           <Button 
             onClick={handleOutflow} 
-            disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || finalBill <= 0} 
+            disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || (finalBill <= 0 && withdrawQuantity <= 0)} 
             className="bg-primary hover:bg-primary/90"
           >
              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -372,5 +378,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     </Dialog>
   );
 }
-
-    
