@@ -41,6 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { logAction } from "@/lib/actions";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),
@@ -208,6 +209,11 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             ownerId: user.uid
         };
         addDocumentNonBlocking(newCustomerRef, finalCustomer);
+        await logAction("CREATE_CUSTOMER", {
+            entityType: "Customer",
+            entityId: finalCustomer.id,
+            details: `Created new customer while adding batch: ${finalCustomer.name}`
+        });
     } else {
         const existingCustomer = customers.find(c => c.id === values.customerId);
         if (!existingCustomer) {
@@ -232,6 +238,13 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     };
     
     addDocumentNonBlocking(newDocRef, newBatch);
+    
+    await logAction("CREATE_BATCH", {
+        entityType: "CropBatch",
+        entityId: newBatch.id,
+        details: `Added ${totalQuantity} bags of ${selectedCropType.name} for ${finalCustomer.name}`
+    });
+
     const fullBatch = { ...newBatch, quantity: totalQuantity, cropType: selectedCropType };
 
     toast({
@@ -504,5 +517,3 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
-
-    

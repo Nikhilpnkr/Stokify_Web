@@ -20,6 +20,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { generatePaymentReceiptPdf } from "@/lib/pdf";
+import { logAction } from "@/lib/actions";
 
 
 type PayDuesDialogProps = {
@@ -92,6 +93,12 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             balanceDue: newBalanceDue,
         };
         updateDocumentNonBlocking(outflowRef, updatedOutflowData);
+
+        await logAction("CREATE_PAYMENT", {
+            entityType: "Payment",
+            entityId: newPayment.id,
+            details: `Paid ₹${amountToPay} for outflow ${outflow.id}`
+        });
 
         const updatedOutflow = { ...outflow, ...updatedOutflowData };
 
@@ -199,5 +206,3 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     </Dialog>
   );
 }
-
-    

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
+import { logAction } from "@/lib/actions";
 
 const formSchema = z.object({
   name: z.string().min(2, "Area name must be at least 2 characters."),
@@ -50,7 +51,7 @@ export function AddAreaDialog({ isOpen, setIsOpen, locationId }: AddAreaDialogPr
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !locationId) {
       toast({
         variant: "destructive",
@@ -72,6 +73,12 @@ export function AddAreaDialog({ isOpen, setIsOpen, locationId }: AddAreaDialogPr
     };
 
     setDocumentNonBlocking(newDocRef, newArea, { merge: false });
+    
+    await logAction("CREATE_AREA", {
+        entityType: "StorageArea",
+        entityId: newArea.id,
+        details: `Created area "${newArea.name}" in location ${locationId}`
+    });
     
     toast({
         title: "Success!",

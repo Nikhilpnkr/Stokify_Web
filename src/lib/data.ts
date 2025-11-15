@@ -112,6 +112,16 @@ export interface PaymentReceiptData {
   newBalance: number;
 }
 
+export type AuditLog = {
+    id: string;
+    ownerId: string;
+    date: string;
+    action: string;
+    entityType: string;
+    entityId: string;
+    details: string;
+};
+
 
 // This can now be used as a default or fallback.
 export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {

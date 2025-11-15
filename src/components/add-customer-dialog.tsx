@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
 import type { Customer } from "@/lib/data";
+import { logAction } from "@/lib/actions";
 
 type AddCustomerDialogProps = {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddC
         },
     });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user || !firestore) {
       toast({
         variant: "destructive",
@@ -74,6 +75,12 @@ export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddC
 
     addDocumentNonBlocking(newDocRef, newCustomer);
     
+    await logAction("CREATE_CUSTOMER", {
+        entityType: "Customer",
+        entityId: newCustomer.id,
+        details: `Created new customer: ${newCustomer.name}`
+    });
+
     toast({
         title: "Success!",
         description: `Customer "${values.name}" has been added.`,

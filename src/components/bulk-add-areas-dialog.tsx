@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser } from "@/firebase";
 import { collection, doc, writeBatch } from "firebase/firestore";
 import { Loader2 } from "lucide-react";
+import { logAction } from "@/lib/actions";
 
 const formSchema = z.object({
   prefixes: z.string().min(1, "Please enter at least one prefix."),
@@ -88,6 +89,12 @@ export function BulkAddAreasDialog({ isOpen, setIsOpen, locationId }: BulkAddAre
         
         await batch.commit();
         
+        await logAction("BULK_CREATE_AREAS", {
+            entityType: "StorageArea",
+            entityId: locationId,
+            details: `Bulk created ${areaCount} areas in location ${locationId}`
+        });
+
         toast({
             title: "Success!",
             description: `${areaCount} new areas have been created in a batch.`,
