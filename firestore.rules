@@ -8,52 +8,60 @@ service cloud.firestore {
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    
+    function isManagerOrAdmin() {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userRole == 'admin' || userRole == 'manager';
+    }
 
     // Rule for user profiles
     match /users/{userId} {
-      // Admins can read/write any profile.
-      // Regular users can only read/write their own profile.
-      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+      // Admins can read/write any profile to change roles.
+      allow write: if isAdmin();
+      // Admins and Managers can list all users.
+      allow list: if isManagerOrAdmin();
+      // Users can only read their own profile, but admins can read any.
+      allow get: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
     
     // Rule for storageLocations and their subcollections
     match /storageLocations/{locationId} {
-        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
-        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || request.auth.uid != null;
+        allow get, update, delete: if isManagerOrAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isManagerOrAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isManagerOrAdmin() || request.auth.uid != null;
 
         // Rules for the 'areas' subcollection
         match /areas/{areaId} {
-           allow read, write: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
+           allow read, write: if isManagerOrAdmin() || (request.auth != null && get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
         }
     }
     
     // Rule for cropBatches
     match /cropBatches/{batchId} {
-        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
-        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || request.auth.uid != null;
+        allow get, update, delete: if isManagerOrAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isManagerOrAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isManagerOrAdmin() || request.auth.uid != null;
     }
 
     // Rule for outflows
     match /outflows/{outflowId} {
-        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
-        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || request.auth.uid != null;
+        allow get, update, delete: if isManagerOrAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isManagerOrAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isManagerOrAdmin() || request.auth.uid != null;
     }
     
     // Rule for cropTypes
     match /cropTypes/{cropTypeId} {
-        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
-        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || request.auth.uid != null;
+        allow get, update, delete: if isManagerOrAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isManagerOrAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isManagerOrAdmin() || request.auth.uid != null;
     }
 
     // Rule for customers
     match /customers/{customerId} {
-        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
-        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || request.auth.uid != null;
+        allow get, update, delete: if isManagerOrAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isManagerOrAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isManagerOrAdmin() || request.auth.uid != null;
     }
   }
 }

@@ -169,7 +169,7 @@
         "role": {
           "type": "string",
           "description": "The user's role in the system.",
-          "enum": ["user", "admin"]
+          "enum": ["admin", "manager", "assistant", "user"]
         }
       },
       "required": [

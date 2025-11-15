@@ -30,6 +30,7 @@ import {
   Wheat,
   Settings,
   Receipt,
+  UserCog,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -42,8 +43,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useDoc, useMemoFirebase, useFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
+import type { UserProfile } from "@/lib/data";
+import { doc } from "firebase/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Inventory", icon: LayoutDashboard },
@@ -52,8 +55,15 @@ const navItems = [
   { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
+
+const adminNavItems = [
+    { href: "/dashboard/users", label: "User Management", icon: UserCog },
+];
+
+const bottomNavItems = [
+    { href: "/dashboard/settings", label: "Settings", icon: Settings },
+]
 
 function UserNav() {
   const auth = useAuth();
@@ -115,7 +125,12 @@ function UserNav() {
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading, firestore } = useFirebase();
+
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   // While checking for user auth, show a full-screen loader.
   if (isUserLoading) {
@@ -161,9 +176,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {userProfile?.role === 'admin' && adminNavItems.map((item) => (
+                 <SidebarMenuItem key={item.label}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(item.href)}
+                  >
+                    <Link href={item.href}>
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
+            <SidebarMenu>
+                {bottomNavItems.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                    <SidebarMenuButton
+                        asChild
+                        isActive={pathname.startsWith(item.href)}
+                    >
+                        <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                        </Link>
+                    </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
             {user && (
               <div className="flex items-center gap-3 p-2">
                 <Avatar>

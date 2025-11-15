@@ -35,12 +35,14 @@ export type StorageArea = {
   ownerId: string;
 };
 
+export type UserRole = 'admin' | 'manager' | 'assistant' | 'user';
+
 export type UserProfile = {
   uid: string;
   displayName: string;
   email: string;
   mobileNumber?: string;
-  role: 'user' | 'admin';
+  role: UserRole;
 };
 
 export type CropType = {
