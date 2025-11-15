@@ -127,7 +127,7 @@ export default function InventoryPage() {
   
   const handleDownloadInflowReceipt = (batch: (typeof batches)[0]) => {
     if (batch.customer && batch.location && batch.cropType) {
-      generateInflowPdf(batch, batch.customer, batch.location, allAreas);
+      generateInflowPdf(batch as (CropBatch & { cropType: CropType }), batch.customer, batch.location, allAreas);
     } else {
       toast({
         variant: "destructive",
