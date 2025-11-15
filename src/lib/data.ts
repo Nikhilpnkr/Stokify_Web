@@ -74,7 +74,10 @@ export type Outflow = {
   totalBill: number;
   amountPaid: number;
   balanceDue: number;
-  // Add fields to reconstruct invoice
+  // Denormalized fields for robust reporting
+  cropTypeName: string;
+  locationName: string;
+  // Fields to reconstruct invoice
   storageDuration: number;
   storageCost: number;
   labourCharge: number;

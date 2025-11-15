@@ -150,6 +150,8 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             totalBill: finalBill,
             amountPaid: amountPaid,
             balanceDue: balanceDue,
+            cropTypeName: cropType.name,
+            locationName: location.name,
             storageDuration: totalMonths,
             storageCost: storageCost,
             labourCharge: batch.labourCharge || 0,

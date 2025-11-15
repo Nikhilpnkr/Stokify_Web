@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, FileDown, Calendar, User, Wheat, ShoppingBag, Banknote, FileText, Search } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { Outflow, Customer, CropBatch, StorageLocation, CropType, StorageArea } from "@/lib/data";
+import type { Outflow, Customer, StorageLocation, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { generateInvoicePdf } from "@/lib/pdf";
@@ -33,12 +33,6 @@ export default function TransactionsPage() {
     [firestore, user]
   );
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
-  
-  const batchesQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -78,31 +72,29 @@ export default function TransactionsPage() {
     if(locations) fetchAllAreas();
   }, [locations, firestore]);
   
-  const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
-  
   const enrichedOutflows = useMemo(() => {
-    if (!unsortedOutflows || !customers || !batches || !locations || !cropTypes) return [];
+    if (!unsortedOutflows || !customers || !locations || !cropTypes) return [];
 
     return unsortedOutflows.map(outflow => {
-        const batch = batches.find(b => b.id === outflow.cropBatchId);
         const customer = customers.find(c => c.id === outflow.customerId);
-        const location = locations.find(l => l.id === batch?.storageLocationId);
-        const cropType = cropTypes.find(ct => ct.name === batch?.cropType);
+        // Use the denormalized locationName to find the location object
+        const location = locations.find(l => l.name === outflow.locationName);
+        // Use the denormalized cropTypeName to find the cropType object
+        const cropType = cropTypes.find(ct => ct.name === outflow.cropTypeName);
 
         return {
             ...outflow,
             customerName: customer?.name || 'N/A',
-            cropTypeName: batch?.cropType || 'N/A',
-            customer,
-            location,
-            cropType,
+            customer, // include the full customer object
+            location, // include the full location object
+            cropType, // include the full cropType object
         };
     }).filter(outflow => {
       const search = searchTerm.toLowerCase();
       return outflow.customerName.toLowerCase().includes(search) || outflow.cropTypeName.toLowerCase().includes(search);
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  }, [unsortedOutflows, customers, batches, locations, cropTypes, searchTerm]);
+  }, [unsortedOutflows, customers, locations, cropTypes, searchTerm]);
 
 
   const handlePayDuesClick = (outflow: Outflow) => {
@@ -110,7 +102,7 @@ export default function TransactionsPage() {
     setIsPayDuesOpen(true);
   }
 
-  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
 
   return (
     <>
@@ -258,5 +250,3 @@ export default function TransactionsPage() {
     </>
   );
 }
-
-    
