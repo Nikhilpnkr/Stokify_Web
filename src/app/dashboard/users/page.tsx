@@ -31,13 +31,22 @@ export default function UserManagementPage() {
   const { data: currentUserProfile, isLoading: isLoadingCurrentUser } = useDoc<UserProfile>(currentUserProfileRef);
 
   const usersQuery = useMemoFirebase(() => 
-    currentUserProfile?.role === 'admin' ? query(collection(firestore, 'users')) : query(collection(firestore, 'users')),
-    [firestore, currentUserProfile]
+    query(collection(firestore, 'users')),
+    [firestore]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     if (!firestore) return;
+    if (currentUserProfile?.role !== 'admin' && userId !== user?.uid) {
+        toast({
+            variant: "destructive",
+            title: "Permission Denied",
+            description: "Only admins can change the roles of other users.",
+        });
+        return;
+    }
+
     const userRef = doc(firestore, "users", userId);
     updateDocumentNonBlocking(userRef, { role: newRole });
     toast({
@@ -47,16 +56,6 @@ export default function UserManagementPage() {
   };
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
-
-  // Temporarily disabled security check
-  // if (!isLoading && currentUserProfile?.role !== 'admin') {
-  //     toast({
-  //       variant: 'destructive',
-  //       title: 'Access Denied',
-  //       description: 'You do not have permission to view this page.'
-  //     });
-  //     return redirect('/dashboard');
-  // }
 
   const roles: UserRole[] = ['admin', 'manager', 'assistant', 'user'];
 
