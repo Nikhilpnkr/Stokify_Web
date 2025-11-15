@@ -227,6 +227,7 @@ export default function CustomerDetailPage() {
             batch={selectedBatch}
             cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
             locations={locations || []}
+            allAreas={allAreas}
         />
       )}
     </>

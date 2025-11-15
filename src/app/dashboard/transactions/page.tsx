@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, FileDown, Calendar, User, Wheat, ShoppingBag, Banknote, FileText, Search } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import type { Outflow, Customer, CropBatch, StorageLocation, CropType } from "@/lib/data";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { Outflow, Customer, CropBatch, StorageLocation, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { generateInvoicePdf } from "@/lib/pdf";
@@ -52,6 +52,31 @@ export default function TransactionsPage() {
   );
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
+  const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
+
+  // Fetch all areas from all locations
+  useEffect(() => {
+    async function fetchAllAreas() {
+      if (!locations || locations.length === 0 || !firestore) {
+        setAllAreas([]);
+        setIsLoadingAreas(false);
+        return;
+      };
+      setIsLoadingAreas(true);
+      const areas: StorageArea[] = [];
+      for (const location of locations) {
+        const areasColRef = collection(firestore, 'storageLocations', location.id, 'areas');
+        const areasSnapshot = await getDocs(areasColRef);
+        areasSnapshot.forEach(doc => {
+          areas.push({ id: doc.id, ...doc.data() } as StorageArea);
+        });
+      }
+      setAllAreas(areas);
+      setIsLoadingAreas(false);
+    }
+    if(locations) fetchAllAreas();
+  }, [locations, firestore]);
   
   const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
   
@@ -85,7 +110,7 @@ export default function TransactionsPage() {
     setIsPayDuesOpen(true);
   }
 
-  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches || isLoadingLocations || isLoadingCropTypes;
+  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
 
   return (
     <>
@@ -145,7 +170,7 @@ export default function TransactionsPage() {
                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(new Date(outflow.date), "MMM d, yyyy")}</span></div>
                             </CardContent>
                              <CardFooter className="flex flex-col items-stretch gap-2">
-                                <Button variant="outline" size="sm" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType)} title="Download Outflow Invoice" className="w-full" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
+                                <Button variant="outline" size="sm" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType, allAreas)} title="Download Outflow Invoice" className="w-full" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
                                     <FileDown className="h-4 w-4 mr-2" />
                                     Download Invoice
                                 </Button>
@@ -205,7 +230,7 @@ export default function TransactionsPage() {
                                           Pay
                                       </Button>
                                     )}
-                                    <Button variant="ghost" size="icon" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType)} title="Download Outflow Invoice" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
+                                    <Button variant="ghost" size="icon" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType, allAreas)} title="Download Outflow Invoice" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
                                         <FileDown className="h-5 w-5" />
                                         <span className="sr-only">Download Outflow Invoice</span>
                                     </Button>

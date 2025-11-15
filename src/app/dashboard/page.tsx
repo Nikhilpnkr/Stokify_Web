@@ -103,10 +103,12 @@ export default function InventoryPage() {
       const outflow = outflows.find(o => o.cropBatchId === batch.id);
       const customer = customers.find(c => c.id === batch.customerId);
       const location = locations.find(l => l.id === batch.storageLocationId);
+      const cropType = cropTypes.find(ct => ct.name === batch.cropType);
       
       return {
         ...batch,
-        cropTypeName: batch.cropType, // Keep the original string name
+        cropTypeName: batch.cropType,
+        cropType: cropType,
         quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
         outflow,
         customer,
@@ -127,7 +129,7 @@ export default function InventoryPage() {
   
   const handleDownloadInflowReceipt = (batch: (typeof batches)[0]) => {
     if (batch.customer && batch.location) {
-      generateInflowPdf(batch, batch.customer, batch.location);
+      generateInflowPdf(batch, batch.customer, batch.location, allAreas);
     } else {
       toast({
         variant: "destructive",
@@ -327,6 +329,7 @@ export default function InventoryPage() {
             batch={selectedBatch}
             cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
             locations={locations || []}
+            allAreas={allAreas}
         />
       )}
     </>
@@ -340,11 +343,3 @@ function toDate(dateValue: any): Date {
     }
     return new Date(dateValue);
 }
-
-    
-
-    
-
-    
-
-    

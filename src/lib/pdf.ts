@@ -5,7 +5,7 @@ import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
 import { PaymentReceipt } from "@/components/payment-receipt";
-import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData, CropBatch } from "./data";
+import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData, CropBatch, StorageArea } from "./data";
 import { getAuth } from "firebase/auth";
 
 function toDate(dateValue: any): Date {
@@ -16,18 +16,21 @@ function toDate(dateValue: any): Date {
     return new Date(dateValue);
 }
 
-export async function generateInflowPdf(batch: CropBatch, customer: Customer, location: StorageLocation) {
+export async function generateInflowPdf(batch: CropBatch, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
   if (!user) {
     console.error("User not authenticated");
     return;
   }
+  
+  const getAreaName = (areaId: string) => allAreas.find(a => a.id === areaId)?.name || areaId;
 
   const invoiceData: InvoiceData = {
     type: 'Inflow',
-    receiptNumber: batch.id.slice(0, 8).toUpperCase(),
+    receiptNumber: `IN${format(new Date(), 'yyyyMMdd')}${batch.id.slice(0, 4).toUpperCase()}`,
     date: toDate(batch.dateAdded),
+    paymentMethod: 'Pending',
     customer: {
       name: customer.name,
       mobile: customer.mobileNumber,
@@ -36,14 +39,17 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
       name: user.displayName || 'N/A',
       email: user.email || 'N/A'
     },
-    items: [{
-      description: `Initial deposit of ${batch.cropType}`,
-      quantity: batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0),
-      unit: 'bags',
-    }],
+    items: batch.areaAllocations.map(alloc => ({
+        description: `Warehouse Products or Services (${batch.cropType})`,
+        quantity: alloc.quantity,
+        unit: 'bags',
+        storageArea: getAreaName(alloc.areaId),
+        total: (batch.labourCharge || 0) * (alloc.quantity / batch.quantity), // Distribute labour charge pro-rata
+    })),
     location: location,
     labourCharge: batch.labourCharge,
-    notes: `This receipt confirms the inflow of ${batch.cropType}.`,
+    total: batch.labourCharge,
+    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${batch.cropType}.`,
   };
 
   const invoiceElement = document.createElement("div");
@@ -80,19 +86,19 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
   }
 }
 
-export async function generateInvoicePdf(outflow: Outflow, customer: Customer, location: StorageLocation, cropType: CropType) {
+export async function generateInvoicePdf(outflow: Outflow, customer: Customer, location: StorageLocation, cropType: CropType, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
   if (!user) {
     console.error("User not authenticated");
     return;
   }
-
-  // Dynamically construct the InvoiceData from the live Outflow object
+  
   const invoiceData: InvoiceData = {
     type: 'Outflow',
-    receiptNumber: outflow.id.slice(0, 8).toUpperCase(),
+    receiptNumber: `OUT${format(new Date(outflow.date), 'yyyyMMdd')}${outflow.id.slice(0, 4).toUpperCase()}`,
     date: toDate(outflow.date),
+    paymentMethod: outflow.balanceDue > 0 ? 'Pending' : 'Paid',
     customer: {
       name: customer.name,
       mobile: customer.mobileNumber,
@@ -102,9 +108,10 @@ export async function generateInvoicePdf(outflow: Outflow, customer: Customer, l
       email: user.email || 'N/A'
     },
     items: [{
-      description: `Storage for ${cropType.name} (${outflow.storageDuration} months)`,
+      description: `Storage for ${cropType.name}`,
       quantity: outflow.quantityWithdrawn,
       unit: 'bags',
+      storageArea: 'Multiple',
       unitPrice: outflow.quantityWithdrawn > 0 ? outflow.storageCost / outflow.quantityWithdrawn : 0,
       total: outflow.storageCost,
     }],

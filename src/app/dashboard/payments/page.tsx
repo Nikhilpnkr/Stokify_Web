@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Search, CreditCard, Calendar, User, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import type { Payment, Customer, Outflow, StorageLocation, CropBatch, CropType } from "@/lib/data";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { Payment, Customer, Outflow, StorageLocation, CropBatch, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,32 @@ export default function PaymentsPage() {
   );
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
+  const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
+
+  // Fetch all areas from all locations
+  useEffect(() => {
+    async function fetchAllAreas() {
+      if (!locations || locations.length === 0 || !firestore) {
+        setAllAreas([]);
+        setIsLoadingAreas(false);
+        return;
+      };
+      setIsLoadingAreas(true);
+      const areas: StorageArea[] = [];
+      for (const location of locations) {
+        const areasColRef = collection(firestore, 'storageLocations', location.id, 'areas');
+        const areasSnapshot = await getDocs(areasColRef);
+        areasSnapshot.forEach(doc => {
+          areas.push({ id: doc.id, ...doc.data() } as StorageArea);
+        });
+      }
+      setAllAreas(areas);
+      setIsLoadingAreas(false);
+    }
+    if(locations) fetchAllAreas();
+  }, [locations, firestore]);
+
   const enrichedPayments = useMemo(() => {
     if (!unsortedPayments || !outflows || !customers || !batches || !locations || !cropTypes) return [];
 
@@ -81,7 +107,7 @@ export default function PaymentsPage() {
   }, [unsortedPayments, outflows, customers, batches, locations, cropTypes, searchTerm]);
 
 
-  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingBatches || isLoadingLocations || isLoadingCropTypes;
+  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
 
   return (
     <>
@@ -140,7 +166,7 @@ export default function PaymentsPage() {
                               <Button variant="outline" size="sm" className="w-full" onClick={() => payment.outflow && payment.customer && generatePaymentReceiptPdf(payment, payment.outflow, payment.customer)} disabled={!payment.outflow || !payment.customer}>
                                   <FileDown className="mr-2 h-4 w-4" /> Download Receipt
                               </Button>
-                              <Button variant="secondary" size="sm" className="w-full" onClick={() => payment.outflow && payment.customer && payment.location && payment.cropType && generateInvoicePdf(payment.outflow, payment.customer, payment.location, payment.cropType)} disabled={!payment.outflow || !payment.customer || !payment.location || !payment.cropType}>
+                              <Button variant="secondary" size="sm" className="w-full" onClick={() => payment.outflow && payment.customer && payment.location && payment.cropType && generateInvoicePdf(payment.outflow, payment.customer, payment.location, payment.cropType, allAreas)} disabled={!payment.outflow || !payment.customer || !payment.location || !payment.cropType}>
                                   <FileDown className="mr-2 h-4 w-4" /> Download Invoice
                               </Button>
                           </CardFooter>
@@ -184,7 +210,7 @@ export default function PaymentsPage() {
                                               <FileDown className="h-5 w-5" />
                                               <span className="sr-only">Download Receipt</span>
                                           </Button>
-                                          <Button variant="ghost" size="icon" onClick={() => payment.outflow && payment.customer && payment.location && payment.cropType && generateInvoicePdf(payment.outflow, payment.customer, payment.location, payment.cropType)} title="Download Outflow Invoice" disabled={!payment.outflow || !payment.customer || !payment.location || !payment.cropType}>
+                                          <Button variant="ghost" size="icon" onClick={() => payment.outflow && payment.customer && payment.location && payment.cropType && generateInvoicePdf(payment.outflow, payment.customer, payment.location, payment.cropType, allAreas)} title="Download Outflow Invoice" disabled={!payment.outflow || !payment.customer || !payment.location || !payment.cropType}>
                                               <FileDown className="h-5 w-5 text-muted-foreground" />
                                               <span className="sr-only">Download Invoice</span>
                                           </Button>

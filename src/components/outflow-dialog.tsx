@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow } from "@/lib/data";
+import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow, StorageArea } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
@@ -27,9 +27,10 @@ type OutflowDialogProps = {
   batch: CropBatch | null;
   cropType: CropType | undefined;
   locations: StorageLocation[];
+  allAreas: StorageArea[];
 };
 
-export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }: OutflowDialogProps) {
+export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, allAreas }: OutflowDialogProps) {
     const { toast } = useToast();
     const { firestore, user } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -173,7 +174,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
             toast({
                 title: "Full Outflow Successful!",
                 description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType)}>Download PDF</Button>,
+                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
                 duration: 10000,
             });
         } else {
@@ -214,14 +215,14 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
                 toast({
                     title: "Partial Outflow Successful!",
                     description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType)}>Download PDF</Button>,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
                     duration: 10000,
                 });
             } else {
                 toast({
                     title: "Bill Settled!",
                     description: `A bill for ${batch.customerName} was processed for ₹${finalBill.toLocaleString()}.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType)}>Download PDF</Button>,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
                     duration: 10000,
                 });
             }

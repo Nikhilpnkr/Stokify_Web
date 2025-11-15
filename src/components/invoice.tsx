@@ -1,7 +1,5 @@
 
-
 import { format } from 'date-fns';
-import { Leaf } from 'lucide-react';
 import React from 'react';
 import type { StorageLocation } from '@/lib/data';
 
@@ -9,62 +7,66 @@ import type { StorageLocation } from '@/lib/data';
 
 const styles = {
     container: {
-        fontFamily: 'Helvetica, Arial, sans-serif',
+        fontFamily: "'PT Sans', sans-serif",
         color: '#333',
         backgroundColor: '#ffffff',
         padding: '40px',
         width: '800px',
     },
     header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        borderBottom: '2px solid #1a2e05',
-        paddingBottom: '20px',
-        marginBottom: '40px',
-    },
-    headerLeft: {
-        display: 'flex',
-        alignItems: 'center',
+        marginBottom: '30px',
     },
     locationName: {
-        fontSize: '28px',
+        fontSize: '24px',
         fontWeight: 'bold',
-        color: '#1a2e05',
-    },
-    locationAddress: {
-        fontSize: '14px',
-        color: '#555',
-        marginTop: '4px',
-        maxWidth: '250px',
-    },
-    headerRight: {
-        textAlign: 'right',
+        color: '#2E8B57', // SeaGreen
+        margin: '0',
     },
     receiptTitle: {
-        fontSize: '32px',
+        fontSize: '36px',
         fontWeight: 'bold',
-        color: '#333',
+        color: '#2E8B57',
+        margin: '0 0 20px 0',
     },
-    receiptNumber: {
-        fontSize: '14px',
-        color: '#555',
+    metaSection: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        borderTop: '1px solid #ccc',
+        borderBottom: '1px solid #ccc',
+        padding: '10px 0',
+        marginBottom: '30px',
+        fontSize: '12px'
+    },
+    metaItem: {
+        display: 'flex',
+        flexDirection: 'column',
+    } as React.CSSProperties,
+    metaLabel: {
+        color: '#666',
+        marginBottom: '4px',
+    },
+    metaValue: {
+        fontWeight: 'bold',
     },
     detailsSection: {
         display: 'flex',
         justifyContent: 'space-between',
-        marginBottom: '40px',
+        gap: '20px',
+        marginBottom: '30px',
     },
-    detailsColumn: {
+    detailsBox: {
         width: '48%',
+        border: '1px solid #ccc',
+        padding: '15px',
+        borderRadius: '5px',
     },
     detailsTitle: {
         fontSize: '12px',
         fontWeight: 'bold',
-        color: '#666',
-        marginBottom: '10px',
+        color: '#2E8B57',
+        marginBottom: '8px',
         textTransform: 'uppercase',
-        letterSpacing: '1px',
+        letterSpacing: '0.5px',
     },
     detailItem: {
         fontSize: '14px',
@@ -76,14 +78,13 @@ const styles = {
         marginBottom: '30px',
     } as React.CSSProperties,
     th: {
-        backgroundColor: '#f9f9f9',
-        borderBottom: '2px solid #eee',
+        backgroundColor: 'rgba(46, 139, 87, 0.1)', // Light green
         padding: '12px 15px',
         textAlign: 'left',
         fontSize: '12px',
         fontWeight: 'bold',
         textTransform: 'uppercase',
-        color: '#555'
+        color: '#2E8B57',
     } as React.CSSProperties,
     td: {
         borderBottom: '1px solid #eee',
@@ -103,16 +104,17 @@ const styles = {
     summaryRow: {
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '10px 0',
+        padding: '8px 0',
         fontSize: '14px',
     },
     summaryTotal: {
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '15px 0',
+        padding: '12px 0',
         fontSize: '20px',
         fontWeight: 'bold',
-        borderTop: '2px solid #333',
+        color: '#2E8B57',
+        borderTop: '2px solid #2E8B57',
         marginTop: '10px',
     },
     summaryBalanceDue: {
@@ -136,10 +138,19 @@ const styles = {
     },
 };
 
+export interface InvoiceItem {
+    description: string;
+    quantity: number;
+    unit: string;
+    storageArea?: string;
+    unitPrice?: number;
+    total?: number;
+}
 export interface InvoiceData {
     type: 'Inflow' | 'Outflow';
     receiptNumber: string;
     date: Date;
+    paymentMethod: string;
     customer: {
         name: string;
         mobile: string;
@@ -148,13 +159,7 @@ export interface InvoiceData {
         name: string;
         email: string;
     }
-    items: {
-        description: string;
-        quantity: number;
-        unit: string;
-        unitPrice?: number;
-        total?: number;
-    }[];
+    items: InvoiceItem[];
     location: StorageLocation;
     labourCharge?: number;
     subTotal?: number;
@@ -171,7 +176,6 @@ interface InvoiceProps {
 
 export function Invoice({ data }: InvoiceProps) {
     const isOutflow = data.type === 'Outflow';
-    const isChargeable = isOutflow || (data.labourCharge && data.labourCharge > 0);
     
     let subTotal = data.subTotal || 0;
     if (!isOutflow && data.labourCharge) {
@@ -187,29 +191,34 @@ export function Invoice({ data }: InvoiceProps) {
     return (
         <div style={styles.container}>
             <header style={styles.header}>
-                <div style={styles.headerLeft}>
-                     <div>
-                        <h1 style={styles.locationName}>{data.location.name}</h1>
-                        <p style={styles.locationAddress}>{data.location.address}</p>
-                    </div>
-                </div>
-                <div style={styles.headerRight}>
-                    <h2 style={styles.receiptTitle}>{data.type === 'Inflow' ? 'Inflow Receipt' : 'Outflow Invoice'}</h2>
-                    <p style={styles.receiptNumber}># {data.receiptNumber}</p>
-                    <p style={styles.receiptNumber}>Date: {format(data.date, "MMM d, yyyy")}</p>
-                </div>
+                <h1 style={styles.locationName}>{data.location.name}</h1>
+                <h2 style={styles.receiptTitle}>{data.type === 'Inflow' ? 'Delivery Warehouse Receipt' : 'Outflow Invoice'}</h2>
             </header>
 
+            <section style={styles.metaSection}>
+                <div style={styles.metaItem}>
+                    <span style={styles.metaLabel}>Receipt Number</span>
+                    <span style={styles.metaValue}>{data.receiptNumber}</span>
+                </div>
+                 <div style={styles.metaItem}>
+                    <span style={styles.metaLabel}>Receipt Date</span>
+                    <span style={styles.metaValue}>{format(data.date, "yyyy-MM-dd HH:mm")}</span>
+                </div>
+                 <div style={styles.metaItem}>
+                    <span style={styles.metaLabel}>Payment Method</span>
+                    <span style={styles.metaValue}>{data.paymentMethod}</span>
+                </div>
+            </section>
+
             <section style={styles.detailsSection}>
-                <div style={styles.detailsColumn}>
-                    <h3 style={styles.detailsTitle}>Billed To</h3>
+                <div style={styles.detailsBox}>
+                    <h3 style={styles.detailsTitle}>Customer</h3>
                     <p style={styles.detailItem}><strong>{data.customer.name}</strong></p>
                     <p style={styles.detailItem}>{data.customer.mobile}</p>
                 </div>
-                <div style={styles.detailsColumn}>
-                    <h3 style={styles.detailsTitle}>From</h3>
-                    <p style={styles.detailItem}><strong>{data.location.name}</strong></p>
-                    <p style={styles.detailItem}>Processed by: {data.user.name}</p>
+                <div style={styles.detailsBox}>
+                    <h3 style={styles.detailsTitle}>Owner</h3>
+                    <p style={styles.detailItem}>{data.user.name}</p>
                 </div>
             </section>
 
@@ -217,28 +226,28 @@ export function Invoice({ data }: InvoiceProps) {
                 <table style={styles.table}>
                     <thead>
                         <tr>
+                            <th style={styles.th}>QTY</th>
                             <th style={styles.th}>Description</th>
-                            <th style={{...styles.th, ...styles.textRight}}>Quantity</th>
-                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Unit Price</th>}
-                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Total</th>}
+                             <th style={styles.th}>Storage Area</th>
+                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Rent Per Bag</th>}
+                            <th style={{...styles.th, ...styles.textRight}}>Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         {data.items.map((item, index) => (
                             <tr key={index}>
-                                <td style={styles.td}>
-                                    {item.description}
-                                </td>
-                                <td style={{...styles.td, ...styles.textRight}}>{item.quantity.toLocaleString()} {item.unit}</td>
+                                <td style={styles.td}>{item.quantity.toLocaleString()}</td>
+                                <td style={styles.td}>{item.description}</td>
+                                <td style={styles.td}>{item.storageArea || 'N/A'}</td>
                                 {isOutflow && <td style={{...styles.td, ...styles.textRight}}>₹{item.unitPrice?.toFixed(2) || '0.00'}</td>}
-                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>₹{item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>}
+                                <td style={{...styles.td, ...styles.textRight}}>₹{item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </section>
             
-            {isChargeable && (
+            {(isOutflow || data.labourCharge) && (
                 <section style={styles.summarySection}>
                     <div style={styles.summaryContainer}>
                         {isOutflow && (
@@ -253,23 +262,19 @@ export function Invoice({ data }: InvoiceProps) {
                              <span>₹{data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                            </div>
                          ) : null}
-                         {isOutflow && 
-                            <div style={styles.summaryRow}>
-                                <span>Taxes</span>
-                                <span>₹0.00</span>
-                            </div>
-                         }
+                        
                         <div style={styles.summaryTotal}>
                             <span>Total</span>
                             <span>₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
+
                         {isOutflow && (
                             <>
                                 <div style={styles.summaryRow}>
                                     <span>Amount Paid</span>
                                     <span>₹{(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
-                                {data.balanceDue && data.balanceDue > 0 ? (
+                                {data.balanceDue !== undefined && data.balanceDue > 0 ? (
                                     <div style={styles.summaryBalanceDue}>
                                         <span>Balance Due</span>
                                         <span>₹{data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -296,5 +301,3 @@ export function Invoice({ data }: InvoiceProps) {
         </div>
     );
 }
-
-    
