@@ -31,19 +31,25 @@ export default function UserManagementPage() {
   );
   const { data: currentUserProfile, isLoading: isLoadingCurrentUser } = useDoc<UserProfile>(currentUserProfileRef);
 
+  // Query all users. Security rules will enforce that only admins can do this.
   const usersQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'users'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
+    firestore ? query(collection(firestore, 'users')) : null,
+    [firestore]
   );
   const { data: allUsers, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
   const users = useMemo(() => {
     if (!allUsers) return [];
-    return allUsers.filter(profile => 
-        profile.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        profile.email.toLowerCase().includes(searchTerm.toLowerCase())
+    // Exclude the current admin from the list
+    const otherUsers = allUsers.filter(profile => profile.uid !== user?.uid);
+    
+    if (!searchTerm) return otherUsers;
+
+    return otherUsers.filter(profile => 
+        (profile.displayName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (profile.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
-  }, [allUsers, searchTerm]);
+  }, [allUsers, searchTerm, user]);
 
 
   useEffect(() => {
@@ -91,7 +97,7 @@ export default function UserManagementPage() {
               <div>
                 <CardTitle>All Users</CardTitle>
                 <CardDescription>
-                    {users?.length || 0} users found that you manage.
+                    {users?.length || 0} other users found in the system.
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
@@ -194,7 +200,7 @@ export default function UserManagementPage() {
             </>
           ) : (
             <div className="h-48 flex justify-center items-center text-muted-foreground">
-              {searchTerm ? "No users match your search." : "No users found."}
+              {searchTerm ? "No users match your search." : "No other users found."}
             </div>
           )}
         </CardContent>
@@ -202,5 +208,3 @@ export default function UserManagementPage() {
     </>
   );
 }
-
-    

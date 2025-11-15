@@ -6,8 +6,8 @@ service cloud.firestore {
     // A user can read/write their own profile.
     match /users/{userId} {
       allow read, write: if request.auth.uid == userId;
-      // Users can only list other users they own (e.g. an admin creating other users)
-      allow list: if request.query.where.get('ownerId') == request.auth.uid;
+      // Admins can list all users.
+      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     // A user can only interact with locations they own.
