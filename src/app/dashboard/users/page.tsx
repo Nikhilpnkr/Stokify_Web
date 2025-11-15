@@ -38,11 +38,11 @@ export default function UserManagementPage() {
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     if (!firestore) return;
-    if (currentUserProfile?.role !== 'admin' && userId !== user?.uid) {
+    if (currentUserProfile?.role !== 'admin') {
         toast({
             variant: "destructive",
             title: "Permission Denied",
-            description: "Only admins can change the roles of other users.",
+            description: "Only admins can change user roles.",
         });
         return;
     }
@@ -56,6 +56,10 @@ export default function UserManagementPage() {
   };
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
+  
+  if (!isLoading && currentUserProfile?.role !== 'admin') {
+    redirect('/dashboard');
+  }
 
   const roles: UserRole[] = ['admin', 'manager', 'assistant', 'user'];
 
@@ -103,6 +107,7 @@ export default function UserManagementPage() {
                       <Select
                         defaultValue={profile.role}
                         onValueChange={(value: UserRole) => handleRoleChange(profile.uid, value)}
+                        disabled={profile.uid === user?.uid}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />

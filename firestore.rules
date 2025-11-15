@@ -22,8 +22,8 @@ service cloud.firestore {
       // Users can only read their own profile, but admins/managers can read any.
       allow get: if isManagerOrAdmin() || (request.auth != null && request.auth.uid == userId);
       
-      // Allow ANY authenticated user to LIST users. This is temporary to allow the first admin to be set.
-      allow list: if request.auth.uid != null;
+      // Only Admins can list all users.
+      allow list: if isAdmin();
     }
     
     // Rule for storageLocations and their subcollections
