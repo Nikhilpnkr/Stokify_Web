@@ -33,14 +33,12 @@ export default function TransactionsPage() {
   const outflowsWithCustomerData = useMemo(() => {
     if (!outflows || !customers) return [];
     
-    // Data is now sorted by the query
-    return outflows.map(outflow => {
-      const customer = customers.find(c => c.id === outflow.customerId);
-      return {
+    const customerMap = new Map(customers.map(c => [c.id, c.name]));
+
+    return outflows.map(outflow => ({
         ...outflow,
-        customerName: customer?.name || 'Unknown',
-      };
-    });
+        customerName: customerMap.get(outflow.customerId) || 'Unknown',
+      }));
   }, [outflows, customers]);
 
   const isLoading = isLoadingOutflows || isLoadingCustomers;
@@ -55,7 +53,7 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>All Outflows</CardTitle>
           <CardDescription>
-            {outflows?.length || 0} transactions found.
+            {isLoading ? 'Loading transactions...' : `${outflows?.length || 0} transactions found.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -94,10 +92,12 @@ export default function TransactionsPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(outflow.invoiceData)}>
-                        <FileDown className="h-5 w-5" />
-                        <span className="sr-only">Download Invoice for {outflow.id}</span>
-                      </Button>
+                      {outflow.invoiceData && (
+                        <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(outflow.invoiceData)} title="Download Invoice">
+                          <FileDown className="h-5 w-5" />
+                          <span className="sr-only">Download Invoice for {outflow.id}</span>
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -115,3 +115,4 @@ export default function TransactionsPage() {
     </>
   );
 }
+
