@@ -178,7 +178,7 @@ export default function TransactionsPage() {
                 </div>
             </>
             ) : (
-            <div className="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+            <div className="h-64 flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground" />
                 <p className="mt-4 text-sm text-muted-foreground">{searchTerm ? "No transactions match your search." : "No transactions found."}</p>
             </div>
@@ -188,5 +188,3 @@ export default function TransactionsPage() {
     </>
   );
 }
-
-    
