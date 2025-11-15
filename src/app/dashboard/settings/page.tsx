@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const { toast } = useToast();
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
+  const [isDeleteAllDataOpen, setIsDeleteAllDataOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
@@ -99,7 +100,7 @@ export default function SettingsPage() {
 
     try {
       // First delete all associated data
-      await handleDeleteAllData(false, true); // Call to delete everything
+      await deleteAllData(false); // Call to delete everything
       
       // Then delete the user profile and auth account
       deleteDocumentNonBlocking(userProfileRef);
@@ -123,16 +124,14 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleDeleteAllData(showToast = true, forAccountDeletion = false) {
+  async function handleDeleteTransactionData(showToast = true) {
     if (!user || !firestore) return;
     setIsProcessing(true);
     
     try {
       const batch = writeBatch(firestore);
       
-      const collectionsToDelete = forAccountDeletion
-        ? ["cropBatches", "outflows", "customers", "cropTypes"]
-        : ["cropBatches", "outflows"];
+      const collectionsToDelete = ["cropBatches", "outflows", "payments"];
 
       for (const collectionName of collectionsToDelete) {
         const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
@@ -140,23 +139,12 @@ export default function SettingsPage() {
         snapshot.forEach(doc => batch.delete(doc.ref));
       }
 
-      if (forAccountDeletion) {
-        const locationsQuery = query(collection(firestore, "storageLocations"), where("ownerId", "==", user.uid));
-        const locationsSnapshot = await getDocs(locationsQuery);
-        for (const locationDoc of locationsSnapshot.docs) {
-            const areasQuery = collection(firestore, "storageLocations", locationDoc.id, "areas");
-            const areasSnapshot = await getDocs(areasQuery);
-            areasSnapshot.forEach(areaDoc => batch.delete(areaDoc.ref));
-            batch.delete(locationDoc.ref);
-        }
-      }
-
       await batch.commit();
 
       if (showToast) {
         toast({
             title: "Transaction Records Deleted",
-            description: "All of your inflow and outflow records have been successfully deleted.",
+            description: "All of your inflow, outflow, and payment records have been successfully deleted.",
         });
       }
 
@@ -172,6 +160,54 @@ export default function SettingsPage() {
     } finally {
         setIsProcessing(false);
         setIsDeleteDataOpen(false);
+    }
+  }
+
+   async function deleteAllData(showToast = true) {
+    if (!user || !firestore) return;
+    setIsProcessing(true);
+    
+    try {
+      const batch = writeBatch(firestore);
+      
+      const collectionsToDelete = ["cropBatches", "outflows", "payments", "customers", "cropTypes"];
+
+      for (const collectionName of collectionsToDelete) {
+        const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(doc => batch.delete(doc.ref));
+      }
+      
+      const locationsQuery = query(collection(firestore, "storageLocations"), where("ownerId", "==", user.uid));
+      const locationsSnapshot = await getDocs(locationsQuery);
+      for (const locationDoc of locationsSnapshot.docs) {
+          const areasQuery = collection(firestore, "storageLocations", locationDoc.id, "areas");
+          const areasSnapshot = await getDocs(areasQuery);
+          areasSnapshot.forEach(areaDoc => batch.delete(areaDoc.ref));
+          batch.delete(locationDoc.ref);
+      }
+
+      await batch.commit();
+
+      if (showToast) {
+        toast({
+            title: "All App Data Deleted",
+            description: "All of your application data has been successfully deleted.",
+        });
+      }
+
+    } catch (error: any) {
+       console.error("Error deleting all data:", error);
+       if (showToast) {
+            toast({
+                variant: "destructive",
+                title: "Error Deleting All Data",
+                description: error.message || "An unexpected error occurred while deleting data.",
+            });
+       }
+    } finally {
+        setIsProcessing(false);
+        setIsDeleteAllDataOpen(false);
     }
   }
   
@@ -264,14 +300,26 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
                  <div>
                     <h4 className="font-medium text-sm">Delete All Transaction Records</h4>
-                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes all inflow (crop batches) and outflow records. Customers, locations, and crop types will NOT be deleted.</p>
+                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes all inflow, outflow, and payment records. Customers, locations, and crop types will NOT be deleted.</p>
                     <Button
                         variant="destructive"
                         onClick={() => setIsDeleteDataOpen(true)}
                         disabled={isProcessing}
                         >
                         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Delete All Transactions
+                        Delete Transactions
+                    </Button>
+                </div>
+                <div>
+                    <h4 className="font-medium text-sm">Delete All My Data</h4>
+                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes all your data including locations, customers, crops, and transactions. Your user account will not be deleted.</p>
+                    <Button
+                        variant="destructive"
+                        onClick={() => setIsDeleteAllDataOpen(true)}
+                        disabled={isProcessing}
+                        >
+                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Delete All Data
                     </Button>
                 </div>
                  <div>
@@ -313,14 +361,32 @@ export default function SettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete all transaction records?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent. This will permanently delete all your inflow (crop batches) and outflow records. This cannot be undone.
+              This action is permanent. This will permanently delete all your inflow, outflow, and payment records. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleDeleteAllData(true, false)} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => handleDeleteTransactionData(true)} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Transactions
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+       <AlertDialog open={isDeleteAllDataOpen} onOpenChange={setIsDeleteAllDataOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all your data?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is permanent. This will permanently delete all your locations, areas, customers, crop types, inflows, outflows, and payments. Your user account will remain.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteAllData(true)} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete All Data
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -328,3 +394,4 @@ export default function SettingsPage() {
     </>
   );
 }
+
