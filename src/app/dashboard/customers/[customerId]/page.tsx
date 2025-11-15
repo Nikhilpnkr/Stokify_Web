@@ -225,10 +225,13 @@ export default function CustomerDetailPage() {
             setIsOpen={setIsOutflowDialogOpen}
             batch={selectedBatch}
             cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
+            locations={locations || []}
         />
       )}
     </>
   );
 }
+
+    
 
     

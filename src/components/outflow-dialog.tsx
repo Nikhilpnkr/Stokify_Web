@@ -27,19 +27,16 @@ type OutflowDialogProps = {
   setIsOpen: (open: boolean) => void;
   batch: CropBatch | null;
   cropType: CropType | undefined;
+  locations: StorageLocation[];
 };
 
-export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDialogProps) {
+export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }: OutflowDialogProps) {
     const { toast } = useToast();
     const { firestore, user } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     const [amountPaid, setAmountPaid] = useState(0);
     
-    const locationsQuery = useMemoFirebase(() => 
-        user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null
-    , [firestore, user]);
-    const { data: locations } = useCollection<StorageLocation>(locationsQuery);
     const location = locations?.find(l => l.id === batch?.storageLocationId);
 
     const totalQuantity = useMemo(() => {
@@ -368,3 +365,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     </Dialog>
   );
 }
+
+    

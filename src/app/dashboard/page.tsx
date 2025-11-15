@@ -307,6 +307,7 @@ export default function InventoryPage() {
             setIsOpen={setIsOutflowDialogOpen}
             batch={selectedBatch}
             cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
+            locations={locations || []}
         />
       )}
     </>
@@ -320,6 +321,7 @@ function toDate(dateValue: any): Date {
     }
     return new Date(dateValue);
 }
+
 
 
     
