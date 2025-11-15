@@ -99,7 +99,7 @@ export default function InventoryPage() {
       const outflow = outflows.find(o => o.cropBatchId === batch.id);
       const customer = customers.find(c => c.id === batch.customerId);
       const location = locations.find(l => l.id === batch.storageLocationId);
-      const cropType = cropTypes.find(ct => ct.name === batch.cropType);
+      const cropType = cropTypes.find(ct => ct.id === batch.cropType);
       
       return {
         ...batch,
@@ -290,5 +290,7 @@ export default function InventoryPage() {
       )}
     </>
   );
+
+    
 
     

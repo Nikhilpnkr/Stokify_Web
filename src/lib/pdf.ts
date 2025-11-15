@@ -20,8 +20,8 @@ function toDate(dateValue: any): Date {
 export async function generateInflowPdf(batch: CropBatch & { cropType: CropType }, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
-  if (!user) {
-    console.error("User not authenticated");
+  if (!user || !batch.cropType) {
+    console.error("User not authenticated or cropType missing");
     return;
   }
   
@@ -212,3 +212,5 @@ export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outfl
     document.body.removeChild(receiptElement);
   }
 }
+
+    
