@@ -31,6 +31,7 @@ import {
   Settings,
   Receipt,
   UserCog,
+  CreditCard,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ const navItems = [
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
+  { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
 ];
 
 const adminNavItems = [

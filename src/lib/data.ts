@@ -77,6 +77,17 @@ export type Outflow = {
   invoiceData: any; // Storing the data used to generate the invoice
 };
 
+export type Payment = {
+  id: string;
+  outflowId: string;
+  customerId: string;
+  ownerId: string;
+  date: string;
+  amount: number;
+  paymentMethod: 'Cash' | 'Card' | 'Online';
+  notes?: string;
+};
+
 
 // This can now be used as a default or fallback.
 export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {

@@ -38,6 +38,13 @@ service cloud.firestore {
         allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
     
+    // A user can only interact with payments they own.
+    match /payments/{paymentId} {
+        allow read, write: if resource.data.ownerId == request.auth.uid;
+        allow create: if request.resource.data.ownerId == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid;
+    }
+
     // A user can only interact with crop types they own.
     match /cropTypes/{cropTypeId} {
         allow read, write: if resource.data.ownerId == request.auth.uid;

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,13 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, updateDocumentNonBlocking } from "@/firebase";
-import { doc } from "firebase/firestore";
-import type { Outflow } from "@/lib/data";
+import { useFirebase, useUser, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { doc, collection } from "firebase/firestore";
+import type { Outflow, Payment } from "@/lib/data";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Badge } from "./ui/badge";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 type PayDuesDialogProps = {
   isOpen: boolean;
@@ -28,13 +28,17 @@ type PayDuesDialogProps = {
 
 export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps) {
     const { toast } = useToast();
-    const { firestore } = useFirebase();
+    const { firestore, user } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
     const [amountToPay, setAmountToPay] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Online'>('Cash');
+    const [notes, setNotes] = useState('');
 
     useEffect(() => {
         if (isOpen && outflow) {
             setAmountToPay(outflow.balanceDue);
+            setPaymentMethod('Cash');
+            setNotes('');
         } else if (!isOpen) {
             setIsProcessing(false);
             setAmountToPay(0);
@@ -42,7 +46,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     }, [isOpen, outflow]);
 
     async function handlePayment() {
-        if (!firestore || !outflow) return;
+        if (!firestore || !outflow || !user) return;
 
         if (amountToPay <= 0) {
             toast({ variant: "destructive", title: "Invalid Amount", description: "Payment amount must be positive." });
@@ -56,17 +60,29 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
 
         setIsProcessing(true);
 
+        const newPaymentRef = doc(collection(firestore, "payments"));
         const outflowRef = doc(firestore, "outflows", outflow.id);
         
-        const newAmountPaid = outflow.amountPaid + amountToPay;
-        const newBalanceDue = outflow.balanceDue - amountToPay;
-
-        const updatedData = {
-            amountPaid: newAmountPaid,
-            balanceDue: newBalanceDue,
+        const newPayment: Payment = {
+            id: newPaymentRef.id,
+            outflowId: outflow.id,
+            customerId: outflow.customerId,
+            ownerId: user.uid,
+            date: new Date().toISOString(),
+            amount: amountToPay,
+            paymentMethod,
+            notes,
         };
 
-        updateDocumentNonBlocking(outflowRef, updatedData);
+        // Create a new payment document
+        addDocumentNonBlocking(newPaymentRef, newPayment);
+        
+        // Update the outflow document
+        const updatedOutflowData = {
+            amountPaid: outflow.amountPaid + amountToPay,
+            balanceDue: outflow.balanceDue - amountToPay,
+        };
+        updateDocumentNonBlocking(outflowRef, updatedOutflowData);
 
         toast({
             title: "Payment Successful!",
@@ -88,7 +104,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             Record a payment for transaction #{outflow.id.slice(0, 8).toUpperCase()}.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
             <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                  <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Total Bill:</p>
@@ -121,13 +137,40 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
                     min={0}
                 />
             </div>
+
+             <div className="grid gap-2">
+                <Label>Payment Method</Label>
+                <RadioGroup defaultValue="Cash" onValueChange={(value: 'Cash' | 'Card' | 'Online') => setPaymentMethod(value)} className="flex space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Cash" id="cash"/>
+                        <Label htmlFor="cash">Cash</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Card" id="card"/>
+                        <Label htmlFor="card">Card</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Online" id="online"/>
+                        <Label htmlFor="online">Online</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+             <div className="grid gap-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Input
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="e.g., Payment for last month"
+                />
+            </div>
+
              <div className="rounded-lg bg-primary/10 text-primary-foreground p-4 space-y-2 border border-primary/20">
                 <div className="flex justify-between items-center">
                     <p className="text-lg font-bold text-primary">New Balance:</p>
                     <p className="text-2xl font-bold text-primary">₹{(outflow.balanceDue - amountToPay).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
                 </div>
             </div>
-
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
