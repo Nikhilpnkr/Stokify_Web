@@ -116,11 +116,6 @@ export default function PaymentsPage() {
                                         <FileDown className="mr-2 h-4 w-4" /> Download Original Invoice
                                     </Button>
                                 )}
-                                {payment.invoiceData && (
-                                    <Button variant="outline" size="sm" className="w-full" onClick={() => generatePaymentReceiptPdf(payment.invoiceData)}>
-                                        <FileDown className="mr-2 h-4 w-4" /> Download Payment Receipt
-                                    </Button>
-                                )}
                             </CardFooter>
                         </Card>
                     )})}
@@ -138,7 +133,6 @@ export default function PaymentsPage() {
                             <TableHead>Notes</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
                             <TableHead className="text-center">Invoice</TableHead>
-                            <TableHead className="text-center">Receipt</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -164,14 +158,6 @@ export default function PaymentsPage() {
                                             <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(invoiceData)} title="Download Original Invoice">
                                                 <FileDown className="h-5 w-5" />
                                                 <span className="sr-only">Download Invoice</span>
-                                            </Button>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="text-center">
-                                        {payment.invoiceData && (
-                                            <Button variant="ghost" size="icon" onClick={() => generatePaymentReceiptPdf(payment.invoiceData)} title="Download Payment Receipt">
-                                                <FileDown className="h-5 w-5" />
-                                                <span className="sr-only">Download Receipt</span>
                                             </Button>
                                         )}
                                     </TableCell>
