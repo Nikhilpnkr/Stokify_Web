@@ -4,60 +4,60 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper function to check if the user is an admin.
+    // It checks the 'role' field on the user's own profile document.
     function isAdmin() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // A user can read/write their own user profile. An admin can read/write any user profile.
+    // Rule for user profiles
     match /users/{userId} {
-      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
-    }
-
-    // Generic function to check for ownership or admin privileges.
-    // This reduces code duplication across different collections.
-    function isOwnerOrAdmin(collectionName) {
-      let isOwner = resource.data.ownerId == request.auth.uid;
-      let isCreatingOwner = request.resource.data.ownerId == request.auth.uid;
-      let isQueryingOwnData = request.query.get('ownerId') == request.auth.uid;
-      
-      // Allow full access for admins.
-      if (isAdmin()) {
-        return true;
-      }
-      
-      // For non-admins, enforce ownership rules.
-      return request.auth != null && (
-        (request.method in ['get', 'update', 'delete'] && isOwner) ||
-        (request.method == 'create' && isCreatingOwner) ||
-        (request.method == 'list' && isQueryingOwnData)
-      );
+      // Admins can read/write any profile.
+      // Regular users can only read/write their own profile.
+      allow read, write: if isAdmin() || (request.auth != null && request.auth.uid == userId);
     }
     
-    // Apply the isOwnerOrAdmin rule to all primary data collections.
+    // Rule for storageLocations and their subcollections
     match /storageLocations/{locationId} {
-        allow read, write: if isOwnerOrAdmin('storageLocations');
-        
+        // Admins have full access.
+        // Users can perform actions if they own the document or are querying their own data.
+        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
+
         // Rules for the 'areas' subcollection
         match /areas/{areaId} {
-           // Users can manage areas in warehouses they own. Admins can manage all areas.
-           allow read, write: if request.auth != null && (get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid || isAdmin());
+           // Admins can manage all areas.
+           // Users can manage areas in warehouses they own by checking the parent document.
+           allow read, write: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
         }
     }
     
+    // Rule for cropBatches
     match /cropBatches/{batchId} {
-        allow read, write: if isOwnerOrAdmin('cropBatches');
+        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
     }
 
+    // Rule for outflows
     match /outflows/{outflowId} {
-        allow read, write: if isOwnerOrAdmin('outflows');
+        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
     }
     
+    // Rule for cropTypes
     match /cropTypes/{cropTypeId} {
-      allow read, write: if isOwnerOrAdmin('cropTypes');
+        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
     }
 
+    // Rule for customers
     match /customers/{customerId} {
-      allow read, write: if isOwnerOrAdmin('customers');
+        allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
+        allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
+        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
     }
   }
 }
