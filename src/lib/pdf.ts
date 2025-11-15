@@ -17,7 +17,7 @@ function toDate(dateValue: any): Date {
     return new Date(dateValue);
 }
 
-export async function generateInflowPdf(batch: CropBatch, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
+export async function generateInflowPdf(batch: CropBatch & { cropType: CropType }, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
   if (!user) {

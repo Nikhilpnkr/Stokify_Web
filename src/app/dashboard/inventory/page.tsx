@@ -95,13 +95,7 @@ export default function InventoryPage() {
   const batches = useMemo(() => {
     if (!rawBatches || !outflows || !customers || !locations || !cropTypes) return [];
     
-    const filteredBatches = rawBatches.filter(batch => {
-        const cropTypeName = (cropTypes.find(ct => ct.id === batch.cropType) as CropType | undefined)?.name || '';
-        return batch.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cropTypeName.toLowerCase().includes(searchTerm.toLowerCase())
-    });
-
-    return filteredBatches.map(batch => {
+    return rawBatches.map(batch => {
       const outflow = outflows.find(o => o.cropBatchId === batch.id);
       const customer = customers.find(c => c.id === batch.customerId);
       const location = locations.find(l => l.id === batch.storageLocationId);
@@ -115,6 +109,9 @@ export default function InventoryPage() {
         customer,
         location,
       }
+    }).filter(batch => {
+        return batch.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (batch.cropType?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     }).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
   }, [rawBatches, outflows, customers, locations, cropTypes, searchTerm]);
 
@@ -129,7 +126,7 @@ export default function InventoryPage() {
   };
   
   const handleDownloadInflowReceipt = (batch: (typeof batches)[0]) => {
-    if (batch.customer && batch.location) {
+    if (batch.customer && batch.location && batch.cropType) {
       generateInflowPdf(batch, batch.customer, batch.location, allAreas);
     } else {
       toast({
