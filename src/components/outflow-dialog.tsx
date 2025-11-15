@@ -148,13 +148,15 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
 
         const balanceDue = finalBill - amountPaid;
 
+        const customer = await (await fetch(`/api/customers/${batch.customerId}`)).json();
+
         const invoiceData: InvoiceData = {
           type: 'Outflow',
           receiptNumber: newOutflowRef.id.slice(0, 8).toUpperCase(),
           date: new Date(),
           customer: {
             name: batch.customerName,
-            mobile: 'N/A',
+            mobile: customer?.mobileNumber || 'N/A',
           },
           user: {
             name: user.displayName || 'N/A',
@@ -205,7 +207,8 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
             let remainingWithdrawal = withdrawQuantity;
             const newAllocations: AreaAllocation[] = [];
 
-            const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.a.id));
+            // Sort allocations to withdraw from alphabetically named areas first
+            const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
 
             for (const alloc of sortedAllocations) {
                 if (remainingWithdrawal <= 0) {
@@ -224,13 +227,16 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 }
             }
             
-            // If the full labour charge was paid, clear it from the batch
-            const labourChargePaid = Math.min(amountPaid, batch.labourCharge || 0);
-            const remainingLabourCharge = (batch.labourCharge || 0) - labourChargePaid;
+            // If only paying for labor, determine the remaining labor charge.
+            let remainingLabourCharge = batch.labourCharge || 0;
+            if (withdrawQuantity === 0 && storageCost === 0) {
+                 remainingLabourCharge = Math.max(0, (batch.labourCharge || 0) - amountPaid);
+            }
+
 
             const updatedData = { 
                 areaAllocations: newAllocations,
-                labourCharge: remainingLabourCharge > 0 ? remainingLabourCharge : 0,
+                labourCharge: remainingLabourCharge,
             };
 
             updateDocumentNonBlocking(batchRef, updatedData);
@@ -366,3 +372,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     </Dialog>
   );
 }
+
+    
