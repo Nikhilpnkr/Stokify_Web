@@ -221,10 +221,6 @@ export default function InventoryPage() {
                       <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(toDate(batch.dateAdded), "MMM d, yyyy")}</span></div>
                     </CardContent>
                     <CardFooter className="flex justify-between">
-                        <Button variant="ghost" size="sm" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice" disabled={!batch.invoiceData}>
-                            <FileDown className="h-5 w-5 mr-2" />
-                            Inflow
-                        </Button>
                         <Button variant="outline" size="sm" onClick={() => handleOutflowClick(batch)} title="Process Outflow">
                             <Receipt className="h-5 w-5 mr-2" />
                             Outflow
@@ -245,8 +241,7 @@ export default function InventoryPage() {
                       <TableHead>Area(s)</TableHead>
                       <TableHead className="text-right">Quantity (bags)</TableHead>
                       <TableHead>Date Added</TableHead>
-                      <TableHead className="text-center">Outflow</TableHead>
-                      <TableHead className="text-center">Download</TableHead>
+                      <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -271,14 +266,6 @@ export default function InventoryPage() {
                             <Receipt className="h-5 w-5" />
                             <span className="sr-only">Process Outflow for {batch.customerName}</span>
                           </Button>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {batch.invoiceData && (
-                              <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice">
-                                  <FileDown className="h-5 w-5" />
-                                  <span className="sr-only">Download Inflow Invoice</span>
-                              </Button>
-                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -321,7 +308,3 @@ function toDate(dateValue: any): Date {
     }
     return new Date(dateValue);
 }
-
-
-
-    

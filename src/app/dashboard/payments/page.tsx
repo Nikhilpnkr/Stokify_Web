@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Search, CreditCard, Calendar, User, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { Payment, Customer, Outflow, PaymentReceiptData } from "@/lib/data";
+import type { Payment, Customer, Outflow, StorageLocation, CropBatch, CropType } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,22 +37,51 @@ export default function PaymentsPage() {
   );
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
-  const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
-  const getOutflowInvoiceData = (outflowId: string) => outflows?.find(o => o.id === outflowId)?.invoiceData || null;
+  const batchesQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
 
-  const payments = useMemo(() => {
-    if (!unsortedPayments) return [];
-    
-    const filtered = unsortedPayments.filter(payment => {
-        const customerName = getCustomerName(payment.customerId).toLowerCase();
+  const locationsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
+
+  const cropTypesQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
+
+  const enrichedPayments = useMemo(() => {
+    if (!unsortedPayments || !outflows || !customers || !batches || !locations || !cropTypes) return [];
+
+    return unsortedPayments.map(payment => {
+        const outflow = outflows.find(o => o.id === payment.outflowId);
+        const customer = customers.find(c => c.id === payment.customerId);
+        const batch = outflow ? batches.find(b => b.id === outflow.cropBatchId) : undefined;
+        const location = batch ? locations.find(l => l.id === batch.storageLocationId) : undefined;
+        const cropType = batch ? cropTypes.find(ct => ct.name === batch.cropType) : undefined;
+
+        return {
+            ...payment,
+            customerName: customer?.name || 'N/A',
+            outflow,
+            customer,
+            location,
+            cropType,
+        }
+    }).filter(payment => {
         const search = searchTerm.toLowerCase();
-        return customerName.includes(search) || payment.outflowId.toLowerCase().includes(search);
-    });
+        return payment.customerName.toLowerCase().includes(search) || payment.outflowId.toLowerCase().includes(search);
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [unsortedPayments, customers, searchTerm]);
+  }, [unsortedPayments, outflows, customers, batches, locations, cropTypes, searchTerm]);
 
-  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows;
+
+  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingBatches || isLoadingLocations || isLoadingCropTypes;
 
   return (
     <>
@@ -66,7 +95,7 @@ export default function PaymentsPage() {
               <div>
                 <CardTitle>All Payments</CardTitle>
                 <CardDescription>
-                  {payments?.length || 0} payments found.
+                  {enrichedPayments?.length || 0} payments found.
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
@@ -85,44 +114,38 @@ export default function PaymentsPage() {
             <div className="flex h-64 items-center justify-center">
                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
             </div>
-            ) : payments && payments.length > 0 ? (
+            ) : enrichedPayments && enrichedPayments.length > 0 ? (
             <>
                 {/* Mobile View */}
                 <div className="grid gap-4 md:hidden">
-                    {payments.map((payment) => {
-                      const invoiceData = getOutflowInvoiceData(payment.outflowId);
-                      return (
-                        <Card key={payment.id} className="bg-muted/30">
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <CardTitle className="text-base">{getCustomerName(payment.customerId)}</CardTitle>
-                                        <CardDescription>Receipt #{payment.id.slice(0,6)}</CardDescription>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                                        <Badge variant="secondary">{payment.paymentMethod}</Badge>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /><span>{format(new Date(payment.date), "MMM d, yyyy")}</span></div>
-                                 {payment.notes && <p className="text-sm text-foreground mt-2">Notes: {payment.notes}</p>}
-                            </CardContent>
-                             <CardFooter className="flex flex-col gap-2 items-stretch">
-                                {payment.receiptData && (
-                                    <Button variant="outline" size="sm" className="w-full" onClick={() => generatePaymentReceiptPdf(payment.receiptData as PaymentReceiptData)}>
-                                        <FileDown className="mr-2 h-4 w-4" /> Download Receipt
-                                    </Button>
-                                )}
-                                {invoiceData && (
-                                    <Button variant="secondary" size="sm" className="w-full" onClick={() => generateInvoicePdf(invoiceData)}>
-                                        <FileDown className="mr-2 h-4 w-4" /> Download Invoice
-                                    </Button>
-                                )}
-                            </CardFooter>
-                        </Card>
-                    )})}
+                    {enrichedPayments.map((payment) => (
+                      <Card key={payment.id} className="bg-muted/30">
+                          <CardHeader>
+                              <div className="flex justify-between items-start">
+                                  <div>
+                                      <CardTitle className="text-base">{payment.customerName}</CardTitle>
+                                      <CardDescription>Receipt #{payment.id.slice(0,6)}</CardDescription>
+                                  </div>
+                                  <div className="text-right">
+                                      <p className="text-lg font-bold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                                      <Badge variant="secondary">{payment.paymentMethod}</Badge>
+                                  </div>
+                              </div>
+                          </CardHeader>
+                          <CardContent>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /><span>{format(new Date(payment.date), "MMM d, yyyy")}</span></div>
+                               {payment.notes && <p className="text-sm text-foreground mt-2">Notes: {payment.notes}</p>}
+                          </CardContent>
+                           <CardFooter className="flex flex-col gap-2 items-stretch">
+                              <Button variant="outline" size="sm" className="w-full" onClick={() => payment.outflow && payment.customer && generatePaymentReceiptPdf(payment, payment.outflow, payment.customer)} disabled={!payment.outflow || !payment.customer}>
+                                  <FileDown className="mr-2 h-4 w-4" /> Download Receipt
+                              </Button>
+                              <Button variant="secondary" size="sm" className="w-full" onClick={() => payment.outflow && payment.customer && payment.location && payment.cropType && generateInvoicePdf(payment.outflow, payment.customer, payment.location, payment.cropType)} disabled={!payment.outflow || !payment.customer || !payment.location || !payment.cropType}>
+                                  <FileDown className="mr-2 h-4 w-4" /> Download Invoice
+                              </Button>
+                          </CardFooter>
+                      </Card>
+                    ))}
                 </div>
 
                 {/* Desktop View */}
@@ -140,42 +163,35 @@ export default function PaymentsPage() {
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payments.map((payment) => {
-                              const invoiceData = getOutflowInvoiceData(payment.outflowId);
-                              return (
-                                <TableRow key={payment.id}>
-                                    <TableCell>
-                                        <div className="flex flex-col">
-                                            <span>{format(new Date(payment.date), "MMM d, yyyy")}</span>
-                                            <span className="text-xs text-muted-foreground">
-                                                {formatDistanceToNow(new Date(payment.date), { addSuffix: true })}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="font-medium">{getCustomerName(payment.customerId)}</TableCell>
-                                    <TableCell>#{payment.outflowId.slice(0, 8).toUpperCase()}</TableCell>
-                                    <TableCell><Badge variant="outline">{payment.paymentMethod}</Badge></TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">{payment.notes || '-'}</TableCell>
-                                    <TableCell className="text-right font-semibold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                    <TableCell className="text-center">
-                                        <div className="flex justify-center gap-2">
-                                            {payment.receiptData && (
-                                                <Button variant="ghost" size="icon" onClick={() => generatePaymentReceiptPdf(payment.receiptData as PaymentReceiptData)} title="Download Payment Receipt">
-                                                    <FileDown className="h-5 w-5" />
-                                                    <span className="sr-only">Download Receipt</span>
-                                                </Button>
-                                            )}
-                                             {invoiceData && (
-                                                <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(invoiceData)} title="Download Outflow Invoice">
-                                                    <FileDown className="h-5 w-5 text-muted-foreground" />
-                                                    <span className="sr-only">Download Invoice</span>
-                                                </Button>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                              )
-                            })}
+                            {enrichedPayments.map((payment) => (
+                              <TableRow key={payment.id}>
+                                  <TableCell>
+                                      <div className="flex flex-col">
+                                          <span>{format(new Date(payment.date), "MMM d, yyyy")}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                              {formatDistanceToNow(new Date(payment.date), { addSuffix: true })}
+                                          </span>
+                                      </div>
+                                  </TableCell>
+                                  <TableCell className="font-medium">{payment.customerName}</TableCell>
+                                  <TableCell>#{payment.outflowId.slice(0, 8).toUpperCase()}</TableCell>
+                                  <TableCell><Badge variant="outline">{payment.paymentMethod}</Badge></TableCell>
+                                  <TableCell className="text-sm text-muted-foreground">{payment.notes || '-'}</TableCell>
+                                  <TableCell className="text-right font-semibold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                  <TableCell className="text-center">
+                                      <div className="flex justify-center gap-2">
+                                          <Button variant="ghost" size="icon" onClick={() => payment.outflow && payment.customer && generatePaymentReceiptPdf(payment, payment.outflow, payment.customer)} title="Download Payment Receipt" disabled={!payment.outflow || !payment.customer}>
+                                              <FileDown className="h-5 w-5" />
+                                              <span className="sr-only">Download Receipt</span>
+                                          </Button>
+                                          <Button variant="ghost" size="icon" onClick={() => payment.outflow && payment.customer && payment.location && payment.cropType && generateInvoicePdf(payment.outflow, payment.customer, payment.location, payment.cropType)} title="Download Outflow Invoice" disabled={!payment.outflow || !payment.customer || !payment.location || !payment.cropType}>
+                                              <FileDown className="h-5 w-5 text-muted-foreground" />
+                                              <span className="sr-only">Download Invoice</span>
+                                          </Button>
+                                      </div>
+                                  </TableCell>
+                              </TableRow>
+                            ))}
                         </TableBody>
                     </Table>
                 </div>
@@ -191,6 +207,3 @@ export default function PaymentsPage() {
     </>
   );
 }
-
-
-    

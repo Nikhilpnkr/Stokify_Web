@@ -15,7 +15,7 @@ export type CropBatch = {
   customerName: string;
   labourCharge?: number;
   quantity: number; // This is a derived field for easier access
-  invoiceData?: any;
+  // invoiceData is removed.
 };
 
 export type StorageLocation = {
@@ -73,7 +73,11 @@ export type Outflow = {
   totalBill: number;
   amountPaid: number;
   balanceDue: number;
-  invoiceData: any; // Storing the data used to generate the invoice
+  // invoiceData is removed.
+  // Add fields to reconstruct invoice
+  storageDuration: number;
+  storageCost: number;
+  labourCharge: number;
 };
 
 export type Payment = {
@@ -85,7 +89,7 @@ export type Payment = {
   amount: number;
   paymentMethod: 'Cash' | 'Card' | 'Online';
   notes?: string;
-  receiptData: any;
+  // receiptData is removed.
 };
 
 export interface PaymentReceiptData {
@@ -112,5 +116,3 @@ export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {
   6: 36,
   12: 56,
 };
-
-    

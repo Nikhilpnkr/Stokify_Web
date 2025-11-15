@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, FileDown, Calendar, User, Wheat, ShoppingBag, Banknote, FileText, Search } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { Outflow, Customer, CropBatch } from "@/lib/data";
+import type { Outflow, Customer, CropBatch, StorageLocation, CropType } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { generateInvoicePdf } from "@/lib/pdf";
@@ -39,29 +39,53 @@ export default function TransactionsPage() {
     [firestore, user]
   );
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+
+  const locationsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
+
+  const cropTypesQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
+
   
   const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
-  const getCropTypeFromBatch = (batchId: string) => batches?.find(b => b.id === batchId)?.cropType || 'N/A';
+  
+  const enrichedOutflows = useMemo(() => {
+    if (!unsortedOutflows || !customers || !batches || !locations || !cropTypes) return [];
 
-  const outflows = useMemo(() => {
-    if (!unsortedOutflows) return [];
-    
-    const filtered = unsortedOutflows.filter(outflow => {
-        const customerName = getCustomerName(outflow.customerId).toLowerCase();
-        const cropType = getCropTypeFromBatch(outflow.cropBatchId).toLowerCase();
-        const search = searchTerm.toLowerCase();
-        return customerName.includes(search) || cropType.includes(search);
-    });
+    return unsortedOutflows.map(outflow => {
+        const batch = batches.find(b => b.id === outflow.cropBatchId);
+        const customer = customers.find(c => c.id === outflow.customerId);
+        const location = locations.find(l => l.id === batch?.storageLocationId);
+        const cropType = cropTypes.find(ct => ct.name === batch?.cropType);
 
-    return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [unsortedOutflows, customers, batches, searchTerm]);
+        return {
+            ...outflow,
+            customerName: customer?.name || 'N/A',
+            cropTypeName: batch?.cropType || 'N/A',
+            customer,
+            location,
+            cropType,
+        };
+    }).filter(outflow => {
+      const search = searchTerm.toLowerCase();
+      return outflow.customerName.toLowerCase().includes(search) || outflow.cropTypeName.toLowerCase().includes(search);
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  }, [unsortedOutflows, customers, batches, locations, cropTypes, searchTerm]);
+
 
   const handlePayDuesClick = (outflow: Outflow) => {
     setSelectedOutflow(outflow);
     setIsPayDuesOpen(true);
   }
 
-  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches;
+  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches || isLoadingLocations || isLoadingCropTypes;
 
   return (
     <>
@@ -75,7 +99,7 @@ export default function TransactionsPage() {
               <div>
                 <CardTitle>All Outflows</CardTitle>
                 <CardDescription>
-                  {outflows?.length || 0} transactions found.
+                  {enrichedOutflows?.length || 0} transactions found.
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
@@ -94,17 +118,17 @@ export default function TransactionsPage() {
             <div className="flex h-64 items-center justify-center">
                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
             </div>
-            ) : outflows && outflows.length > 0 ? (
+            ) : enrichedOutflows && enrichedOutflows.length > 0 ? (
             <>
                 {/* Mobile View */}
                 <div className="grid gap-4 md:hidden">
-                    {outflows.map((outflow) => (
+                    {enrichedOutflows.map((outflow) => (
                         <Card key={outflow.id} className="bg-muted/30">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="text-base">{getCustomerName(outflow.customerId)}</CardTitle>
-                                        <CardDescription>{getCropTypeFromBatch(outflow.cropBatchId)}</CardDescription>
+                                        <CardTitle className="text-base">{outflow.customerName}</CardTitle>
+                                        <CardDescription>{outflow.cropTypeName}</CardDescription>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-lg font-bold">₹{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -121,12 +145,10 @@ export default function TransactionsPage() {
                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(new Date(outflow.date), "MMM d, yyyy")}</span></div>
                             </CardContent>
                              <CardFooter className="flex flex-col items-stretch gap-2">
-                                {outflow.invoiceData && (
-                                    <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(outflow.invoiceData)} title="Download Outflow Receipt" className="w-full">
-                                        <FileDown className="h-4 w-4 mr-2" />
-                                        Download Receipt
-                                    </Button>
-                                )}
+                                <Button variant="outline" size="sm" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType)} title="Download Outflow Invoice" className="w-full" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
+                                    <FileDown className="h-4 w-4 mr-2" />
+                                    Download Invoice
+                                </Button>
                                 {outflow.balanceDue > 0 && (
                                     <Button size="sm" onClick={() => handlePayDuesClick(outflow)} className="w-full">
                                         <Banknote className="h-4 w-4 mr-2" />
@@ -154,7 +176,7 @@ export default function TransactionsPage() {
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {outflows.map((outflow) => (
+                            {enrichedOutflows.map((outflow) => (
                             <TableRow key={outflow.id}>
                                 <TableCell>
                                     <div className="flex flex-col">
@@ -164,8 +186,8 @@ export default function TransactionsPage() {
                                         </span>
                                     </div>
                                 </TableCell>
-                                <TableCell className="font-medium">{getCustomerName(outflow.customerId)}</TableCell>
-                                <TableCell>{getCropTypeFromBatch(outflow.cropBatchId)}</TableCell>
+                                <TableCell className="font-medium">{outflow.customerName}</TableCell>
+                                <TableCell>{outflow.cropTypeName}</TableCell>
                                 <TableCell className="text-right">{outflow.quantityWithdrawn.toLocaleString()} bags</TableCell>
                                 <TableCell className="text-right">₹{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                 <TableCell className="text-right">₹{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
@@ -177,18 +199,17 @@ export default function TransactionsPage() {
                                     )}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                {outflow.balanceDue > 0 ? (
-                                     <Button variant="secondary" size="sm" onClick={() => handlePayDuesClick(outflow)} title="Pay Dues">
-                                        Pay
+                                  <div className="flex justify-center gap-1">
+                                    {outflow.balanceDue > 0 && (
+                                      <Button variant="secondary" size="sm" onClick={() => handlePayDuesClick(outflow)} title="Pay Dues">
+                                          Pay
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType)} title="Download Outflow Invoice" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
+                                        <FileDown className="h-5 w-5" />
+                                        <span className="sr-only">Download Outflow Invoice</span>
                                     </Button>
-                                ) : (
-                                    outflow.invoiceData && (
-                                        <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(outflow.invoiceData)} title="Download Outflow Receipt">
-                                            <FileDown className="h-5 w-5" />
-                                            <span className="sr-only">Download Outflow Receipt</span>
-                                        </Button>
-                                    )
-                                )}
+                                  </div>
                                 </TableCell>
                             </TableRow>
                             ))}

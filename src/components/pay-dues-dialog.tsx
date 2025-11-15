@@ -71,25 +71,8 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         const outflowRef = doc(firestore, "outflows", outflow.id);
         
         const newBalanceDue = outflow.balanceDue - amountToPay;
-
-        const receiptData: PaymentReceiptData = {
-          paymentId: newPaymentRef.id.slice(0, 8).toUpperCase(),
-          paymentDate: new Date(),
-          paymentMethod,
-          amountPaid: amountToPay,
-          customer: {
-            name: customer.name,
-            mobile: customer.mobileNumber,
-          },
-          outflowId: outflow.id.slice(0, 8).toUpperCase(),
-          outflowDate: new Date(outflow.date),
-          totalBill: outflow.totalBill,
-          previousBalance: outflow.balanceDue,
-          newBalance: newBalanceDue,
-          notes,
-        };
         
-        const newPayment: Omit<Payment, 'id'> & { id: string } = {
+        const newPayment: Omit<Payment, 'id' | 'receiptData'> & { id: string } = {
             id: newPaymentRef.id,
             outflowId: outflow.id,
             customerId: outflow.customerId,
@@ -98,7 +81,6 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             amount: amountToPay,
             paymentMethod,
             notes,
-            receiptData,
         };
 
         // Create a new payment document
@@ -111,10 +93,12 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         };
         updateDocumentNonBlocking(outflowRef, updatedOutflowData);
 
+        const updatedOutflow = { ...outflow, ...updatedOutflowData };
+
         toast({
             title: "Payment Successful!",
             description: `Paid ₹${amountToPay.toLocaleString()} towards the balance.`,
-            action: <Button variant="outline" size="sm" onClick={() => generatePaymentReceiptPdf(receiptData)}>Download Receipt</Button>,
+            action: <Button variant="outline" size="sm" onClick={() => generatePaymentReceiptPdf(newPayment, updatedOutflow, customer)}>Download Receipt</Button>,
             duration: 10000,
         });
 
@@ -215,5 +199,3 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     </Dialog>
   );
 }
-
-    

@@ -3,37 +3,66 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
-import { PaymentReceipt, PaymentReceiptData } from "@/components/payment-receipt";
+import { PaymentReceipt, PaymentReceiptProps } from "@/components/payment-receipt";
+import type { Outflow, Payment, Customer, StorageLocation, CropType } from "./data";
+import { getAuth } from "firebase/auth";
 
 function toDate(dateValue: any): Date {
     if (!dateValue) return new Date();
-    // Firestore Timestamp object
     if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
         return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
     }
-    // ISO string or already a Date object
     return new Date(dateValue);
 }
 
-export async function generateInvoicePdf(data: InvoiceData) {
-  // Ensure the date is a Date object, not a string or Timestamp from Firestore
-  const processedData = {
-    ...data,
-    date: toDate(data.date),
+export async function generateInvoicePdf(outflow: Outflow, customer: Customer, location: StorageLocation, cropType: CropType) {
+  const user = getAuth().currentUser;
+
+  if (!user) {
+    console.error("User not authenticated");
+    return;
+  }
+
+  // Dynamically construct the InvoiceData from the live Outflow object
+  const invoiceData: InvoiceData = {
+    type: 'Outflow',
+    receiptNumber: outflow.id.slice(0, 8).toUpperCase(),
+    date: toDate(outflow.date),
+    customer: {
+      name: customer.name,
+      mobile: customer.mobileNumber,
+    },
+    user: {
+      name: user.displayName || 'N/A',
+      email: user.email || 'N/A'
+    },
+    items: [{
+      description: `Storage for ${cropType.name} (${outflow.storageDuration} months)`,
+      quantity: outflow.quantityWithdrawn,
+      unit: 'bags',
+      unitPrice: outflow.storageCost / outflow.quantityWithdrawn,
+      total: outflow.storageCost,
+    }],
+    location: location,
+    labourCharge: outflow.labourCharge,
+    subTotal: outflow.storageCost,
+    total: outflow.totalBill,
+    amountPaid: outflow.amountPaid,
+    balanceDue: outflow.balanceDue,
+    notes: `Thank you for your business! This bill covers ${outflow.storageDuration} months of storage.`,
   };
 
   const invoiceElement = document.createElement("div");
-  // Position off-screen
   invoiceElement.style.position = "absolute";
   invoiceElement.style.left = "-9999px";
   invoiceElement.style.top = "-9999px";
-  invoiceElement.style.width = "800px"; // A4-like width
-  invoiceElement.innerHTML = renderToStaticMarkup(Invoice({ data: processedData }));
+  invoiceElement.style.width = "800px";
+  invoiceElement.innerHTML = renderToStaticMarkup(Invoice({ data: invoiceData }));
   document.body.appendChild(invoiceElement);
 
   try {
     const canvas = await html2canvas(invoiceElement, {
-      scale: 2, // Higher scale for better quality
+      scale: 2,
       useCORS: true,
       logging: false,
     });
@@ -47,30 +76,42 @@ export async function generateInvoicePdf(data: InvoiceData) {
 
     pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
     
-    const fileName = `${data.type.toLowerCase()}-receipt-${data.receiptNumber}.pdf`;
+    const fileName = `outflow-invoice-${invoiceData.receiptNumber}.pdf`;
     pdf.save(fileName);
 
   } catch (error) {
     console.error("Error generating PDF:", error);
   } finally {
-    // Clean up the temporary element
     document.body.removeChild(invoiceElement);
   }
 }
 
-export async function generatePaymentReceiptPdf(data: PaymentReceiptData) {
-  const processedData = {
-    ...data,
-    paymentDate: toDate(data.paymentDate),
-    outflowDate: toDate(data.outflowDate),
+export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outflow, customer: Customer) {
+
+  const receiptData: PaymentReceiptProps['data'] = {
+    paymentId: payment.id.slice(0, 8).toUpperCase(),
+    paymentDate: toDate(payment.date),
+    paymentMethod: payment.paymentMethod,
+    amountPaid: payment.amount,
+    notes: payment.notes,
+    customer: {
+      name: customer.name,
+      mobile: customer.mobileNumber,
+    },
+    outflowId: outflow.id.slice(0, 8).toUpperCase(),
+    outflowDate: toDate(outflow.date),
+    totalBill: outflow.totalBill,
+    previousBalance: outflow.balanceDue + payment.amount, // Recalculate previous balance
+    newBalance: outflow.balanceDue,
   };
+
 
   const receiptElement = document.createElement("div");
   receiptElement.style.position = "absolute";
   receiptElement.style.left = "-9999px";
   receiptElement.style.top = "-9999px";
   receiptElement.style.width = "800px";
-  receiptElement.innerHTML = renderToStaticMarkup(PaymentReceipt({ data: processedData }));
+  receiptElement.innerHTML = renderToStaticMarkup(PaymentReceipt({ data: receiptData }));
   document.body.appendChild(receiptElement);
 
   try {
@@ -89,7 +130,7 @@ export async function generatePaymentReceiptPdf(data: PaymentReceiptData) {
 
     pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
     
-    const fileName = `payment-receipt-${data.paymentId}.pdf`;
+    const fileName = `payment-receipt-${receiptData.paymentId}.pdf`;
     pdf.save(fileName);
 
   } catch (error) {
@@ -98,5 +139,3 @@ export async function generatePaymentReceiptPdf(data: PaymentReceiptData) {
     document.body.removeChild(receiptElement);
   }
 }
-
-    

@@ -117,7 +117,7 @@ const styles = {
 };
 
 
-interface PaymentReceiptProps {
+export interface PaymentReceiptProps {
     data: PaymentReceiptData;
 }
 
@@ -199,5 +199,3 @@ export function PaymentReceipt({ data }: PaymentReceiptProps) {
         </div>
     );
 }
-
-    

@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CropType, StorageLocation, StorageArea, Customer, CropBatch } from "@/lib/data";
+import type { CropType, StorageLocation, StorageArea, Customer, CropBatch, Outflow } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
@@ -201,8 +201,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         return;
     }
 
-    let customerId = values.customerId;
-    let customerName = values.customerName;
+    let finalCustomer: Customer;
 
     if (isNewCustomer) {
         const customerQuery = query(collection(firestore, 'customers'), where('mobileNumber', '==', values.customerMobile), where('ownerId', '==', user.uid));
@@ -214,45 +213,25 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         }
 
         const newCustomerRef = doc(collection(firestore, "customers"));
-        const newCustomer = {
+        finalCustomer = {
             id: newCustomerRef.id,
             name: values.customerName,
             mobileNumber: values.customerMobile,
             ownerId: user.uid
         };
-        setDocumentNonBlocking(newCustomerRef, newCustomer, { merge: false });
-        customerId = newCustomer.id;
+        setDocumentNonBlocking(newCustomerRef, finalCustomer, { merge: false });
     } else {
-        const existingCustomer = customers.find(c => c.id === customerId);
-        if (existingCustomer) {
-            customerName = existingCustomer.name;
+        const existingCustomer = customers.find(c => c.id === values.customerId);
+        if (!existingCustomer) {
+             toast({ variant: "destructive", title: "Error", description: "Could not find selected customer." });
+             return;
         }
+        finalCustomer = existingCustomer;
     }
 
 
     const cropBatchesCol = collection(firestore, "cropBatches");
     const newDocRef = doc(cropBatchesCol);
-
-    const invoiceData: InvoiceData = {
-      type: 'Inflow',
-      receiptNumber: newDocRef.id.slice(0, 8).toUpperCase(),
-      date: values.dateAdded,
-      customer: {
-        name: customerName,
-        mobile: values.customerMobile,
-      },
-      user: {
-        name: user.displayName || 'N/A',
-        email: user.email || 'N/A'
-      },
-      items: [{
-        description: `Storage for ${selectedCropType.name}`,
-        quantity: totalQuantity,
-        unit: 'bags'
-      }],
-      location: selectedLocation,
-      labourCharge: totalLabourCharge,
-    };
 
     const newBatch = {
       id: newDocRef.id,
@@ -261,18 +240,16 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       storageLocationId: values.locationId,
       dateAdded: values.dateAdded.toISOString(),
       ownerId: user.uid,
-      customerId,
-      customerName,
+      customerId: finalCustomer.id,
+      customerName: finalCustomer.name,
       labourCharge: totalLabourCharge,
-      invoiceData: invoiceData
     };
     
     setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
 
     toast({
       title: "Success! Batch Added.",
-      description: `New batch for ${customerName} has been added.`,
-      action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>
+      description: `New batch for ${finalCustomer.name} has been added.`,
     });
     setIsOpen(false);
     form.reset();

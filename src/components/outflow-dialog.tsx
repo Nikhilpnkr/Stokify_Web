@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer } from "@/lib/data";
+import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
@@ -151,35 +151,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
 
         const balanceDue = finalBill - amountPaid;
 
-        const invoiceData: InvoiceData = {
-          type: 'Outflow',
-          receiptNumber: newOutflowRef.id.slice(0, 8).toUpperCase(),
-          date: new Date(),
-          customer: {
-            name: customer.name,
-            mobile: customer.mobileNumber,
-          },
-          user: {
-            name: user.displayName || 'N/A',
-            email: user.email || 'N/A'
-          },
-          items: [{
-            description: `Storage for ${batch.cropType} (${totalMonths} months)`,
-            quantity: withdrawQuantity,
-            unit: 'bags',
-            unitPrice: costPerBag,
-            total: storageCost,
-          }],
-          location: location,
-          labourCharge: batch.labourCharge || 0,
-          subTotal: storageCost,
-          total: finalBill,
-          amountPaid: amountPaid,
-          balanceDue: balanceDue,
-          notes: `Thank you for your business! This bill covers ${totalMonths} months of storage.`,
-        };
-
-        const newOutflow = {
+        const newOutflow: Omit<Outflow, 'invoiceData'> = {
             id: newOutflowRef.id,
             cropBatchId: batch.id,
             customerId: batch.customerId,
@@ -189,10 +161,13 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
             totalBill: finalBill,
             amountPaid: amountPaid,
             balanceDue: balanceDue,
-            invoiceData: invoiceData,
+            // invoiceData is removed. It will be generated on the fly.
+            storageDuration: totalMonths,
+            storageCost: storageCost,
+            labourCharge: batch.labourCharge || 0,
         };
         
-        setDocumentNonBlocking(newOutflowRef, newOutflow, {merge: false});
+        setDocumentNonBlocking(newOutflowRef, newOutflow as any, {merge: false});
 
         if (withdrawQuantity === totalQuantity) {
             // Full withdrawal, delete the document
@@ -200,7 +175,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
             toast({
                 title: "Full Outflow Successful!",
                 description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow as Outflow, customer, location, cropType)}>Download PDF</Button>,
                 duration: 10000,
             });
         } else {
@@ -241,14 +216,14 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
                 toast({
                     title: "Partial Outflow Successful!",
                     description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow as Outflow, customer, location, cropType)}>Download PDF</Button>,
                     duration: 10000,
                 });
             } else {
                 toast({
                     title: "Bill Settled!",
                     description: `A bill for ${batch.customerName} was processed for ₹${finalBill.toLocaleString()}.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow as Outflow, customer, location, cropType)}>Download PDF</Button>,
                     duration: 10000,
                 });
             }
