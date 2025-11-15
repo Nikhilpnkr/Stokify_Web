@@ -57,13 +57,5 @@ service cloud.firestore {
         allow create: if request.resource.data.ownerId == request.auth.uid;
         allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
-
-    // Audit logs can be created by the owner, and only read by the owner. They cannot be updated or deleted.
-    match /auditLogs/{logId} {
-        allow create: if request.resource.data.ownerId == request.auth.uid;
-        allow read: if resource.data.ownerId == request.auth.uid;
-        allow list: if request.query.where.get('ownerId') == request.auth.uid;
-        allow update, delete: if false;
-    }
   }
 }

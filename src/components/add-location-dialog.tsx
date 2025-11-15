@@ -25,7 +25,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import { logAction } from "@/lib/actions";
 
 const formSchema = z.object({
   name: z.string().min(2, "Warehouse name must be at least 2 characters."),
@@ -77,12 +76,6 @@ export function AddLocationDialog({ isOpen, setIsOpen }: AddLocationDialogProps)
     };
 
     setDocumentNonBlocking(newDocRef, newLocation, { merge: false });
-    
-    await logAction("CREATE_LOCATION", { 
-        entityType: 'StorageLocation', 
-        entityId: newLocation.id, 
-        details: `Created new storage location: ${newLocation.name}` 
-    });
 
     toast({
         title: "Success!",

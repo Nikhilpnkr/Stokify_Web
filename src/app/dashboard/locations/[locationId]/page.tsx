@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { logAction } from "@/lib/actions";
 
 export default function LocationDetailPage() {
   const { locationId } = useParams<{ locationId: string }>();
@@ -72,12 +71,6 @@ export default function LocationDetailPage() {
     const areaRef = doc(firestore, "storageLocations", locationId, "areas", areaToDelete.id);
     deleteDocumentNonBlocking(areaRef);
 
-    await logAction("DELETE_AREA", {
-        entityType: "StorageArea",
-        entityId: areaToDelete.id,
-        details: `Deleted area: ${areaToDelete.name} from location ${locationId}`
-    });
-
     toast({
       title: "Area Deleted",
       description: `"${areaToDelete.name}" has been removed.`,
@@ -99,12 +92,6 @@ export default function LocationDetailPage() {
             batch.delete(doc.ref);
         });
         await batch.commit();
-
-        await logAction("DELETE_AREA", {
-            entityType: "StorageArea",
-            entityId: locationId,
-            details: `Deleted all areas from location ${location?.name || locationId}`
-        });
 
         toast({
             title: "All Areas Deleted",

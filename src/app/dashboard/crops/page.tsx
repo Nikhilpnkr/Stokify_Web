@@ -17,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { STORAGE_RATES } from "@/lib/data";
-import { logAction } from "@/lib/actions";
 
 const cropTypeFormSchema = z.object({
   name: z.string().min(2, "Crop name must be at least 2 characters."),
@@ -93,11 +92,6 @@ export default function CropTypesManagerPage() {
     if (isEditing && editingCropTypeId) {
         const docRef = doc(firestore, "cropTypes", editingCropTypeId);
         updateDocumentNonBlocking(docRef, cropData);
-        await logAction("UPDATE_CROP_TYPE", {
-            entityType: "CropType",
-            entityId: editingCropTypeId,
-            details: `Updated crop type: ${values.name}`
-        });
         toast({
             title: "Crop Type Updated",
             description: `"${values.name}" has been updated.`,
@@ -106,11 +100,6 @@ export default function CropTypesManagerPage() {
         const newDocRef = doc(collection(firestore, "cropTypes"));
         const newCropType = { id: newDocRef.id, ...cropData };
         addDocumentNonBlocking(newDocRef, newCropType);
-        await logAction("CREATE_CROP_TYPE", {
-            entityType: "CropType",
-            entityId: newCropType.id,
-            details: `Created new crop type: ${values.name}`
-        });
         toast({
             title: "Crop Type Added",
             description: `"${values.name}" has been added to your crop types.`,
@@ -131,12 +120,6 @@ export default function CropTypesManagerPage() {
     const cropTypeRef = doc(firestore, "cropTypes", cropTypeToDelete.id);
     deleteDocumentNonBlocking(cropTypeRef);
     
-    await logAction("DELETE_CROP_TYPE", {
-        entityType: "CropType",
-        entityId: cropTypeToDelete.id,
-        details: `Deleted crop type: ${cropTypeToDelete.name}`
-    });
-
     toast({
       title: "Crop Type Deleted",
       description: `"${cropTypeToDelete.name}" has been removed.`,

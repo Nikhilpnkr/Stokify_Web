@@ -27,7 +27,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { StorageLocation } from "@/lib/data";
-import { logAction } from "@/lib/actions";
 
 const formSchema = z.object({
   name: z.string().min(2, "Warehouse name must be at least 2 characters."),
@@ -80,12 +79,6 @@ export function EditLocationDialog({ isOpen, setIsOpen, location }: EditLocation
     };
 
     updateDocumentNonBlocking(locationRef, updatedData);
-    
-    await logAction("UPDATE_LOCATION", {
-        entityType: "StorageLocation",
-        entityId: location.id,
-        details: `Updated location: ${location.name}`
-    });
 
     toast({
         title: "Success!",

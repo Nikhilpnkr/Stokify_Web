@@ -20,7 +20,6 @@ import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
-import { logAction } from "@/lib/actions";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -160,12 +159,6 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         };
         
         addDocumentNonBlocking(newOutflowRef, newOutflow);
-        
-        await logAction("CREATE_OUTFLOW", {
-            entityType: "Outflow",
-            entityId: newOutflow.id,
-            details: `Processed outflow of ${withdrawQuantity} bags for ${customer.name}`
-        });
 
         if (withdrawQuantity === totalQuantity) {
             deleteDocumentNonBlocking(batchRef);

@@ -31,7 +31,6 @@ import {
   Receipt,
   CreditCard,
   Archive,
-  History,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -57,7 +56,6 @@ const navItems = [
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
-  { href: "/dashboard/audit-log", label: "Audit Log", icon: History },
 ];
 
 const bottomNavItems = [
