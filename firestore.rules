@@ -42,7 +42,7 @@ service cloud.firestore {
     match /outflows/{outflowId} {
         allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
         allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if request.query.where.get('ownerId') == request.auth.uid;
+        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
     }
     
     // Rule for cropTypes
