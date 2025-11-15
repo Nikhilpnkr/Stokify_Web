@@ -31,8 +31,8 @@ export default function UserManagementPage() {
   const { data: currentUserProfile, isLoading: isLoadingCurrentUser } = useDoc<UserProfile>(currentUserProfileRef);
 
   const usersQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'users')),
-    [firestore]
+    (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'manager') ? query(collection(firestore, 'users')) : null,
+    [firestore, currentUserProfile]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
@@ -57,7 +57,7 @@ export default function UserManagementPage() {
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
   
-  if (!isLoading && currentUserProfile?.role !== 'admin') {
+  if (!isLoadingCurrentUser && currentUserProfile?.role !== 'admin' && currentUserProfile?.role !== 'manager') {
     redirect('/dashboard');
   }
 
@@ -107,7 +107,7 @@ export default function UserManagementPage() {
                       <Select
                         defaultValue={profile.role}
                         onValueChange={(value: UserRole) => handleRoleChange(profile.uid, value)}
-                        disabled={profile.uid === user?.uid}
+                        disabled={profile.uid === user?.uid && currentUserProfile?.role !== 'admin'}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
