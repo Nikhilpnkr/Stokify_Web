@@ -31,6 +31,7 @@ import {
   Settings,
   Receipt,
   CreditCard,
+  Archive,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,8 @@ import type { UserProfile } from "@/lib/data";
 import { doc } from "firebase/firestore";
 
 const navItems = [
-  { href: "/dashboard", label: "Inventory", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard/inventory", label: "Inventory", icon: Archive },
   { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
