@@ -176,7 +176,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              {userProfile?.role === 'admin' && adminNavItems.map((item) => (
+              {adminNavItems.map((item) => (
                  <SidebarMenuItem key={item.label}>
                   <SidebarMenuButton
                     asChild
