@@ -18,16 +18,12 @@ service cloud.firestore {
     
     // Rule for storageLocations and their subcollections
     match /storageLocations/{locationId} {
-        // Admins have full access.
-        // Users can perform actions if they own the document or are querying their own data.
         allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
         allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
+        allow list: if isAdmin() || request.auth.uid != null;
 
         // Rules for the 'areas' subcollection
         match /areas/{areaId} {
-           // Admins can manage all areas.
-           // Users can manage areas in warehouses they own by checking the parent document.
            allow read, write: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
         }
     }
@@ -36,28 +32,28 @@ service cloud.firestore {
     match /cropBatches/{batchId} {
         allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
         allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
+        allow list: if isAdmin() || request.auth.uid != null;
     }
 
     // Rule for outflows
     match /outflows/{outflowId} {
         allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
         allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
+        allow list: if isAdmin() || request.auth.uid != null;
     }
     
     // Rule for cropTypes
     match /cropTypes/{cropTypeId} {
         allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
         allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
+        allow list: if isAdmin() || request.auth.uid != null;
     }
 
     // Rule for customers
     match /customers/{customerId} {
         allow get, update, delete: if isAdmin() || (request.auth.uid == resource.data.ownerId);
         allow create: if isAdmin() || (request.auth.uid == request.resource.data.ownerId);
-        allow list: if isAdmin() || (request.auth.uid == request.query.get("ownerId"));
+        allow list: if isAdmin() || request.auth.uid != null;
     }
   }
 }
