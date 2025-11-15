@@ -182,13 +182,14 @@ export default function InventoryPage() {
                 <TableHead>Area(s)</TableHead>
                 <TableHead className="text-right">Quantity (bags)</TableHead>
                 <TableHead>Date Added</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-center">Outflow</TableHead>
+                <TableHead className="text-center">Download</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                   </TableCell>
                 </TableRow>
@@ -208,11 +209,13 @@ export default function InventoryPage() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-center">
                     <Button variant="ghost" size="icon" onClick={() => handleRowClick(batch)} title="Process Outflow">
                       <Receipt className="h-5 w-5" />
                       <span className="sr-only">Process Outflow for {batch.customerName}</span>
                     </Button>
+                  </TableCell>
+                  <TableCell className="text-center">
                     {batch.invoiceData && (
                         <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice">
                             <FileDown className="h-5 w-5" />
@@ -223,7 +226,7 @@ export default function InventoryPage() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center">
+                  <TableCell colSpan={9} className="h-24 text-center">
                     No crop batches found.
                   </TableCell>
                 </TableRow>
