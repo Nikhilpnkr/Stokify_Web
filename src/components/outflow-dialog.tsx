@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import type { CropBatch, CropType, AreaAllocation, StorageLocation } from "@/lib/data";
+import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
@@ -38,6 +38,11 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
     const [amountPaid, setAmountPaid] = useState(0);
     
     const location = locations?.find(l => l.id === batch?.storageLocationId);
+
+    const customerRef = useMemoFirebase(() => 
+        batch ? doc(firestore, 'customers', batch.customerId) : null, 
+    [batch, firestore]);
+    const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerRef);
 
     const totalQuantity = useMemo(() => {
         if (!batch) return 0;
@@ -110,7 +115,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
 
 
     async function handleOutflow() {
-        if (!firestore || !batch || !user || !cropType || !location) return;
+        if (!firestore || !batch || !user || !cropType || !location || !customer) return;
         
         if (withdrawQuantity > totalQuantity) {
             toast({
@@ -146,15 +151,13 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
 
         const balanceDue = finalBill - amountPaid;
 
-        const customer = batch.customerName;
-
         const invoiceData: InvoiceData = {
           type: 'Outflow',
           receiptNumber: newOutflowRef.id.slice(0, 8).toUpperCase(),
           date: new Date(),
           customer: {
-            name: batch.customerName,
-            mobile: 'N/A', // Customer mobile is not directly on batch, would need another query
+            name: customer.name,
+            mobile: customer.mobileNumber,
           },
           user: {
             name: user.displayName || 'N/A',
@@ -168,7 +171,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
             total: storageCost,
           }],
           location: location,
-          labourCharge: batch.labourCharge,
+          labourCharge: batch.labourCharge || 0,
           subTotal: storageCost,
           total: finalBill,
           amountPaid: amountPaid,
@@ -267,24 +270,26 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                    <p className="font-medium text-muted-foreground">Customer</p>
-                    <p className="font-semibold">{batch.customerName}</p>
+            {isLoadingCustomer ? <Loader2 className="h-5 w-5 animate-spin"/> :
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p className="font-medium text-muted-foreground">Customer</p>
+                        <p className="font-semibold">{batch.customerName}</p>
+                    </div>
+                    <div>
+                        <p className="font-medium text-muted-foreground">Crop Type</p>
+                        <p className="font-semibold">{batch.cropType}</p>
+                    </div>
+                    <div>
+                        <p className="font-medium text-muted-foreground">Total Stored</p>
+                        <p className="font-semibold">{totalQuantity.toLocaleString()} bags</p>
+                    </div>
+                    <div>
+                        <p className="font-medium text-muted-foreground">Date Added</p>
+                        <p className="font-semibold">{format(new Date(batch.dateAdded), "MMM d, yyyy")}</p>
+                    </div>
                 </div>
-                <div>
-                    <p className="font-medium text-muted-foreground">Crop Type</p>
-                    <p className="font-semibold">{batch.cropType}</p>
-                </div>
-                 <div>
-                    <p className="font-medium text-muted-foreground">Total Stored</p>
-                    <p className="font-semibold">{totalQuantity.toLocaleString()} bags</p>
-                </div>
-                <div>
-                    <p className="font-medium text-muted-foreground">Date Added</p>
-                    <p className="font-semibold">{format(new Date(batch.dateAdded), "MMM d, yyyy")}</p>
-                </div>
-            </div>
+            }
 
             <div className="grid gap-2">
                 <Label htmlFor="quantity">Quantity to Withdraw (bags)</Label>
@@ -354,10 +359,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
           <Button 
             onClick={handleOutflow} 
-            disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || (finalBill <= 0 && withdrawQuantity <= 0)} 
+            disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || (finalBill <= 0 && withdrawQuantity <= 0) || isLoadingCustomer} 
             className="bg-primary hover:bg-primary/90"
           >
-             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+             {(isProcessing || isLoadingCustomer) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm Outflow
           </Button>
         </DialogFooter>
@@ -366,4 +371,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
   );
 }
 
-    
