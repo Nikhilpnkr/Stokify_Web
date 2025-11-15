@@ -103,7 +103,6 @@ export default function UserManagementPage() {
                       <Select
                         defaultValue={profile.role}
                         onValueChange={(value: UserRole) => handleRoleChange(profile.uid, value)}
-                        disabled={profile.uid === user?.uid && currentUserProfile?.role !== 'admin'}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
