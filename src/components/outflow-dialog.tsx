@@ -278,7 +278,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 </div>
                 {batch.labourCharge && batch.labourCharge > 0 && (
                     <div className="flex justify-between items-baseline">
-                        <p className="text-muted-foreground">Inflow Labour Charge:</p>
+                        <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
                         <p className="font-semibold">₹{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                 )}
@@ -328,3 +328,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     </Dialog>
   );
 }
+
+    
