@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return redirect('/login');
   }
   
-  if (userProfile && userProfile.role !== 'admin') {
+  if (!userProfile || userProfile.role !== 'admin') {
       return redirect('/dashboard');
   }
 
