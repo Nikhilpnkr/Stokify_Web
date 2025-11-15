@@ -1,44 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read their own profile, and anyone can create one (for signup)
-    match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null;
-    }
-
-    // Owner-based security for top-level collections
-    match /storageLocations/{locationId} {
-      allow read, write: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow list: if request.auth != null && request.query.get('ownerId') == request.auth.uid;
-    }
-
-    match /cropBatches/{batchId} {
-      allow read, write: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-       allow list: if request.auth != null && request.query.get('ownerId') == request.auth.uid;
-    }
-    
-    match /cropTypes/{typeId} {
-        allow read, write: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-        allow list: if request.auth != null && request.query.get('ownerId') == request.auth.uid;
-    }
-
-    match /customers/{customerId} {
-      allow read, write: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow list: if request.auth != null && request.query.get('ownerId') == request.auth.uid;
-    }
-
-    match /outflows/{outflowId} {
-      allow read, write: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow list: if request.auth != null && request.query.get('ownerId') == request.auth.uid;
-    }
-
-    // Rules for the 'areas' subcollection
-    match /storageLocations/{locationId}/areas/{areaId} {
-      // Allow read/write if the user owns the parent location.
-      // A get() call is needed to check the parent document's ownerId.
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
