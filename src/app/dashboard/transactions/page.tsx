@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, FileDown, Calendar, User, Wheat, ShoppingBag, Banknote, FileText } from "lucide-react";
+import { Loader2, FileDown, Calendar, User, Wheat, ShoppingBag, Banknote, FileText, Search } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { Outflow, Customer, CropBatch } from "@/lib/data";
@@ -13,21 +13,17 @@ import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 export default function TransactionsPage() {
   const { firestore, user } = useFirebase();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const outflowsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
   const { data: unsortedOutflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
-
-  const outflows = useMemo(() => {
-    if (!unsortedOutflows) return [];
-    return [...unsortedOutflows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [unsortedOutflows]);
-
 
   const customersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
@@ -44,6 +40,20 @@ export default function TransactionsPage() {
   const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
   const getCropTypeFromBatch = (batchId: string) => batches?.find(b => b.id === batchId)?.cropType || 'N/A';
 
+  const outflows = useMemo(() => {
+    if (!unsortedOutflows) return [];
+    
+    const filtered = unsortedOutflows.filter(outflow => {
+        const customerName = getCustomerName(outflow.customerId).toLowerCase();
+        const cropType = getCropTypeFromBatch(outflow.cropBatchId).toLowerCase();
+        const search = searchTerm.toLowerCase();
+        return customerName.includes(search) || cropType.includes(search);
+    });
+
+    return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [unsortedOutflows, customers, batches, searchTerm]);
+
+
   const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches;
 
   return (
@@ -54,10 +64,23 @@ export default function TransactionsPage() {
       />
       <Card>
         <CardHeader>
-          <CardTitle>All Outflows</CardTitle>
-          <CardDescription>
-            {outflows?.length || 0} transactions found.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <CardTitle>All Outflows</CardTitle>
+                <CardDescription>
+                  {outflows?.length || 0} transactions found.
+                </CardDescription>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search by customer or crop..."
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+          </div>
         </CardHeader>
         <CardContent>
            {isLoading ? (
@@ -157,7 +180,7 @@ export default function TransactionsPage() {
             ) : (
             <div className="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground" />
-                <p className="mt-4 text-sm text-muted-foreground">No transactions found.</p>
+                <p className="mt-4 text-sm text-muted-foreground">{searchTerm ? "No transactions match your search." : "No transactions found."}</p>
             </div>
             )}
         </CardContent>
@@ -165,3 +188,5 @@ export default function TransactionsPage() {
     </>
   );
 }
+
+    

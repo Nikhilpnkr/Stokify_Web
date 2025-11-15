@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote, FileDown, MapPin, Calendar, Smartphone } from "lucide-react";
+import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote, FileDown, MapPin, Calendar, Smartphone, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,6 +14,7 @@ import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { CropBatch, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
 import { generateInvoicePdf } from "@/lib/pdf";
+import { Input } from "@/components/ui/input";
 
 
 export default function InventoryPage() {
@@ -22,6 +23,7 @@ export default function InventoryPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const cropBatchesQuery = useMemoFirebase(() =>
     user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
@@ -89,11 +91,17 @@ export default function InventoryPage() {
 
   const batches = useMemo(() => {
     if (!rawBatches) return [];
-    return rawBatches.map(batch => ({
+    
+    const filteredBatches = rawBatches.filter(batch => 
+        batch.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        batch.cropType.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return filteredBatches.map(batch => ({
       ...batch,
       quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
     })).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
-  }, [rawBatches]);
+  }, [rawBatches, searchTerm]);
 
   const getLocationName = (locationId: string) => locations?.find(l => l.id === locationId)?.name || '...';
   const getAreaNames = (allocations: {areaId: string, quantity: number}[]) => {
@@ -168,8 +176,21 @@ export default function InventoryPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle>Current Inventory</CardTitle>
-            <CardDescription>A list of all crop batches currently in storage. Click the receipt icon to process outflow.</CardDescription>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <CardTitle>Current Inventory</CardTitle>
+                <CardDescription>A list of all crop batches currently in storage. Click the receipt icon to process outflow.</CardDescription>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search by customer or crop..."
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -197,7 +218,7 @@ export default function InventoryPage() {
                     <CardContent className="space-y-2 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /><span>{getCustomerMobile(batch.customerId)}</span></div>
                       <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>{getLocationName(batch.storageLocationId)} ({getAreaNames(batch.areaAllocations)})</span></div>
-                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span></div>
+                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(toDate(batch.dateAdded), "MMM d, yyyy")}</span></div>
                     </CardContent>
                     <CardFooter className="flex justify-between">
                         <Button variant="ghost" size="sm" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice" disabled={!batch.invoiceData}>
@@ -239,9 +260,9 @@ export default function InventoryPage() {
                         <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
+                            <span>{format(toDate(batch.dateAdded), "MMM d, yyyy")}</span>
                             <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}
+                              {formatDistanceToNow(toDate(batch.dateAdded), { addSuffix: true })}
                             </span>
                           </div>
                         </TableCell>
@@ -267,7 +288,7 @@ export default function InventoryPage() {
             </>
           ) : (
             <div className="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-                <p className="text-sm text-muted-foreground">No crop batches found.</p>
+                <p className="text-sm text-muted-foreground">{searchTerm ? "No batches match your search." : "No crop batches found."}</p>
             </div>
           )}
         </CardContent>
@@ -291,3 +312,14 @@ export default function InventoryPage() {
     </>
   );
 }
+
+function toDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
+        return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
+    }
+    return new Date(dateValue);
+}
+
+
+    

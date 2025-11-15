@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Mail, User } from "lucide-react";
+import { Loader2, Mail, Search } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase, updateDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import type { UserProfile, UserRole } from "@/lib/data";
@@ -18,10 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 
 export default function UserManagementPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const currentUserProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null,
@@ -33,7 +35,16 @@ export default function UserManagementPage() {
     user ? query(collection(firestore, 'users'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+  const { data: allUsers, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+
+  const users = useMemo(() => {
+    if (!allUsers) return [];
+    return allUsers.filter(profile => 
+        profile.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        profile.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [allUsers, searchTerm]);
+
 
   useEffect(() => {
     if (currentUserProfile && currentUserProfile.role === 'admin') {
@@ -76,10 +87,23 @@ export default function UserManagementPage() {
       />
       <Card>
         <CardHeader>
-          <CardTitle>All Users</CardTitle>
-          <CardDescription>
-            {users?.length || 0} users found that you manage.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+              <div>
+                <CardTitle>All Users</CardTitle>
+                <CardDescription>
+                    {users?.length || 0} users found that you manage.
+                </CardDescription>
+              </div>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search by name or email..."
+                  className="pl-9"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -170,7 +194,7 @@ export default function UserManagementPage() {
             </>
           ) : (
             <div className="h-48 flex justify-center items-center text-muted-foreground">
-              No users found.
+              {searchTerm ? "No users match your search." : "No users found."}
             </div>
           )}
         </CardContent>
@@ -178,3 +202,5 @@ export default function UserManagementPage() {
     </>
   );
 }
+
+    
