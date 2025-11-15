@@ -1,23 +1,28 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Users, Loader2, Phone, User as UserIcon } from "lucide-react";
+import { Users, Loader2, Phone, User as UserIcon, PlusCircle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { Customer, Outflow } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
+import { AddCustomerDialog } from "@/components/add-customer-dialog";
 
-function EmptyState() {
+function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center h-full">
       <Users className="mx-auto h-12 w-12 text-muted-foreground" />
       <h3 className="mt-4 text-lg font-semibold text-foreground">No Customers Found</h3>
-      <p className="mt-2 text-sm text-muted-foreground">Customers are added automatically when you create a new crop batch.</p>
+      <p className="mt-2 text-sm text-muted-foreground">Get started by adding your first customer.</p>
+       <Button onClick={onAdd} className="mt-6">
+        <PlusCircle className="mr-2 h-4 w-4" />
+        Add New Customer
+      </Button>
     </div>
   )
 }
@@ -26,6 +31,8 @@ export default function CustomersPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const router = useRouter();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
 
   const customersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
@@ -72,6 +79,12 @@ export default function CustomersPage() {
       <PageHeader
         title="Customers"
         description="View all customers and their stored batches. Balances are shown in red."
+         action={
+          <Button onClick={() => setIsAddDialogOpen(true)} disabled={!user}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add New Customer
+          </Button>
+        }
       />
       
       {customers && customers.length > 0 ? (
@@ -112,8 +125,13 @@ export default function CustomersPage() {
           })}
         </div>
       ) : (
-        <EmptyState />
+        <EmptyState onAdd={() => setIsAddDialogOpen(true)} />
       )}
+      <AddCustomerDialog
+        isOpen={isAddDialogOpen}
+        setIsOpen={setIsAddDialogOpen}
+        existingCustomers={customers || []}
+       />
     </>
   );
 }
