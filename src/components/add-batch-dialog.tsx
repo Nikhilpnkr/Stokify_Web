@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -33,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import type { CropType, StorageLocation, StorageArea, Customer, CropBatch, Outflow } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, useUser, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { PlusCircle, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { generateInflowPdf } from "@/lib/pdf";
@@ -64,9 +63,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
   const [isNewCustomer, setIsNewCustomer] = useState(true);
 
   const formSchema = z.object({
-    customerId: z.string(), // Can be an existing ID or a placeholder for a new customer
+    customerId: z.string(),
     customerName: z.string().min(2, "Customer name is required."),
-    customerMobile: z.string().min(10, "A valid mobile number is required.").refine(val => !customers.some(c => c.mobileNumber === val && c.id !== form.getValues('customerId')), { message: "This mobile number is already taken."}),
+    customerMobile: z.string().min(10, "A valid mobile number is required.").refine(val => {
+        if (!isNewCustomer) return true; // Don't validate for existing customers
+        return !customers.some(c => c.mobileNumber === val);
+    }, { message: "This mobile number is already taken."}),
     cropTypeId: z.string().min(1, "Please select a crop type."),
     locationId: z.string().min(1, "Please select a storage location."),
     dateAdded: z.date(),
@@ -106,15 +108,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     },
   });
   
-  const selectedLocationId = useWatch({
-    control: form.control,
-    name: "locationId"
-  });
-
-  const selectedCustomerId = useWatch({
-      control: form.control,
-      name: "customerId",
-  });
+  const selectedLocationId = useWatch({ control: form.control, name: "locationId" });
+  const selectedCustomerId = useWatch({ control: form.control, name: "customerId" });
 
   useEffect(() => {
     if (selectedCustomerId && selectedCustomerId !== 'new_customer') {
@@ -122,6 +117,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         if (customer) {
             form.setValue('customerName', customer.name);
             form.setValue('customerMobile', customer.mobileNumber);
+            form.clearErrors('customerMobile');
             setIsNewCustomer(false);
         }
     } else {
@@ -204,14 +200,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     let finalCustomer: Customer;
 
     if (isNewCustomer) {
-        const customerQuery = query(collection(firestore, 'customers'), where('mobileNumber', '==', values.customerMobile), where('ownerId', '==', user.uid));
-        const querySnapshot = await getDocs(customerQuery);
-        
-        if (!querySnapshot.empty) {
-            form.setError("customerMobile", { message: "A customer with this mobile number already exists."});
-            return;
-        }
-
         const newCustomerRef = doc(collection(firestore, "customers"));
         finalCustomer = {
             id: newCustomerRef.id,
@@ -219,7 +207,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             mobileNumber: values.customerMobile,
             ownerId: user.uid
         };
-        setDocumentNonBlocking(newCustomerRef, finalCustomer, { merge: false });
+        addDocumentNonBlocking(newCustomerRef, finalCustomer);
     } else {
         const existingCustomer = customers.find(c => c.id === values.customerId);
         if (!existingCustomer) {
@@ -229,11 +217,9 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         finalCustomer = existingCustomer;
     }
 
+    const newDocRef = doc(collection(firestore, "cropBatches"));
 
-    const cropBatchesCol = collection(firestore, "cropBatches");
-    const newDocRef = doc(cropBatchesCol);
-
-    const newBatch: CropBatch = {
+    const newBatch: Omit<CropBatch, 'quantity'> = {
       id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
@@ -243,15 +229,15 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       customerId: finalCustomer.id,
       customerName: finalCustomer.name,
       labourCharge: totalLabourCharge,
-      quantity: totalQuantity, // derived for convenience
     };
     
-    setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
+    addDocumentNonBlocking(newDocRef, newBatch);
+    const fullBatch = { ...newBatch, quantity: totalQuantity };
 
     toast({
       title: "Success! Batch Added.",
       description: `New batch for ${finalCustomer.name} has been added.`,
-      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(newBatch, finalCustomer, selectedLocation!)}>Download Inflow Receipt</Button>,
+      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullBatch, finalCustomer, selectedLocation!, areas)}>Download Inflow Receipt</Button>,
       duration: 10000,
     });
     setIsOpen(false);
@@ -287,7 +273,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                                 onChange={field.onChange}
                                 placeholder="Select an existing customer..."
                                 searchPlaceholder="Search customers..."
-                                emptyPlaceholder="No customer found. Type to add a new one."
+                                emptyPlaceholder="No customer found. Add details below."
                             />
                         </FormControl>
                         <FormMessage />
@@ -507,9 +493,10 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </div>
             </div>
 
-
             <DialogFooter>
-              <Button type="submit">Add Batch</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                Add Batch
+              </Button>
             </DialogFooter>
           </form>
         </Form>

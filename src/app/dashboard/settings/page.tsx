@@ -14,12 +14,11 @@ import { Loader2 } from "lucide-react";
 import { useUser, useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { doc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
-import { updateProfile, deleteUser } from "firebase/auth";
+import { updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
 import type { UserProfile } from "@/lib/data";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Display name must be at least 2 characters."),
@@ -66,34 +65,31 @@ export default function SettingsPage() {
   }, [userProfile, user, form]);
 
   async function onSubmit(values: z.infer<typeof profileFormSchema>) {
-    if (!user || !userProfileRef) return;
+    if (!user || !userProfileRef || !auth.currentUser) return;
 
-    try {
-      if (auth.currentUser && values.displayName !== auth.currentUser.displayName) {
-        await updateProfile(auth.currentUser, { displayName: values.displayName });
-      }
-
-      const updatedData: Partial<UserProfile> = {
-        displayName: values.displayName,
-        mobileNumber: values.mobileNumber || '',
-      };
-
-      updateDocumentNonBlocking(userProfileRef, updatedData);
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error updating profile",
-        description: error.message,
-      });
+    if (values.displayName !== auth.currentUser.displayName) {
+        updateProfile(auth.currentUser, { displayName: values.displayName }).catch(error => {
+             toast({
+                variant: "destructive",
+                title: "Error updating display name",
+                description: error.message,
+            });
+        });
     }
+
+    const updatedData: Partial<UserProfile> = {
+      displayName: values.displayName,
+      mobileNumber: values.mobileNumber || '',
+    };
+    updateDocumentNonBlocking(userProfileRef, updatedData);
+
+    toast({
+      title: "Profile updated",
+      description: "Your profile has been successfully updated.",
+    });
   }
 
-   async function deleteAllData(showToast = true) {
+  async function deleteAllData(showToast = true) {
     if (!user || !firestore) return;
     setIsProcessing(true);
     
@@ -101,7 +97,6 @@ export default function SettingsPage() {
       const batch = writeBatch(firestore);
       
       const collectionsToDelete = ["cropBatches", "outflows", "payments", "customers", "cropTypes"];
-
       for (const collectionName of collectionsToDelete) {
         const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
         const snapshot = await getDocs(q);
@@ -125,7 +120,6 @@ export default function SettingsPage() {
             description: "All of your application data has been successfully deleted.",
         });
       }
-
     } catch (error: any) {
        console.error("Error deleting all data:", error);
        if (showToast) {
@@ -141,18 +135,37 @@ export default function SettingsPage() {
     }
   }
 
+  async function deleteTransactionData() {
+    if (!user || !firestore) return;
+    setIsProcessing(true);
+    try {
+      const batch = writeBatch(firestore);
+      const collectionsToDelete = ["cropBatches", "outflows", "payments"];
+      for (const collectionName of collectionsToDelete) {
+        const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
+        const snapshot = await getDocs(q);
+        snapshot.forEach(doc => batch.delete(doc.ref));
+      }
+      await batch.commit();
+      toast({
+        title: "Transaction Records Deleted",
+        description: "All inflow and outflow records deleted.",
+      });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Error Deleting Data", description: error.message });
+    } finally {
+      setIsProcessing(false);
+      setIsDeleteDataOpen(false);
+    }
+  }
+
   async function handleDeleteAccount() {
     if (!user || !userProfileRef) return;
     setIsProcessing(true);
 
     try {
-      // First delete all associated data
-      await deleteAllData(false); // Call to delete everything, don't show toast
-      
-      // Then delete the user profile document itself
+      await deleteAllData(false);
       deleteDocumentNonBlocking(userProfileRef);
-
-      // Finally, delete the Firebase Auth user
       await deleteUser(user);
       
       toast({
@@ -160,13 +173,12 @@ export default function SettingsPage() {
         description: "Your account and all data have been successfully deleted.",
       });
       redirect('/login');
-
     } catch (error: any) {
       console.error("Error deleting account:", error);
       toast({
         variant: "destructive",
         title: "Error Deleting Account",
-        description: error.message || "An unexpected error occurred.",
+        description: error.message || "An unexpected error occurred. You may need to sign out and sign back in to complete this action.",
       });
     } finally {
         setIsProcessing(false);
@@ -262,8 +274,8 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
                  <div>
-                    <h4 className="font-medium text-sm">Delete All My Data</h4>
-                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes all inflow and outflow records. Customers, locations, and crop types will NOT be deleted.</p>
+                    <h4 className="font-medium text-sm">Delete Transaction Data</h4>
+                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes all inflow, outflow, and payment records. Your customers, locations, and crop types will NOT be deleted.</p>
                     <Button
                         variant="destructive"
                         onClick={() => setIsDeleteDataOpen(true)}
@@ -275,7 +287,7 @@ export default function SettingsPage() {
                 </div>
                  <div>
                     <h4 className="font-medium text-sm">Delete Account &amp; All Data</h4>
-                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes your user account and all associated data to start fresh.</p>
+                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes your user account and all associated application data.</p>
                     <Button
                         variant="destructive"
                         onClick={() => setIsDeleteAccountOpen(true)}
@@ -312,34 +324,12 @@ export default function SettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete all transaction records?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent. This will permanently delete all your inflow and outflow records. This cannot be undone.
+              This action is permanent. This will permanently delete all your inflow, outflow, and payment records. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={async () => {
-              if (!user || !firestore) return;
-              setIsProcessing(true);
-              try {
-                const batch = writeBatch(firestore);
-                const collectionsToDelete = ["cropBatches", "outflows"];
-                for (const collectionName of collectionsToDelete) {
-                  const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
-                  const snapshot = await getDocs(q);
-                  snapshot.forEach(doc => batch.delete(doc.ref));
-                }
-                await batch.commit();
-                toast({
-                  title: "Transaction Records Deleted",
-                  description: "All inflow and outflow records deleted.",
-                });
-              } catch (error: any) {
-                toast({ variant: "destructive", title: "Error Deleting Data", description: error.message });
-              } finally {
-                setIsProcessing(false);
-                setIsDeleteDataOpen(false);
-              }
-            }} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction onClick={deleteTransactionData} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Transactions
             </AlertDialogAction>
@@ -349,5 +339,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

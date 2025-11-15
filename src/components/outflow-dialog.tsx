@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
+import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
+import { doc, collection } from "firebase/firestore";
 import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow, StorageArea } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
@@ -29,6 +29,16 @@ type OutflowDialogProps = {
   locations: StorageLocation[];
   allAreas: StorageArea[];
 };
+
+function toDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
+        return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
+    }
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return new Date();
+    return date;
+}
 
 export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, allAreas }: OutflowDialogProps) {
     const { toast } = useToast();
@@ -50,18 +60,15 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         return batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
     }, [batch]);
 
-    // This useMemo calculates the initial cost and duration. It only runs when batch or cropType changes.
     const { initialCostPerBag, totalMonths } = useMemo(() => {
         if (!batch || !cropType) {
             return { initialCostPerBag: 0, totalMonths: 0 };
         }
 
-        const startDate = new Date(batch.dateAdded);
+        const startDate = toDate(batch.dateAdded);
         const endDate = new Date();
         let months = differenceInMonths(endDate, startDate);
-        if (months < 1 && startDate.getTime() < endDate.getTime()) {
-            months = 1;
-        }
+        if (months < 1 && endDate.getTime() > startDate.getTime()) months = 1;
         if (months <= 0) months = 1;
 
         let calculatedCost = 0;
@@ -70,42 +77,34 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         const monthlyRate = cropType.rates['1'];
 
         if (months <= 5) {
-            // For the first 5 months, use the monthly rate.
             calculatedCost = months * monthlyRate;
         } else {
-            // After 5 months, use the most cost-effective combination of 6 and 12-month rates.
             const numYears = Math.floor(months / 12);
             calculatedCost += numYears * yearlyRate;
             
             const remainingMonths = months % 12;
-
             if (remainingMonths > 0) {
-                // If there are remaining months, charge for at least a 6-month block.
                  calculatedCost += halfYearlyRate;
             }
         }
+        
+        calculatedCost += cropType.insurance || 0;
 
         return { initialCostPerBag: calculatedCost, totalMonths: months };
-
     }, [batch, cropType]);
 
-    // This useMemo recalculates the final bill whenever the editable cost, quantity, or batch changes.
-    const { storageCost, insuranceCharge, finalBill } = useMemo(() => {
+    const { storageCost, finalBill } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
-        const insurance = (cropType?.insurance || 0) * withdrawQuantity;
-        const bill = storage + insurance + (batch?.labourCharge || 0);
-        return { storageCost: storage, insuranceCharge: insurance, finalBill: bill };
-    }, [costPerBag, withdrawQuantity, batch, cropType]);
-
+        const bill = storage + (batch?.labourCharge || 0);
+        return { storageCost: storage, finalBill: bill };
+    }, [costPerBag, withdrawQuantity, batch]);
 
     useEffect(() => {
         if (isOpen && batch) {
             const batchTotal = batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
             setWithdrawQuantity(batchTotal);
-            // Set the editable costPerBag from the initial calculation
             setCostPerBag(initialCostPerBag);
         } else if (!isOpen) {
-            // Reset state when dialog closes
             setIsProcessing(false);
             setWithdrawQuantity(0);
             setAmountPaid(0);
@@ -113,39 +112,23 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         }
     }, [isOpen, batch, initialCostPerBag]);
 
-    // Effect to update amountPaid whenever the finalBill changes
     useEffect(() => {
         setAmountPaid(finalBill);
     }, [finalBill]);
-
 
     async function handleOutflow() {
         if (!firestore || !batch || !user || !cropType || !location || !customer) return;
         
         if (withdrawQuantity > totalQuantity) {
-            toast({
-                variant: "destructive",
-                title: "Invalid Quantity",
-                description: "Withdrawal quantity cannot exceed the total quantity in the batch.",
-            });
+            toast({ variant: "destructive", title: "Invalid Quantity" });
             return;
         }
-        
         if (amountPaid > finalBill) {
-            toast({
-                variant: "destructive",
-                title: "Invalid Payment",
-                description: "Amount paid cannot exceed the final bill.",
-            });
+            toast({ variant: "destructive", title: "Invalid Payment" });
             return;
         }
-        
         if (finalBill <= 0 && withdrawQuantity <= 0) {
-            toast({
-                variant: "destructive",
-                title: "No Bill",
-                description: "There is nothing to bill for this transaction.",
-            });
+            toast({ variant: "destructive", title: "No Bill" });
             return;
         }
 
@@ -155,8 +138,9 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         const newOutflowRef = doc(collection(firestore, "outflows"));
 
         const balanceDue = finalBill - amountPaid;
+        const insuranceCharge = (cropType?.insurance || 0) * withdrawQuantity;
 
-        const newOutflow: Outflow = {
+        const newOutflow: Omit<Outflow, 'id'> & { id: string } = {
             id: newOutflowRef.id,
             cropBatchId: batch.id,
             customerId: batch.customerId,
@@ -172,10 +156,9 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             insuranceCharge: insuranceCharge,
         };
         
-        setDocumentNonBlocking(newOutflowRef, newOutflow, {merge: false});
+        addDocumentNonBlocking(newOutflowRef, newOutflow);
 
         if (withdrawQuantity === totalQuantity) {
-            // Full withdrawal, delete the document
             deleteDocumentNonBlocking(batchRef);
             toast({
                 title: "Full Outflow Successful!",
@@ -184,11 +167,8 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                 duration: 10000,
             });
         } else {
-            // Partial withdrawal or zero withdrawal (just paying labour)
             let remainingWithdrawal = withdrawQuantity;
             const newAllocations: AreaAllocation[] = [];
-
-            // Sort allocations to withdraw from alphabetically named areas first
             const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
 
             for (const alloc of sortedAllocations) {
@@ -196,42 +176,26 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                     newAllocations.push(alloc);
                     continue;
                 }
-
                 if (alloc.quantity > remainingWithdrawal) {
-                    newAllocations.push({
-                        ...alloc,
-                        quantity: alloc.quantity - remainingWithdrawal,
-                    });
+                    newAllocations.push({ ...alloc, quantity: alloc.quantity - remainingWithdrawal });
                     remainingWithdrawal = 0;
                 } else {
                     remainingWithdrawal -= alloc.quantity;
                 }
             }
             
-            // After any outflow, the labor charge is considered billed and tracked in the outflow record.
-            // We set it to 0 on the original batch to prevent double-billing.
             const updatedData = { 
                 areaAllocations: newAllocations,
                 labourCharge: 0,
             };
-
             updateDocumentNonBlocking(batchRef, updatedData);
             
-             if (withdrawQuantity > 0) {
-                toast({
-                    title: "Partial Outflow Successful!",
-                    description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
-                    duration: 10000,
-                });
-            } else {
-                toast({
-                    title: "Bill Settled!",
-                    description: `A bill for ${batch.customerName} was processed for ₹${finalBill.toLocaleString()}.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
-                    duration: 10000,
-                });
-            }
+            toast({
+                title: withdrawQuantity > 0 ? "Partial Outflow Successful!" : "Bill Settled!",
+                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
+                duration: 10000,
+            });
         }
         
         setIsProcessing(false);
@@ -240,136 +204,126 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
 
     if (!batch) return null;
 
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Process Outflow & Bill</DialogTitle>
-          <DialogDescription>
-            Enter the quantity to withdraw and the payment amount.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
-            {isLoadingCustomer ? <Loader2 className="h-5 w-5 animate-spin"/> :
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                        <p className="font-medium text-muted-foreground">Customer</p>
-                        <p className="font-semibold">{batch.customerName}</p>
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+            <DialogTitle>Process Outflow & Bill</DialogTitle>
+            <DialogDescription>
+                Enter the quantity to withdraw and the payment amount.
+            </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                {isLoadingCustomer ? <Loader2 className="h-5 w-5 animate-spin"/> :
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <p className="font-medium text-muted-foreground">Customer</p>
+                            <p className="font-semibold">{batch.customerName}</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-muted-foreground">Mobile</p>
+                            <p className="font-semibold">{customer?.mobileNumber}</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-muted-foreground">Crop Type</p>
+                            <p className="font-semibold">{cropType?.name}</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-muted-foreground">Total Stored</p>
+                            <p className="font-semibold">{totalQuantity.toLocaleString()} bags</p>
+                        </div>
+                        <div>
+                            <p className="font-medium text-muted-foreground">Date Added</p>
+                            <p className="font-semibold">{format(toDate(batch.dateAdded), "MMM d, yyyy")}</p>
+                        </div>
                     </div>
-                     <div>
-                        <p className="font-medium text-muted-foreground">Mobile</p>
-                        <p className="font-semibold">{customer?.mobileNumber}</p>
-                    </div>
-                    <div>
-                        <p className="font-medium text-muted-foreground">Crop Type</p>
-                        <p className="font-semibold">{cropType?.name}</p>
-                    </div>
-                    <div>
-                        <p className="font-medium text-muted-foreground">Total Stored</p>
-                        <p className="font-semibold">{totalQuantity.toLocaleString()} bags</p>
-                    </div>
-                    <div>
-                        <p className="font-medium text-muted-foreground">Date Added</p>
-                        <p className="font-semibold">{format(new Date(batch.dateAdded), "MMM d, yyyy")}</p>
-                    </div>
-                </div>
-            }
+                }
 
-            <div className="grid gap-2">
-                <Label htmlFor="quantity">Quantity to Withdraw (bags)</Label>
-                <Input
-                    id="quantity"
-                    type="number"
-                    value={withdrawQuantity}
-                    onWheel={(e) => (e.target as HTMLElement).blur()}
-                    onChange={(e) => {
-                        const val = Number(e.target.value);
-                         if (val >= 0 && val <= totalQuantity) {
-                            setWithdrawQuantity(val)
-                         }
-                    }}
-                    max={totalQuantity}
-                    min={0}
-                />
-            </div>
-            
-            <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-                 <div className="flex justify-between items-baseline">
-                    <p className="text-muted-foreground">Storage Duration:</p>
-                    <p className="font-semibold">{totalMonths} months</p>
-                </div>
                 <div className="grid gap-2">
-                    <Label htmlFor="costPerBag">Storage Cost per Bag</Label>
+                    <Label htmlFor="quantity">Quantity to Withdraw (bags)</Label>
                     <Input
-                        id="costPerBag"
+                        id="quantity"
                         type="number"
-                        value={costPerBag}
+                        value={withdrawQuantity}
                         onWheel={(e) => (e.target as HTMLElement).blur()}
-                        onChange={(e) => setCostPerBag(Number(e.target.value))}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (val >= 0 && val <= totalQuantity) setWithdrawQuantity(val)
+                        }}
+                        max={totalQuantity}
+                        min={0}
                     />
-                    <p className="text-xs text-muted-foreground">
-                        Calculated rate: ₹{initialCostPerBag.toFixed(2)}
-                    </p>
                 </div>
-                <div className="flex justify-between items-baseline">
-                    <p className="text-muted-foreground">Total Storage Cost:</p>
-                    <p className="font-semibold">₹{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-                <div className="flex justify-between items-baseline">
-                    <p className="text-muted-foreground">Insurance:</p>
-                    <p className="font-semibold">₹{insuranceCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-                {batch.labourCharge && batch.labourCharge > 0 && (
+                
+                <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                     <div className="flex justify-between items-baseline">
-                        <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
-                        <p className="font-semibold">₹{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-muted-foreground">Storage Duration:</p>
+                        <p className="font-semibold">{totalMonths} months</p>
                     </div>
-                )}
-                 <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                    <p className="text-lg font-bold">Final Bill:</p>
-                    <p className="text-2xl font-bold text-primary">₹{finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="grid gap-2">
+                        <Label htmlFor="costPerBag">Cost per Bag (Storage + Insurance)</Label>
+                        <Input
+                            id="costPerBag"
+                            type="number"
+                            value={costPerBag}
+                            onWheel={(e) => (e.target as HTMLElement).blur()}
+                            onChange={(e) => setCostPerBag(Number(e.target.value))}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Calculated rate: ₹{initialCostPerBag.toFixed(2)}
+                        </p>
+                    </div>
+                    <div className="flex justify-between items-baseline">
+                        <p className="text-muted-foreground">Total Cost (Qty x Rate):</p>
+                        <p className="font-semibold">₹{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                    {batch.labourCharge && batch.labourCharge > 0 && (
+                        <div className="flex justify-between items-baseline">
+                            <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
+                            <p className="font-semibold">₹{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        </div>
+                    )}
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t">
+                        <p className="text-lg font-bold">Final Bill:</p>
+                        <p className="text-2xl font-bold text-primary">₹{finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
+                </div>
+
+                <div className="grid gap-2">
+                    <Label htmlFor="amountPaid">Amount Paid</Label>
+                    <Input
+                        id="amountPaid"
+                        type="number"
+                        value={amountPaid}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
+                        onChange={(e) => {
+                            const val = Number(e.target.value);
+                            if (val >= 0 && val <= finalBill) setAmountPaid(val)
+                        }}
+                        max={finalBill}
+                        min={0}
+                    />
+                </div>
+
+                <div className="rounded-lg bg-destructive/10 text-destructive-foreground p-4 space-y-2 border border-destructive/20">
+                    <div className="flex justify-between items-center">
+                        <p className="text-lg font-bold">Balance Due:</p>
+                        <p className="text-2xl font-bold">₹{(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    </div>
                 </div>
             </div>
-
-             <div className="grid gap-2">
-                <Label htmlFor="amountPaid">Amount Paid</Label>
-                <Input
-                    id="amountPaid"
-                    type="number"
-                    value={amountPaid}
-                    onWheel={(e) => (e.target as HTMLElement).blur()}
-                     onChange={(e) => {
-                        const val = Number(e.target.value);
-                         if (val >= 0 && val <= finalBill) {
-                            setAmountPaid(val)
-                         }
-                    }}
-                    max={finalBill}
-                    min={0}
-                />
-            </div>
-
-            <div className="rounded-lg bg-destructive/10 text-destructive-foreground p-4 space-y-2 border border-destructive/20">
-                <div className="flex justify-between items-center">
-                    <p className="text-lg font-bold">Balance Due:</p>
-                    <p className="text-2xl font-bold">₹{(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                </div>
-            </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
-          <Button 
-            onClick={handleOutflow} 
-            disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || (finalBill <= 0 && withdrawQuantity <= 0) || isLoadingCustomer} 
-            className="bg-primary hover:bg-primary/90"
-          >
-             {(isProcessing || isLoadingCustomer) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Confirm Outflow
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+            <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
+            <Button 
+                onClick={handleOutflow} 
+                disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || (finalBill <= 0 && withdrawQuantity <= 0) || isLoadingCustomer} 
+                className="bg-primary hover:bg-primary/90"
+            >
+                {(isProcessing || isLoadingCustomer) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirm Outflow
+            </Button>
+            </DialogFooter>
+        </DialogContent>
+        </Dialog>
+    );
 }
-
-    

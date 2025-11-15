@@ -76,9 +76,9 @@ export default function CropTypesManagerPage() {
 
 
   function onSubmit(values: z.infer<typeof cropTypeFormSchema>) {
-    if (!user) return;
+    if (!user || !firestore) return;
 
-    const newCropData = {
+    const cropData = {
       name: values.name,
       ownerId: user.uid,
       rates: {
@@ -90,21 +90,15 @@ export default function CropTypesManagerPage() {
     };
 
     if (isEditing && editingCropTypeId) {
-        // Update existing document
         const docRef = doc(firestore, "cropTypes", editingCropTypeId);
-        updateDocumentNonBlocking(docRef, newCropData);
+        updateDocumentNonBlocking(docRef, cropData);
         toast({
             title: "Crop Type Updated",
             description: `"${values.name}" has been updated.`,
         });
     } else {
-        // Add new document
-        const cropTypesCol = collection(firestore, "cropTypes");
-        const newDocRef = doc(cropTypesCol);
-        const newCropType = {
-            id: newDocRef.id,
-            ...newCropData,
-        };
+        const newDocRef = doc(collection(firestore, "cropTypes"));
+        const newCropType = { id: newDocRef.id, ...cropData };
         addDocumentNonBlocking(newDocRef, newCropType);
         toast({
             title: "Crop Type Added",
@@ -322,5 +316,3 @@ export default function CropTypesManagerPage() {
     </>
   );
 }
-
-    

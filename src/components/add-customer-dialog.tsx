@@ -23,14 +23,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, useUser, setDocumentNonBlocking } from "@/firebase";
+import { useFirebase, useUser, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
 import type { Customer } from "@/lib/data";
-
-const formSchema = z.object({
-  name: z.string().min(2, "Customer name must be at least 2 characters."),
-  mobileNumber: z.string().min(10, "Please enter a valid 10-digit mobile number.").max(10, "Please enter a valid 10-digit mobile number."),
-});
 
 type AddCustomerDialogProps = {
   isOpen: boolean;
@@ -40,8 +35,15 @@ type AddCustomerDialogProps = {
 
 export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddCustomerDialogProps) {
     const { toast } = useToast();
-    const { firestore } = useFirebase();
-    const { user } = useUser();
+    const { firestore, user } = useFirebase();
+    
+    const formSchema = z.object({
+      name: z.string().min(2, "Customer name must be at least 2 characters."),
+      mobileNumber: z.string().min(10, "Please enter a valid 10-digit mobile number.").max(10, "Please enter a valid 10-digit mobile number.")
+        .refine(val => !existingCustomers.some(c => c.mobileNumber === val), {
+            message: "A customer with this mobile number already exists.",
+        }),
+    });
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -52,7 +54,7 @@ export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddC
     });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!user) {
+    if (!user || !firestore) {
       toast({
         variant: "destructive",
         title: "Authentication Error",
@@ -61,26 +63,16 @@ export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddC
       return;
     }
 
-    // Check for duplicates
-    if (existingCustomers.some(c => c.mobileNumber === values.mobileNumber)) {
-        form.setError("mobileNumber", {
-            type: "manual",
-            message: "A customer with this mobile number already exists.",
-        });
-        return;
-    }
-
-    const customersCol = collection(firestore, "customers");
-    const newDocRef = doc(customersCol);
+    const newDocRef = doc(collection(firestore, "customers"));
     
-    const newCustomer = {
+    const newCustomer: Omit<Customer, 'id'> & { id: string } = {
       id: newDocRef.id,
       name: values.name,
       mobileNumber: values.mobileNumber,
       ownerId: user.uid,
     };
 
-    setDocumentNonBlocking(newDocRef, newCustomer, { merge: false });
+    addDocumentNonBlocking(newDocRef, newCustomer);
     
     toast({
         title: "Success!",
@@ -138,4 +130,3 @@ export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddC
     </Dialog>
   );
 }
-

@@ -17,6 +17,20 @@ import { generateInflowPdf } from "@/lib/pdf";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
+function toDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    // Handle Firestore Timestamp objects
+    if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
+        return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
+    }
+    // Handle ISO strings or other date formats
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+        console.warn("Invalid date value:", dateValue);
+        return new Date(); // Return a valid date to prevent crashes
+    }
+    return date;
+}
 
 export default function InventoryPage() {
   const { firestore } = useFirebase();
@@ -57,7 +71,6 @@ export default function InventoryPage() {
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
 
-  // Fetch all areas from all locations
   useEffect(() => {
     async function fetchAllAreas() {
       if (!locations || locations.length === 0 || !firestore) {
@@ -280,12 +293,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-function toDate(dateValue: any): Date {
-    if (!dateValue) return new Date();
-    if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
-        return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
-    }
-    return new Date(dateValue);
-}
-

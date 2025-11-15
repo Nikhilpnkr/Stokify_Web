@@ -4,19 +4,18 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, where, writeBatch, getDocs } from "firebase/firestore";
+import { doc, collection, query, writeBatch, getDocs } from "firebase/firestore";
 import type { StorageLocation, StorageArea, CropBatch } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, Warehouse, MapPin, Phone, Trash2, Edit, PlusCircle, Layers } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
+import { Loader2, Warehouse, MapPin, Phone, Trash2, Layers, PlusCircle } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AddAreaDialog } from "@/components/add-area-dialog";
 import { BulkAddAreasDialog } from "@/components/bulk-add-areas-dialog";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
-
+import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function LocationDetailPage() {
   const { locationId } = useParams<{ locationId: string }>();
@@ -29,21 +28,18 @@ export default function LocationDetailPage() {
   const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
   const [areaToDelete, setAreaToDelete] = useState<StorageArea | null>(null);
 
-  // Document reference for the specific storage location
   const locationRef = useMemoFirebase(() =>
     locationId ? doc(firestore, 'storageLocations', locationId) : null,
     [firestore, locationId]
   );
   const { data: location, isLoading: isLoadingLocation } = useDoc<StorageLocation>(locationRef);
 
-  // Collection reference for the areas within this location
   const areasQuery = useMemoFirebase(() =>
     locationId ? query(collection(firestore, 'storageLocations', locationId, 'areas')) : null,
     [firestore, locationId]
   );
   const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
 
-  // Query for all crop batches to calculate usage
   const batchesQuery = useMemoFirebase(() => 
     user && locationId ? query(collection(firestore, 'cropBatches'), where('storageLocationId', '==', locationId), where('ownerId', '==', user.uid)) : null,
     [user, firestore, locationId]
@@ -88,9 +84,11 @@ export default function LocationDetailPage() {
     if (!locationId || !firestore || !areasQuery) return;
     
     try {
+        const areasSnapshot = await getDocs(areasQuery);
+        if (areasSnapshot.empty) return;
+        
         const batch = writeBatch(firestore);
-        const querySnapshot = await getDocs(areasQuery);
-        querySnapshot.forEach(doc => {
+        areasSnapshot.forEach(doc => {
             batch.delete(doc.ref);
         });
         await batch.commit();
@@ -99,7 +97,6 @@ export default function LocationDetailPage() {
             title: "All Areas Deleted",
             description: `All storage areas in "${location?.name}" have been removed.`,
         });
-
     } catch (error) {
         toast({
             variant: "destructive",
@@ -111,7 +108,6 @@ export default function LocationDetailPage() {
         setIsDeleteAllOpen(false);
     }
   }
-
 
   if (isLoading) {
     return (
@@ -133,7 +129,6 @@ export default function LocationDetailPage() {
   const totalCapacity = areasWithUsage.reduce((acc, area) => acc + area.capacity, 0);
   const overallPercentage = totalCapacity > 0 ? (totalUsed / totalCapacity) * 100 : 0;
 
-
   return (
     <>
       <PageHeader
@@ -154,7 +149,6 @@ export default function LocationDetailPage() {
       />
       
       <div className="grid gap-6">
-        {/* Location Details Card */}
         <Card>
             <CardHeader>
                 <div className="flex justify-between items-start">
@@ -183,7 +177,6 @@ export default function LocationDetailPage() {
             </CardContent>
         </Card>
 
-        {/* Areas Section */}
         <Card>
             <CardHeader className="flex-row items-center justify-between">
                 <div>
