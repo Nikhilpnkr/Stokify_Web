@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,6 +35,16 @@ export default function UserManagementPage() {
     [firestore, user]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+
+  useEffect(() => {
+    if (currentUserProfile && currentUserProfile.role === 'admin') {
+      toast({
+        title: `Welcome, ${currentUserProfile.displayName}!`,
+        description: `You are logged in as an administrator.`,
+      });
+    }
+  }, [currentUserProfile, toast]);
+
 
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     if (!firestore) return;
