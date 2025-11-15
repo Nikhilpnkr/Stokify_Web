@@ -30,7 +30,6 @@ import {
   Wheat,
   Settings,
   Receipt,
-  UserCog,
   CreditCard,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,10 +56,6 @@ const navItems = [
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
-];
-
-const adminNavItems = [
-    { href: "/admin/users", label: "User Management", icon: UserCog },
 ];
 
 const bottomNavItems = [
@@ -170,19 +165,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         ? pathname === item.href
                         : pathname.startsWith(item.href)
                     }
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {userProfile?.role === 'admin' && adminNavItems.map((item) => (
-                 <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname.startsWith(item.href)}
                   >
                     <Link href={item.href}>
                       <item.icon />
