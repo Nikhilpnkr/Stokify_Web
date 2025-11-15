@@ -46,7 +46,7 @@ export function AddAreaDialog({ isOpen, setIsOpen, locationId }: AddAreaDialogPr
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      capacity: undefined,
+      capacity: 0,
     },
   });
 
@@ -82,7 +82,12 @@ export function AddAreaDialog({ isOpen, setIsOpen, locationId }: AddAreaDialogPr
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+        if (!open) {
+            form.reset();
+        }
+        setIsOpen(open);
+    }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Storage Area</DialogTitle>

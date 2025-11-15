@@ -93,8 +93,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       customerId: 'new_customer',
       customerName: "",
       customerMobile: "",
-      cropTypeId: undefined,
-      locationId: undefined,
+      cropTypeId: "",
+      locationId: "",
       areaAllocations: [{ areaId: "", quantity: 0 }],
       labourChargePerBag: 0,
     },
@@ -171,8 +171,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             customerId: 'new_customer',
             customerName: "",
             customerMobile: "",
-            cropTypeId: undefined,
-            locationId: undefined,
+            cropTypeId: "",
+            locationId: "",
             areaAllocations: [{ areaId: "", quantity: 0 }],
             labourChargePerBag: 0,
         });
@@ -487,5 +487,3 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
-
-    
