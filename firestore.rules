@@ -35,7 +35,10 @@ service cloud.firestore {
     match /outflows/{outflowId} {
         allow read, write: if resource.data.ownerId == request.auth.uid;
         allow create: if request.resource.data.ownerId == request.auth.uid;
-        allow list: if request.query.where.get('ownerId') == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid && (
+          request.query.orderBy.keys().size() == 0 || 
+          (request.query.orderBy.keys().size() == 1 && request.query.orderBy.keys()[0] == 'date')
+        );
     }
     
     // A user can only interact with crop types they own.
