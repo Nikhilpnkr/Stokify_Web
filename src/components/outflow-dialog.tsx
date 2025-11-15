@@ -90,11 +90,12 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     }, [batch, cropType]);
 
     // This useMemo recalculates the final bill whenever the editable cost, quantity, or batch changes.
-    const { storageCost, finalBill } = useMemo(() => {
+    const { storageCost, insuranceCharge, finalBill } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
-        const bill = storage + (batch?.labourCharge || 0);
-        return { storageCost: storage, finalBill: bill };
-    }, [costPerBag, withdrawQuantity, batch]);
+        const insurance = (cropType?.insurance || 0) * withdrawQuantity;
+        const bill = storage + insurance + (batch?.labourCharge || 0);
+        return { storageCost: storage, insuranceCharge: insurance, finalBill: bill };
+    }, [costPerBag, withdrawQuantity, batch, cropType]);
 
 
     useEffect(() => {
@@ -168,6 +169,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             storageDuration: totalMonths,
             storageCost: storageCost,
             labourCharge: batch.labourCharge || 0,
+            insuranceCharge: insuranceCharge,
         };
         
         setDocumentNonBlocking(newOutflowRef, newOutflow, {merge: false});
@@ -313,6 +315,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                     <p className="text-muted-foreground">Total Storage Cost:</p>
                     <p className="font-semibold">₹{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
+                <div className="flex justify-between items-baseline">
+                    <p className="text-muted-foreground">Insurance:</p>
+                    <p className="font-semibold">₹{insuranceCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
                 {batch.labourCharge && batch.labourCharge > 0 && (
                     <div className="flex justify-between items-baseline">
                         <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
@@ -365,3 +371,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     </Dialog>
   );
 }
+
+    

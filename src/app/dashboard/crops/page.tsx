@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Trash2 } from "lucide-react";
+import { PlusCircle, Loader2, Trash2, Edit, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
@@ -23,6 +23,7 @@ const cropTypeFormSchema = z.object({
   rate1: z.coerce.number().min(0, "Rate must be a positive number."),
   rate6: z.coerce.number().min(0, "Rate must be a positive number."),
   rate12: z.coerce.number().min(0, "Rate must be a positive number."),
+  insurance: z.coerce.number().min(0, "Insurance must be a positive number.").optional(),
 });
 
 export default function CropTypesManagerPage() {
@@ -30,6 +31,7 @@ export default function CropTypesManagerPage() {
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [cropTypeToDelete, setCropTypeToDelete] = useState<CropType | null>(null);
+  const [editingCropTypeId, setEditingCropTypeId] = useState<string | null>(null);
   
   const cropTypesQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
@@ -44,33 +46,73 @@ export default function CropTypesManagerPage() {
       rate1: STORAGE_RATES[1],
       rate6: STORAGE_RATES[6],
       rate12: STORAGE_RATES[12],
+      insurance: 0,
     },
   });
+
+  const isEditing = !!editingCropTypeId;
+
+  function handleEdit(cropType: CropType) {
+    setEditingCropTypeId(cropType.id);
+    form.reset({
+        name: cropType.name,
+        rate1: cropType.rates['1'],
+        rate6: cropType.rates['6'],
+        rate12: cropType.rates['12'],
+        insurance: cropType.insurance || 0,
+    });
+  }
+
+  function cancelEdit() {
+    setEditingCropTypeId(null);
+    form.reset({
+      name: "",
+      rate1: STORAGE_RATES[1],
+      rate6: STORAGE_RATES[6],
+      rate12: STORAGE_RATES[12],
+      insurance: 0,
+    });
+  }
+
 
   function onSubmit(values: z.infer<typeof cropTypeFormSchema>) {
     if (!user) return;
 
-    const cropTypesCol = collection(firestore, "cropTypes");
-    const newDocRef = doc(cropTypesCol);
-    
-    const newCropType = {
-      id: newDocRef.id,
+    const newCropData = {
       name: values.name,
       ownerId: user.uid,
       rates: {
         '1': values.rate1,
         '6': values.rate6,
         '12': values.rate12,
-      }
+      },
+      insurance: values.insurance || 0,
     };
 
-    addDocumentNonBlocking(cropTypesCol, newCropType);
-    
-    toast({
-        title: "Crop Type Added",
-        description: `"${values.name}" has been added to your crop types.`,
-    });
-    form.reset();
+    if (isEditing && editingCropTypeId) {
+        // Update existing document
+        const docRef = doc(firestore, "cropTypes", editingCropTypeId);
+        updateDocumentNonBlocking(docRef, newCropData);
+        toast({
+            title: "Crop Type Updated",
+            description: `"${values.name}" has been updated.`,
+        });
+    } else {
+        // Add new document
+        const cropTypesCol = collection(firestore, "cropTypes");
+        const newDocRef = doc(cropTypesCol);
+        const newCropType = {
+            id: newDocRef.id,
+            ...newCropData,
+        };
+        addDocumentNonBlocking(newDocRef, newCropType);
+        toast({
+            title: "Crop Type Added",
+            description: `"${values.name}" has been added to your crop types.`,
+        });
+    }
+
+    cancelEdit();
   }
 
   function handleDeleteConfirmation(cropType: CropType) {
@@ -98,14 +140,14 @@ export default function CropTypesManagerPage() {
     <>
       <PageHeader
         title="Manage Crop Types"
-        description="Add or view your custom crop types and their storage rates."
+        description="Add, edit, or view your custom crop types and their storage rates."
       />
       <div className="grid gap-8 lg:grid-cols-5">
         <div className="lg:col-span-2">
             <Card>
                 <CardHeader>
-                <CardTitle>Add a New Crop Type</CardTitle>
-                <CardDescription>Define a crop and its storage rates.</CardDescription>
+                <CardTitle>{isEditing ? "Edit Crop Type" : "Add a New Crop Type"}</CardTitle>
+                <CardDescription>{isEditing ? `Editing "${form.getValues('name')}"` : "Define a crop and its storage costs."}</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <Form {...form}>
@@ -123,52 +165,77 @@ export default function CropTypesManagerPage() {
                             </FormItem>
                             )}
                         />
-                        <div className="grid grid-cols-3 gap-4">
-                            <FormField
-                                control={form.control}
-                                name="rate1"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>1 Month</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="rate6"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>6 Months</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="rate12"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>1 Year</FormLabel>
-                                    <FormControl>
-                                        <Input type="number" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                        <div>
+                            <p className="text-sm font-medium mb-2">Storage Rates (per bag)</p>
+                            <div className="grid grid-cols-3 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="rate1"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>1 Month</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="rate6"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>6 Months</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="rate12"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>1 Year</FormLabel>
+                                        <FormControl>
+                                            <Input type="number" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
                         </div>
 
-                        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
-                            {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
-                            Add Crop Type
-                        </Button>
+                        <FormField
+                            control={form.control}
+                            name="insurance"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Insurance (per bag)</FormLabel>
+                                <FormControl>
+                                <Input type="number" placeholder="e.g., 2" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+
+                        <div className="flex gap-2">
+                             {isEditing && (
+                                <Button type="button" variant="outline" onClick={cancelEdit} className="w-full">
+                                    <X className="mr-2 h-4 w-4" />
+                                    Cancel
+                                </Button>
+                             )}
+                            <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
+                                {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (isEditing ? <Edit className="mr-2 h-4 w-4" /> : <PlusCircle className="mr-2 h-4 w-4" />)}
+                                {isEditing ? "Save Changes" : "Add Crop Type"}
+                            </Button>
+                        </div>
                     </form>
                 </Form>
                 </CardContent>
@@ -192,14 +259,19 @@ export default function CropTypesManagerPage() {
                                 <CardHeader>
                                     <div className="flex flex-row items-start justify-between pb-2">
                                         <CardTitle className="text-lg">{ct.name}</CardTitle>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteConfirmation(ct)}>
-                                            <Trash2 className="h-4 w-4" />
-                                            <span className="sr-only">Delete {ct.name}</span>
-                                        </Button>
+                                        <div className="flex items-center">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(ct)}>
+                                                <Edit className="h-4 w-4" />
+                                                <span className="sr-only">Edit {ct.name}</span>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDeleteConfirmation(ct)}>
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Delete {ct.name}</span>
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-sm font-medium mb-2">Storage Rates (per bag)</p>
                                     <ul className="text-sm space-y-1">
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">1 Month:</span>
@@ -212,6 +284,10 @@ export default function CropTypesManagerPage() {
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">1 Year:</span>
                                             <span className="font-semibold">₹{ct.rates ? ct.rates['12'] : '0'}</span>
+                                        </li>
+                                        <li className="flex justify-between items-baseline mt-2 pt-2 border-t">
+                                            <span className="text-muted-foreground">Insurance:</span>
+                                            <span className="font-semibold">₹{ct.insurance || '0'}</span>
                                         </li>
                                     </ul>
                                 </CardContent>
@@ -246,3 +322,5 @@ export default function CropTypesManagerPage() {
     </>
   );
 }
+
+    
