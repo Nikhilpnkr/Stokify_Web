@@ -54,7 +54,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     }, [isOpen, batch]);
 
     const { totalMonths, storageCost, costPerBag, finalBill } = useMemo(() => {
-        if (!batch || !cropType || withdrawQuantity <= 0) {
+        if (!batch || !cropType) {
           return { totalMonths: 0, storageCost: 0, costPerBag: 0, finalBill: 0 };
         }
     
@@ -66,6 +66,12 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         }
         if (totalMonths <= 0) totalMonths = 1;
 
+        // If quantity is 0, storage cost related calculations are also 0
+        if (withdrawQuantity <= 0) {
+            const finalBill = batch.labourCharge || 0;
+            setAmountPaid(finalBill);
+            return { totalMonths: 0, storageCost: 0, costPerBag: 0, finalBill };
+        }
 
         let remainingMonths = totalMonths;
         let costPerBag = 0;
@@ -101,7 +107,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
 
 
     async function handleOutflow() {
-        if (!firestore || !batch || !user || !cropType || withdrawQuantity <= 0) return;
+        if (!firestore || !batch || !user || !cropType) return;
         
         if (withdrawQuantity > totalQuantity) {
             toast({
@@ -117,6 +123,15 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 variant: "destructive",
                 title: "Invalid Payment",
                 description: "Amount paid cannot exceed the final bill.",
+            });
+            return;
+        }
+        
+        if (finalBill <= 0) {
+            toast({
+                variant: "destructive",
+                title: "No Bill",
+                description: "There is nothing to bill for this transaction.",
             });
             return;
         }
@@ -170,45 +185,55 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
         
         setDocumentNonBlocking(newOutflowRef, newOutflow, {merge: false});
 
+        // Only modify the batch if a quantity is actually withdrawn
+        if (withdrawQuantity > 0) {
+            if (withdrawQuantity === totalQuantity) {
+                // Full withdrawal, delete the document
+                deleteDocumentNonBlocking(batchRef);
+                toast({
+                    title: "Full Outflow Successful!",
+                    description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                    duration: 10000,
+                });
+            } else {
+                // Partial withdrawal, update the allocations
+                let remainingWithdrawal = withdrawQuantity;
+                const newAllocations: AreaAllocation[] = [];
 
-        if (withdrawQuantity === totalQuantity) {
-            // Full withdrawal, delete the document
-            deleteDocumentNonBlocking(batchRef);
-            toast({
-                title: "Full Outflow Successful!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
-                duration: 10000,
-            });
-        } else {
-            // Partial withdrawal, update the allocations
-            let remainingWithdrawal = withdrawQuantity;
-            const newAllocations: AreaAllocation[] = [];
+                const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
 
-            const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
+                for (const alloc of sortedAllocations) {
+                    if (remainingWithdrawal <= 0) {
+                        newAllocations.push(alloc);
+                        continue;
+                    }
 
-            for (const alloc of sortedAllocations) {
-                if (remainingWithdrawal <= 0) {
-                    newAllocations.push(alloc);
-                    continue;
+                    if (alloc.quantity > remainingWithdrawal) {
+                        newAllocations.push({
+                            ...alloc,
+                            quantity: alloc.quantity - remainingWithdrawal,
+                        });
+                        remainingWithdrawal = 0;
+                    } else {
+                        remainingWithdrawal -= alloc.quantity;
+                    }
                 }
-
-                if (alloc.quantity > remainingWithdrawal) {
-                    newAllocations.push({
-                        ...alloc,
-                        quantity: alloc.quantity - remainingWithdrawal,
-                    });
-                    remainingWithdrawal = 0;
-                } else {
-                    remainingWithdrawal -= alloc.quantity;
-                }
+                
+                const updatedData = { areaAllocations: newAllocations };
+                updateDocumentNonBlocking(batchRef, updatedData);
+                 toast({
+                    title: "Partial Outflow Successful!",
+                    description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
+                    duration: 10000,
+                });
             }
-            
-            const updatedData = { areaAllocations: newAllocations };
-            updateDocumentNonBlocking(batchRef, updatedData);
-             toast({
-                title: "Partial Outflow Successful!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+        } else {
+            // This is a zero-quantity outflow, likely just to settle a bill
+            toast({
+                title: "Bill Settled!",
+                description: `A bill for ${batch.customerName} was processed for ₹${finalBill.toLocaleString()}.`,
                 action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(invoiceData)}>Download PDF</Button>,
                 duration: 10000,
             });
@@ -317,7 +342,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
           <Button 
             onClick={handleOutflow} 
-            disabled={isProcessing || withdrawQuantity <= 0 || withdrawQuantity > totalQuantity || amountPaid > finalBill} 
+            disabled={isProcessing || withdrawQuantity > totalQuantity || amountPaid > finalBill || finalBill <= 0} 
             className="bg-primary hover:bg-primary/90"
           >
              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -328,5 +353,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     </Dialog>
   );
 }
-
-    
