@@ -36,10 +36,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     const [amountPaid, setAmountPaid] = useState(0);
     
-    const locationsQueryRef = useMemoFirebase(() => 
+    const locationsQuery = useMemoFirebase(() => 
         user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null
     , [firestore, user]);
-    const { data: locations } = useCollection<StorageLocation>(locationsQueryRef);
+    const { data: locations } = useCollection<StorageLocation>(locationsQuery);
     const location = locations?.find(l => l.id === batch?.storageLocationId);
 
     const totalQuantity = useMemo(() => {
@@ -228,21 +228,11 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                 }
             }
             
-            // If paying for labor, determine the remaining labor charge.
-            const totalBillForLaborOnly = batch.labourCharge || 0;
-            const amountPaidForLabor = Math.min(amountPaid, totalBillForLaborOnly);
-            let remainingLabourCharge = Math.max(0, (batch.labourCharge || 0) - amountPaidForLabor);
-            
-            // if storage cost was also paid, remaining labour charge should be 0 if covered
-            if(storageCost > 0 && amountPaid > storageCost) {
-                const remainingPayment = amountPaid - storageCost;
-                remainingLabourCharge = Math.max(0, (batch.labourCharge || 0) - remainingPayment);
-            }
-
-
+            // After any outflow, the labor charge is considered billed and tracked in the outflow record.
+            // We set it to 0 on the original batch to prevent double-billing.
             const updatedData = { 
                 areaAllocations: newAllocations,
-                labourCharge: remainingLabourCharge,
+                labourCharge: 0,
             };
 
             updateDocumentNonBlocking(batchRef, updatedData);
