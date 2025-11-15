@@ -30,8 +30,8 @@ export default function CustomerDetailPage() {
 
   // Query for all crop batches for this customer
   const batchesQuery = useMemoFirebase(() => 
-    customerId ? query(collection(firestore, 'cropBatches'), where('customerId', '==', customerId)) : null,
-    [firestore, customerId]
+    (user && customerId) ? query(collection(firestore, 'cropBatches'), where('customerId', '==', customerId), where('ownerId', '==', user.uid)) : null,
+    [firestore, user, customerId]
   );
   const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
 
@@ -199,3 +199,5 @@ export default function CustomerDetailPage() {
     </>
   );
 }
+
+    

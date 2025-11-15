@@ -45,7 +45,7 @@ export default function LocationDetailPage() {
 
   // Query for all crop batches to calculate usage
   const batchesQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'cropBatches'), where('storageLocationId', '==', locationId)) : null,
+    user && locationId ? query(collection(firestore, 'cropBatches'), where('storageLocationId', '==', locationId), where('ownerId', '==', user.uid)) : null,
     [user, firestore, locationId]
   );
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
@@ -277,3 +277,5 @@ export default function LocationDetailPage() {
     </>
   );
 }
+
+    
