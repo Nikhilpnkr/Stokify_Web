@@ -41,7 +41,7 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
       email: user.email || 'N/A'
     },
     items: batch.areaAllocations.map(alloc => ({
-        description: `Warehouse Products or Services (${batch.cropType})`,
+        description: batch.cropType,
         quantity: alloc.quantity,
         unit: 'bags',
         storageArea: getAreaName(alloc.areaId),
