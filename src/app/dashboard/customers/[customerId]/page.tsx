@@ -7,8 +7,8 @@ import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase"
 import { doc, collection, query, where, getDocs } from "firebase/firestore";
 import type { Customer, CropBatch, StorageLocation, StorageArea, CropType } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, User, Phone } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Loader2, User, Phone, MapPin, Calendar, Archive } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, formatDistanceToNow } from "date-fns";
 import { OutflowDialog } from "@/components/outflow-dialog";
@@ -77,7 +77,7 @@ export default function CustomerDetailPage() {
     return rawBatches.map(batch => ({
       ...batch,
       quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
-    }))
+    })).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
   }, [rawBatches]);
 
   const getLocationName = (locationId: string) => locations?.find(l => l.id === locationId)?.name || '...';
@@ -144,47 +144,78 @@ export default function CustomerDetailPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                 <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead>Crop Type</TableHead>
-                        <TableHead>Location</TableHead>
-                        <TableHead>Area(s)</TableHead>
-                        <TableHead className="text-right">Quantity (bags)</TableHead>
-                        <TableHead>Date Added</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {isLoading ? (
-                        <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                        </TableCell>
-                        </TableRow>
-                    ) : batches && batches.length > 0 ? batches.map((batch) => (
-                        <TableRow key={batch.id} onClick={() => handleRowClick(batch)} className="cursor-pointer">
-                        <TableCell>{batch.cropType}</TableCell>
-                        <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
-                        <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
-                        <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
-                        <TableCell>
-                            <div className="flex flex-col">
-                            <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
-                            <span className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}
-                            </span>
-                            </div>
-                        </TableCell>
-                        </TableRow>
-                    )) : (
-                        <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
-                            No crop batches found for this customer.
-                        </TableCell>
-                        </TableRow>
-                    )}
-                    </TableBody>
-                </Table>
+                {isLoading ? (
+                    <div className="flex justify-center items-center h-48">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : batches && batches.length > 0 ? (
+                    <>
+                    {/* Mobile View */}
+                    <div className="grid gap-4 md:hidden">
+                        {batches.map((batch) => (
+                            <Card key={batch.id} onClick={() => handleRowClick(batch)} className="cursor-pointer bg-muted/30">
+                                <CardHeader>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <CardTitle>{batch.cropType}</CardTitle>
+                                            <CardDescription>
+                                                {getLocationName(batch.storageLocationId)} ({getAreaNames(batch.areaAllocations)})
+                                            </CardDescription>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xl font-bold">{batch.quantity.toLocaleString()} bags</p>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardFooter>
+                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <Calendar className="h-4 w-4" />
+                                        <span>Added {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}</span>
+                                    </div>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+
+                    {/* Desktop View */}
+                    <div className="hidden md:block">
+                        <Table>
+                            <TableHeader>
+                            <TableRow>
+                                <TableHead>Crop Type</TableHead>
+                                <TableHead>Location</TableHead>
+                                <TableHead>Area(s)</TableHead>
+                                <TableHead className="text-right">Quantity (bags)</TableHead>
+                                <TableHead>Date Added</TableHead>
+                            </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {batches.map((batch) => (
+                                <TableRow key={batch.id} onClick={() => handleRowClick(batch)} className="cursor-pointer">
+                                <TableCell>{batch.cropType}</TableCell>
+                                <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
+                                <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
+                                <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
+                                <TableCell>
+                                    <div className="flex flex-col">
+                                    <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                        {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}
+                                    </span>
+                                    </div>
+                                </TableCell>
+                                </TableRow>
+                            ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    </>
+                ) : (
+                    <div className="h-48 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+                        <Archive className="h-10 w-10 text-muted-foreground" />
+                        <p className="mt-4 text-sm text-muted-foreground">No crop batches found for this customer.</p>
+                    </div>
+                )}
             </CardContent>
         </Card>
       </div>

@@ -98,12 +98,12 @@ export default function CropTypesManagerPage() {
         title="Manage Crop Types"
         description="Add or view your custom crop types and their storage rates."
       />
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+      <div className="grid gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-2">
             <Card>
                 <CardHeader>
                 <CardTitle>Add a New Crop Type</CardTitle>
-                <CardDescription>Define a crop and its storage rates for different durations.</CardDescription>
+                <CardDescription>Define a crop and its storage rates.</CardDescription>
                 </CardHeader>
                 <CardContent>
                 <Form {...form}>
@@ -172,7 +172,7 @@ export default function CropTypesManagerPage() {
                 </CardContent>
             </Card>
         </div>
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
             <Card className="min-h-full">
                 <CardHeader>
                     <CardTitle>Your Crop Types</CardTitle>
