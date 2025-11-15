@@ -293,14 +293,16 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 render={({ field }) => (
                     <FormItem className="flex flex-col">
                         <FormLabel>Customer</FormLabel>
-                        <Combobox
-                            options={customerOptions}
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="Select an existing customer..."
-                            searchPlaceholder="Search customers..."
-                            emptyPlaceholder="No customer found. Type to add a new one."
-                        />
+                        <FormControl>
+                            <Combobox
+                                options={customerOptions}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder="Select an existing customer..."
+                                searchPlaceholder="Search customers..."
+                                emptyPlaceholder="No customer found. Type to add a new one."
+                            />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
@@ -485,3 +487,5 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
+
+    
