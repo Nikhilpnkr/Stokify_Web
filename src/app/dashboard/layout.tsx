@@ -54,6 +54,7 @@ const navItems = [
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
+  { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
 ];
 
 const adminNavItems = [
