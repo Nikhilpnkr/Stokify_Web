@@ -187,7 +187,7 @@ export function Invoice({ data }: InvoiceProps) {
             <header style={styles.header}>
                 <div style={styles.headerLeft}>
                     <Leaf style={styles.logo} />
-                    <h1 style={styles.companyName}>CropSafe</h1>
+                    <h1 style={styles.companyName}>Stokify</h1>
                 </div>
                 <div style={styles.headerRight}>
                     <h2 style={styles.receiptTitle}>{data.type} Receipt</h2>
@@ -204,7 +204,7 @@ export function Invoice({ data }: InvoiceProps) {
                 </div>
                 <div style={styles.detailsColumn}>
                     <h3 style={styles.detailsTitle}>From</h3>
-                    <p style={styles.detailItem}><strong>CropSafe Inc.</strong></p>
+                    <p style={styles.detailItem}><strong>Stokify Inc.</strong></p>
                     <p style={styles.detailItem}>Processed by: {data.user.name}</p>
                     <p style={styles.detailItem}>{data.user.email}</p>
                 </div>
@@ -282,8 +282,8 @@ export function Invoice({ data }: InvoiceProps) {
 
 
             <footer style={styles.footer}>
-                <p>Thank you for choosing CropSafe for your storage needs.</p>
-                <p>CropSafe Inc. | 123 Farming Lane, Harvest Town, 54321</p>
+                <p>Thank you for choosing Stokify for your storage needs.</p>
+                <p>Stokify Inc. | 123 Farming Lane, Harvest Town, 54321</p>
             </footer>
         </div>
     );

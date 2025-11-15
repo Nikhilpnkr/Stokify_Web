@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
-  title: 'CropSafe',
-  description: 'Manage your crop inventory with ease.',
+  title: 'Stokify',
+  description: 'Manage your inventory with ease.',
 };
 
 export default function RootLayout({

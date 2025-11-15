@@ -140,7 +140,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <SidebarHeader className="p-4">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Leaf className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-headline font-bold">CropSafe</h1>
+              <h1 className="text-2xl font-headline font-bold">Stokify</h1>
             </Link>
           </SidebarHeader>
           <SidebarContent>

@@ -86,7 +86,7 @@ export default function SignUpPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="flex items-center gap-3 mb-8">
         <Leaf className="h-12 w-12 text-primary" />
-        <h1 className="text-5xl font-headline font-bold">CropSafe</h1>
+        <h1 className="text-5xl font-headline font-bold">Stokify</h1>
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
