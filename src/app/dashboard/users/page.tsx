@@ -59,14 +59,16 @@ export default function UserManagementPage() {
   
   if (isLoadingCurrentUser) {
     return (
-      <div className="flex h-48 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
   
   if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'manager')) {
-    redirect('/dashboard');
+    // This check now correctly runs after isLoadingCurrentUser is false.
+    // If there's no profile or the role is insufficient, then redirect.
+    return redirect('/dashboard');
   }
 
   const roles: UserRole[] = ['admin', 'manager', 'assistant', 'user'];
