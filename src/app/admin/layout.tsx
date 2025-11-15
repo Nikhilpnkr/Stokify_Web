@@ -117,6 +117,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const isLoading = isUserLoading || isLoadingProfile;
 
+  // Show a loader while authentication and profile data are being fetched.
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -125,14 +126,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // If there's no user, redirect to login. This is safe to check after loading.
   if (!user) {
     return redirect('/login');
   }
   
-  if (!userProfile || userProfile.role !== 'admin') {
+  // If the user profile is loaded and the user is not an admin, redirect.
+  if (userProfile?.role !== 'admin') {
       return redirect('/dashboard');
   }
 
+  // If all checks pass, render the admin layout.
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
