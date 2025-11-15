@@ -11,11 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useUser, useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, useCollection } from "@/firebase";
+import { useUser, useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { doc, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { updateProfile, deleteUser } from "firebase/auth";
-import type { UserProfile, StorageLocation } from "@/lib/data";
+import type { UserProfile } from "@/lib/data";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +31,6 @@ export default function SettingsPage() {
   const { auth, firestore, user } = useFirebase();
   const { toast } = useToast();
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
-  const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
@@ -39,13 +38,6 @@ export default function SettingsPage() {
   , [firestore, user]);
 
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
-
-  const locationsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, "storageLocations"), where("ownerId", "==", user.uid)) : null,
-    [firestore, user]
-  );
-  const { data: locations } = useCollection<StorageLocation>(locationsQuery);
-
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
@@ -125,50 +117,6 @@ export default function SettingsPage() {
     }
   }
   
-  async function handleDeleteTransactionalData() {
-    if (!user || !firestore) return;
-    setIsProcessing(true);
-
-    try {
-        const batch = writeBatch(firestore);
-
-        const collectionsToDelete = ["cropBatches", "outflows", "customers", "cropTypes"];
-        
-        for (const collectionName of collectionsToDelete) {
-            const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
-            const snapshot = await getDocs(q);
-            snapshot.forEach(doc => batch.delete(doc.ref));
-        }
-
-        if (locations) {
-            for (const loc of locations) {
-                const areasQuery = query(collection(firestore, `storageLocations/${loc.id}/areas`));
-                const areasSnapshot = await getDocs(areasQuery);
-                areasSnapshot.forEach(doc => batch.delete(doc.ref));
-            }
-        }
-
-        await batch.commit();
-
-        toast({
-            title: "Data Cleared",
-            description: "All transactional data has been successfully deleted.",
-        });
-
-    } catch (error: any) {
-         console.error("Error deleting data:", error);
-         toast({
-            variant: "destructive",
-            title: "Error Clearing Data",
-            description: error.message || "An unexpected error occurred.",
-         });
-    } finally {
-        setIsProcessing(false);
-        setIsDeleteDataOpen(false);
-    }
-  }
-
-
   const isLoading = isLoadingProfile || form.formState.isSubmitting;
 
   return (
@@ -252,22 +200,10 @@ export default function SettingsPage() {
             <CardHeader>
                 <CardTitle>Danger Zone</CardTitle>
                 <CardDescription>
-                These actions are permanent and cannot be undone.
+                This action is permanent and cannot be undone.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-                 <div>
-                    <h4 className="font-medium text-sm">Clear All Transactional Data</h4>
-                    <p className="text-xs text-muted-foreground mb-2">Deletes all crop batches, customers, transactions, and storage areas. Keeps your account and warehouse locations.</p>
-                    <Button
-                        variant="destructive"
-                        onClick={() => setIsDeleteDataOpen(true)}
-                        disabled={isProcessing}
-                        >
-                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Delete Data
-                    </Button>
-                 </div>
                  <div>
                     <h4 className="font-medium text-sm">Delete Account</h4>
                     <p className="text-xs text-muted-foreground mb-2">Permanently deletes your account and all associated data.</p>
@@ -297,24 +233,6 @@ export default function SettingsPage() {
             <AlertDialogAction onClick={handleDeleteAccount} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Account
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={isDeleteDataOpen} onOpenChange={setIsDeleteDataOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete all transactional data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete all crop batches, customer records, crop types, transactions, and storage areas. Your user account and main warehouse locations will NOT be deleted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTransactionalData} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete All Data
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
