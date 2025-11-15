@@ -1,15 +1,15 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Archive, Wheat, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import type { CropBatch, StorageLocation, CropType } from "@/lib/data";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { CropBatch, StorageLocation, CropType, StorageArea } from "@/lib/data";
 import { addDays, format, startOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,32 @@ export default function ReportsPage() {
   const { data: allBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   
+  const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
+
+  // Fetch all areas from all locations
+  useEffect(() => {
+    async function fetchAllAreas() {
+      if (!locations || locations.length === 0 || !firestore) {
+        setAllAreas([]);
+        setIsLoadingAreas(false);
+        return;
+      };
+      setIsLoadingAreas(true);
+      const areas: StorageArea[] = [];
+      for (const location of locations) {
+        const areasColRef = collection(firestore, 'storageLocations', location.id, 'areas');
+        const areasSnapshot = await getDocs(areasColRef);
+        areasSnapshot.forEach(doc => {
+          areas.push({ id: doc.id, ...doc.data() } as StorageArea);
+        });
+      }
+      setAllAreas(areas);
+      setIsLoadingAreas(false);
+    }
+    if(locations) fetchAllAreas();
+  }, [locations, firestore]);
+
   const filteredBatches = useMemo(() => {
     if (!allBatches) return [];
     return allBatches.filter(batch => {
@@ -58,7 +84,7 @@ export default function ReportsPage() {
 
   const { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
     const batches = filteredBatches;
-    if (!batches || !locations || !cropTypes) {
+    if (!batches || !locations || !cropTypes || isLoadingAreas) {
       return { totalBatches: 0, totalQuantity: 0, potentialMonthlyRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
     }
 
@@ -79,24 +105,26 @@ export default function ReportsPage() {
         return acc + (batchQty * monthlyRate);
     }, 0);
 
-    const totalCapacity = locations.reduce((acc, l) => acc + l.capacity, 0);
+    const totalCapacity = allAreas.reduce((acc, area) => acc + area.capacity, 0);
     const spaceUtilization = totalCapacity > 0 ? (totalQuantity / totalCapacity) * 100 : 0;
 
     const chartData = locations.map(location => {
+        const locationAreas = allAreas.filter(a => a.storageLocationId === location.id);
+        const capacity = locationAreas.reduce((acc, area) => acc + area.capacity, 0);
       const used = batches
         .filter(b => b.storageLocationId === location.id)
         .reduce((acc, b) => acc + (b.areaAllocations?.reduce((s, a) => s + a.quantity, 0) || 0), 0);
       return {
         name: location.name,
-        capacity: location.capacity,
+        capacity: capacity,
         used: used,
       };
     });
 
     return { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData };
-  }, [filteredBatches, locations, cropTypes]);
+  }, [filteredBatches, locations, cropTypes, allAreas, isLoadingAreas]);
   
-  const isLoading = isLoadingLocations || isLoadingBatches || isLoadingCropTypes;
+  const isLoading = isLoadingLocations || isLoadingBatches || isLoadingCropTypes || isLoadingAreas;
 
   const chartConfig = {
     capacity: {

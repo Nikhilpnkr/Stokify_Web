@@ -109,6 +109,14 @@ export default function LocationDetailPage() {
     }
   }
 
+  const { totalUsed, totalCapacity, overallPercentage } = useMemo(() => {
+    if (!areasWithUsage) return { totalUsed: 0, totalCapacity: 0, overallPercentage: 0 };
+    const used = areasWithUsage.reduce((acc, area) => acc + area.used, 0);
+    const capacity = areasWithUsage.reduce((acc, area) => acc + area.capacity, 0);
+    const percentage = capacity > 0 ? (used / capacity) * 100 : 0;
+    return { totalUsed: used, totalCapacity: capacity, overallPercentage: percentage };
+  }, [areasWithUsage]);
+
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -124,10 +132,6 @@ export default function LocationDetailPage() {
       </div>
     );
   }
-  
-  const totalUsed = areasWithUsage.reduce((acc, area) => acc + area.used, 0);
-  const totalCapacity = areasWithUsage.reduce((acc, area) => acc + area.capacity, 0);
-  const overallPercentage = totalCapacity > 0 ? (totalUsed / totalCapacity) * 100 : 0;
 
   return (
     <>

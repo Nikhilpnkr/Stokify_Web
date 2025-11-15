@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Warehouse, Loader2, Phone, MapPin, Edit, Search } from "lucide-react";
@@ -11,8 +11,8 @@ import { Progress } from "@/components/ui/progress";
 import { AddLocationDialog } from "@/components/add-location-dialog";
 import { EditLocationDialog } from "@/components/edit-location-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import type { StorageLocation, CropBatch } from "@/lib/data";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { StorageLocation, CropBatch, StorageArea } from "@/lib/data";
 import { Input } from "@/components/ui/input";
 
 function EmptyState({ onAdd, isSearching }: { onAdd: () => void, isSearching: boolean }) {
@@ -40,6 +40,8 @@ export default function LocationsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<StorageLocation | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -53,6 +55,28 @@ export default function LocationsPage() {
   const { data: allLocations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
   const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
 
+  useEffect(() => {
+    async function fetchAllAreas() {
+      if (!allLocations || allLocations.length === 0 || !firestore) {
+        setAllAreas([]);
+        setIsLoadingAreas(false);
+        return;
+      };
+      setIsLoadingAreas(true);
+      const areas: StorageArea[] = [];
+      for (const location of allLocations) {
+        const areasColRef = collection(firestore, 'storageLocations', location.id, 'areas');
+        const areasSnapshot = await getDocs(areasColRef);
+        areasSnapshot.forEach(doc => {
+          areas.push({ id: doc.id, ...doc.data() } as StorageArea);
+        });
+      }
+      setAllAreas(areas);
+      setIsLoadingAreas(false);
+    }
+    if(allLocations) fetchAllAreas();
+  }, [allLocations, firestore]);
+
   const locations = useMemo(() => {
     if (!allLocations) return [];
     return allLocations.filter(loc => 
@@ -62,15 +86,19 @@ export default function LocationsPage() {
   }, [allLocations, searchTerm]);
 
   const locationsWithUsage = useMemo(() => {
-    if (!locations || !batches) return [];
+    if (!locations || !batches || isLoadingAreas) return [];
     return locations.map(location => {
+      const locationAreas = allAreas.filter(area => area.storageLocationId === location.id);
+      const totalCapacity = locationAreas.reduce((acc, area) => acc + area.capacity, 0);
+
       const used = batches
         .filter(b => b.storageLocationId === location.id)
         .reduce((acc, b) => acc + (b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0), 0);
-      const percentage = location.capacity > 0 ? (used / location.capacity) * 100 : 0;
-      return { ...location, used, percentage };
+      
+      const percentage = totalCapacity > 0 ? (used / totalCapacity) * 100 : 0;
+      return { ...location, used, percentage, capacity: totalCapacity };
     });
-  }, [locations, batches]);
+  }, [locations, batches, allAreas, isLoadingAreas]);
 
   const handleEditClick = (e: React.MouseEvent, location: StorageLocation) => {
     e.stopPropagation();
@@ -83,7 +111,7 @@ export default function LocationsPage() {
   };
 
 
-  const isLoading = isLoadingLocations || isLoadingBatches;
+  const isLoading = isLoadingLocations || isLoadingBatches || isLoadingAreas;
 
   return (
     <>
