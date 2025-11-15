@@ -256,7 +256,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                     </div>
                     <div>
                         <p className="font-medium text-muted-foreground">Crop Type</p>
-                        <p className="font-semibold">{batch.cropType}</p>
+                        <p className="font-semibold">{cropType?.name}</p>
                     </div>
                     <div>
                         <p className="font-medium text-muted-foreground">Total Stored</p>
