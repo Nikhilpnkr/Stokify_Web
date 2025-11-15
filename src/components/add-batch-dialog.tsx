@@ -370,7 +370,13 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                             render={({ field }) => (
                                 <FormItem>
                                      <FormControl>
-                                        <Input type="number" placeholder="Qty" {...field} value={field.value ?? ''} />
+                                        <Input
+                                            type="number"
+                                            placeholder="Qty"
+                                            onWheel={(e) => (e.target as HTMLElement).blur()}
+                                            {...field}
+                                            value={field.value ?? ''}
+                                        />
                                      </FormControl>
                                       <FormMessage />
                                 </FormItem>
@@ -391,7 +397,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 <FormItem>
                   <FormLabel>Labour Charge per Bag (Optional)</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} />
+                    <Input type="number" placeholder="e.g., 5" {...field} value={field.value ?? ''} onWheel={(e) => (e.target as HTMLElement).blur()} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

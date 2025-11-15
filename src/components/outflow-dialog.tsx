@@ -255,6 +255,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     id="quantity"
                     type="number"
                     value={withdrawQuantity}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                     onChange={(e) => {
                         const val = Number(e.target.value);
                          if (val >= 0 && val <= totalQuantity) {
@@ -293,6 +294,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType }: OutflowDia
                     id="amountPaid"
                     type="number"
                     value={amountPaid}
+                    onWheel={(e) => (e.target as HTMLElement).blur()}
                      onChange={(e) => {
                         const val = Number(e.target.value);
                          if (val >= 0 && val <= finalBill) {
