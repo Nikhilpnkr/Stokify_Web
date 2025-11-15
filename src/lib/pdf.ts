@@ -4,11 +4,21 @@ import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
 
+function toDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    // Firestore Timestamp object
+    if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
+        return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
+    }
+    // ISO string or already a Date object
+    return new Date(dateValue);
+}
+
 export async function generateInvoicePdf(data: InvoiceData) {
-  // Ensure the date is a Date object, not a string from Firestore
+  // Ensure the date is a Date object, not a string or Timestamp from Firestore
   const processedData = {
     ...data,
-    date: typeof data.date === 'string' ? new Date(data.date) : data.date,
+    date: toDate(data.date),
   };
 
   const invoiceElement = document.createElement("div");
