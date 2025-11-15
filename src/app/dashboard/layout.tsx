@@ -227,7 +227,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </Sidebar>
         <SidebarInset>
           <header className="flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 lg:px-6 sticky top-0 z-30">
-            {isMobile && <SidebarTrigger asChild><Button variant="ghost" size="icon"><Menu /></Button></SidebarTrigger>}
+            {isMobile && <SidebarTrigger><Menu /></SidebarTrigger>}
             <div className="flex-1">
               {/* Maybe add breadcrumbs here later */}
             </div>
