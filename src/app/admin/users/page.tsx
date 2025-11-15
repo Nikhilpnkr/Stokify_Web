@@ -31,8 +31,6 @@ export default function UserManagementPage() {
   const { data: currentUserProfile, isLoading: isLoadingCurrentUser } = useDoc<UserProfile>(currentUserProfileRef);
 
   const usersQuery = useMemoFirebase(() => 
-    // An admin should only see the users they have created/own.
-    // In a real multi-tenant system, this might be more complex (e.g., based on organization ID).
     user ? query(collection(firestore, 'users'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
@@ -67,7 +65,7 @@ export default function UserManagementPage() {
     );
   }
   
-  if (!isLoading && (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'manager'))) {
+  if (!isLoading && (!currentUserProfile || currentUserProfile.role !== 'admin')) {
     return redirect('/dashboard');
   }
 

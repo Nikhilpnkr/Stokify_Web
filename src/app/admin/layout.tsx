@@ -18,19 +18,13 @@ import {
 } from "@/components/ui/sidebar";
 import {
   Leaf,
-  Warehouse,
-  BarChart,
-  LayoutDashboard,
   Menu,
   LogIn,
   LogOut,
   Loader2,
   User as UserIcon,
-  Users,
-  Wheat,
-  Settings,
-  Receipt,
   UserCog,
+  LayoutDashboard,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -49,20 +43,10 @@ import type { UserProfile } from "@/lib/data";
 import { doc } from "firebase/firestore";
 
 const navItems = [
-  { href: "/dashboard", label: "Inventory", icon: LayoutDashboard },
-  { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
-  { href: "/dashboard/reports", label: "Reports", icon: BarChart },
-  { href: "/dashboard/crops", label: "Crops", icon: Wheat },
-  { href: "/dashboard/customers", label: "Customers", icon: Users },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/users", label: "User Management", icon: UserCog },
 ];
 
-const adminNavItems = [
-    { href: "/admin/users", label: "User Management", icon: UserCog },
-];
-
-const bottomNavItems = [
-    { href: "/dashboard/settings", label: "Settings", icon: Settings },
-]
 
 function UserNav() {
   const auth = useAuth();
@@ -121,7 +105,7 @@ function UserNav() {
   );
 }
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const isMobile = useIsMobile();
   const { user, isUserLoading, firestore } = useFirebase();
@@ -131,7 +115,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   , [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  // While checking for user auth, show a full-screen loader.
   if (isUserLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -140,12 +123,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // After loading, if no user is found, redirect to the login page.
   if (!user) {
     return redirect('/login');
   }
+  
+  if (userProfile && userProfile.role !== 'admin') {
+      return redirect('/dashboard');
+  }
 
-  // If user is found, render the dashboard.
   return (
     <SidebarProvider>
       <div className="flex min-h-screen">
@@ -162,23 +147,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <SidebarMenuItem key={item.label}>
                   <SidebarMenuButton
                     asChild
-                    isActive={
-                      item.href === "/dashboard"
-                        ? pathname === item.href
-                        : pathname.startsWith(item.href)
-                    }
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {userProfile?.role === 'admin' && adminNavItems.map((item) => (
-                 <SidebarMenuItem key={item.label}>
-                  <SidebarMenuButton
-                    asChild
                     isActive={pathname.startsWith(item.href)}
                   >
                     <Link href={item.href}>
@@ -191,21 +159,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            <SidebarMenu>
-                {bottomNavItems.map((item) => (
-                    <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton
-                        asChild
-                        isActive={pathname.startsWith(item.href)}
-                    >
-                        <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                        </Link>
-                    </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
-            </SidebarMenu>
             {user && (
               <div className="flex items-center gap-3 p-2">
                 <Avatar>
@@ -228,7 +181,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <header className="flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 lg:px-6 sticky top-0 z-30">
             {isMobile && <SidebarTrigger asChild><Button variant="ghost" size="icon"><Menu /></Button></SidebarTrigger>}
             <div className="flex-1">
-              {/* Maybe add breadcrumbs here later */}
+               <h1 className="text-xl font-semibold">Admin Panel</h1>
             </div>
             <UserNav />
           </header>
