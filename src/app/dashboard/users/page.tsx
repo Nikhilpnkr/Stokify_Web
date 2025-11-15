@@ -31,6 +31,8 @@ export default function UserManagementPage() {
   const { data: currentUserProfile, isLoading: isLoadingCurrentUser } = useDoc<UserProfile>(currentUserProfileRef);
 
   const usersQuery = useMemoFirebase(() => 
+    // An admin should only see the users they have created/own.
+    // In a real multi-tenant system, this might be more complex (e.g., based on organization ID).
     user ? query(collection(firestore, 'users'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
@@ -57,7 +59,7 @@ export default function UserManagementPage() {
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
 
-  if (isLoadingCurrentUser) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -65,7 +67,7 @@ export default function UserManagementPage() {
     );
   }
   
-  if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'manager')) {
+  if (!isLoading && (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'manager'))) {
     return redirect('/dashboard');
   }
 
@@ -75,13 +77,13 @@ export default function UserManagementPage() {
     <>
       <PageHeader
         title="User Management"
-        description="View all users and manage their roles. Only admins can access this page."
+        description="View and manage user roles. Only admins can modify roles."
       />
       <Card>
         <CardHeader>
           <CardTitle>All Users</CardTitle>
           <CardDescription>
-            {users?.length || 0} users found in the system.
+            {users?.length || 0} users found that you manage.
           </CardDescription>
         </CardHeader>
         <CardContent>

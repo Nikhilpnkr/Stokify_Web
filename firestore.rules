@@ -3,55 +3,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isManagerOrAdmin() {
-      // Temporarily allow all authenticated users
-      return request.auth != null;
-    }
-    
-    function isAdmin() {
-      // Temporarily allow all authenticated users
-      return request.auth != null;
-    }
-
+    // A user can read/write their own profile.
     match /users/{userId} {
-      allow write: if isAdmin() || request.auth.uid == userId;
-      allow get: if isManagerOrAdmin() || (request.auth != null && request.auth.uid == userId);
-      allow list: if isManagerOrAdmin();
+      allow read, write: if request.auth.uid == userId;
+      // Users can only list other users they own (e.g. an admin creating other users)
+      allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
     
+    // A user can only interact with locations they own.
     match /storageLocations/{locationId} {
-        allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
-        allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
+        allow read, write: if resource.data.ownerId == request.auth.uid;
+        allow create: if request.resource.data.ownerId == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid;
 
+        // A user can interact with areas if they own the parent location.
         match /areas/{areaId} {
-           allow read, write: if isManagerOrAdmin() || (get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
-           allow list: if isManagerOrAdmin() || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
+           allow read, write: if get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
+           // Listing areas requires querying via the parent location, which is handled in the app logic.
+           allow list: if get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
         }
     }
     
+    // A user can only interact with batches they own.
     match /cropBatches/{batchId} {
-        allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
-        allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
+        allow read, write: if resource.data.ownerId == request.auth.uid;
+        allow create: if request.resource.data.ownerId == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
 
+    // A user can only interact with outflows they own.
     match /outflows/{outflowId} {
-        allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
-        allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
+        allow read, write: if resource.data.ownerId == request.auth.uid;
+        allow create: if request.resource.data.ownerId == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
     
+    // A user can only interact with crop types they own.
     match /cropTypes/{cropTypeId} {
-        allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
-        allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
+        allow read, write: if resource.data.ownerId == request.auth.uid;
+        allow create: if request.resource.data.ownerId == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
 
+    // A user can only interact with customers they own.
     match /customers/{customerId} {
-        allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
-        allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
+        allow read, write: if resource.data.ownerId == request.auth.uid;
+        allow create: if request.resource.data.ownerId == request.auth.uid;
+        allow list: if request.query.where.get('ownerId') == request.auth.uid;
     }
   }
 }

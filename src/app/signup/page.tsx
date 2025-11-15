@@ -57,6 +57,7 @@ export default function SignUpPage() {
         email: email,
         mobileNumber: mobileNumber,
         role: 'user', // Assign default role
+        ownerId: userCredential.user.uid, // The user owns their own profile
       };
       setDocumentNonBlocking(userRef, userProfile, { merge: false });
 
