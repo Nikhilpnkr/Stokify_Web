@@ -69,11 +69,11 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         const halfYearlyRate = cropType.rates['6'];
         const monthlyRate = cropType.rates['1'];
 
-        if (months <= 6) {
-            // For the first 6 months, use the monthly rate.
+        if (months <= 5) {
+            // For the first 5 months, use the monthly rate.
             calculatedCost = months * monthlyRate;
         } else {
-            // After 6 months, use the most cost-effective combination of 6 and 12-month rates.
+            // After 5 months, use the most cost-effective combination of 6 and 12-month rates.
             const numYears = Math.floor(months / 12);
             calculatedCost += numYears * yearlyRate;
             
@@ -365,5 +365,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     </Dialog>
   );
 }
-
-    
