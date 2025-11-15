@@ -64,26 +64,25 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         }
         if (months <= 0) months = 1;
 
-        let remainingMonths = months;
         let calculatedCost = 0;
-
         const yearlyRate = cropType.rates['12'];
         const halfYearlyRate = cropType.rates['6'];
         const monthlyRate = cropType.rates['1'];
 
-        if (remainingMonths >= 12) {
-            const years = Math.floor(remainingMonths / 12);
-            calculatedCost += years * yearlyRate;
-            remainingMonths %= 12;
-        }
+        if (months <= 6) {
+            // For the first 6 months, use the monthly rate.
+            calculatedCost = months * monthlyRate;
+        } else {
+            // After 6 months, use the most cost-effective combination of 6 and 12-month rates.
+            const numYears = Math.floor(months / 12);
+            calculatedCost += numYears * yearlyRate;
+            
+            const remainingMonths = months % 12;
 
-        if (remainingMonths >= 6) {
-            calculatedCost += halfYearlyRate;
-            remainingMonths = 0;
-        }
-
-        if (remainingMonths > 0) {
-            calculatedCost += remainingMonths * monthlyRate;
+            if (remainingMonths > 0) {
+                // If there are remaining months, charge for at least a 6-month block.
+                 calculatedCost += halfYearlyRate;
+            }
         }
 
         return { initialCostPerBag: calculatedCost, totalMonths: months };
