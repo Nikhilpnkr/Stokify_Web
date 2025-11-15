@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, orderBy } from "firebase/firestore";
 import type { Outflow, Customer } from "@/lib/data";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default function TransactionsPage() {
   const { user } = useUser();
 
   const outflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
+    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid), orderBy('date', 'desc')) : null,
     [firestore, user]
   );
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
@@ -33,10 +33,8 @@ export default function TransactionsPage() {
   const outflowsWithCustomerData = useMemo(() => {
     if (!outflows || !customers) return [];
     
-    // Sort transactions by date descending here on the client-side
-    const sortedOutflows = [...outflows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    return sortedOutflows.map(outflow => {
+    // The sorting is now handled by the Firestore query with an index
+    return outflows.map(outflow => {
       const customer = customers.find(c => c.id === outflow.customerId);
       return {
         ...outflow,
@@ -86,13 +84,13 @@ export default function TransactionsPage() {
                     <TableCell>{format(new Date(outflow.date), "MMM d, yyyy")}</TableCell>
                     <TableCell className="font-medium">{outflow.customerName}</TableCell>
                     <TableCell className="font-mono text-xs">{outflow.id.slice(0, 8).toUpperCase()}</TableCell>
-                    <TableCell className="text-right">${outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                    <TableCell className="text-right text-green-600">${outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right">₹{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                    <TableCell className="text-right text-green-600">₹{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     <TableCell className="text-right">
                       {outflow.balanceDue > 0 ? (
-                        <Badge variant="destructive">${outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Badge>
+                        <Badge variant="destructive">₹{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Badge>
                       ) : (
-                        <span className="text-muted-foreground">$0.00</span>
+                        <span className="text-muted-foreground">₹0.00</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">

@@ -228,8 +228,8 @@ export function Invoice({ data }: InvoiceProps) {
                                     {data.location && <div style={{ fontSize: '12px', color: '#666' }}>at {data.location}</div>}
                                 </td>
                                 <td style={{...styles.td, ...styles.textRight}}>{item.quantity.toLocaleString()} {item.unit}</td>
-                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>${isOutflow ? (item.unitPrice?.toFixed(2) || '0.00') : '-'}</td>}
-                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>${isOutflow ? (item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00') : '-'}</td>}
+                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>₹{isOutflow ? (item.unitPrice?.toFixed(2) || '0.00') : '-'}</td>}
+                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>₹{isOutflow ? (item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00') : '-'}</td>}
                             </tr>
                         ))}
                     </tbody>
@@ -242,31 +242,31 @@ export function Invoice({ data }: InvoiceProps) {
                         {isOutflow && (
                             <div style={styles.summaryRow}>
                                 <span>Subtotal</span>
-                                <span>${subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                                <span>₹{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                             </div>
                         )}
                          {data.labourCharge && data.labourCharge > 0 ? (
                            <div style={styles.summaryRow}>
                              <span>Labour Charges</span>
-                             <span>${data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                             <span>₹{data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                            </div>
                          ) : null}
                          <div style={styles.summaryRow}>
                             <span>Taxes</span>
-                            <span>$0.00</span>
+                            <span>₹0.00</span>
                         </div>
                         <div style={styles.summaryTotal}>
                             <span>Total Bill</span>
-                            <span>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                            <span>₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
                         <div style={styles.summaryRow}>
                             <span>Amount Paid</span>
-                            <span>${(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>₹{(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </div>
                          {data.balanceDue && data.balanceDue > 0 ? (
                             <div style={styles.summaryBalanceDue}>
                                 <span>Balance Due</span>
-                                <span>${data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span>₹{data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                          ) : null}
                     </div>
