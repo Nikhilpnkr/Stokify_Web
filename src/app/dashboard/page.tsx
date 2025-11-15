@@ -13,7 +13,7 @@ import { OutflowDialog } from "@/components/outflow-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { CropBatch, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
-import { generateInvoicePdf } from "@/lib/pdf";
+import { generateInflowPdf, generateInvoicePdf } from "@/lib/pdf";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
@@ -103,12 +103,10 @@ export default function InventoryPage() {
       const outflow = outflows.find(o => o.cropBatchId === batch.id);
       const customer = customers.find(c => c.id === batch.customerId);
       const location = locations.find(l => l.id === batch.storageLocationId);
-      const cropTypeData = cropTypes.find(ct => ct.name === batch.cropType);
       
       return {
         ...batch,
         cropTypeName: batch.cropType, // Keep the original string name
-        cropType: cropTypeData, // Assign the full object
         quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
         outflow,
         customer,
@@ -127,14 +125,14 @@ export default function InventoryPage() {
     setIsOutflowDialogOpen(true);
   };
   
-  const handleDownloadInvoice = (batch: (typeof batches)[0]) => {
-    if (batch.outflow && batch.customer && batch.location && batch.cropType) {
-      generateInvoicePdf(batch.outflow, batch.customer, batch.location, batch.cropType);
+  const handleDownloadInflowReceipt = (batch: (typeof batches)[0]) => {
+    if (batch.customer && batch.location) {
+      generateInflowPdf(batch, batch.customer, batch.location);
     } else {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not find all necessary data to generate invoice.",
+        description: "Could not find all necessary data to generate receipt.",
       });
     }
   };
@@ -249,12 +247,10 @@ export default function InventoryPage() {
                             <Receipt className="h-5 w-5 mr-2" />
                             Outflow
                         </Button>
-                        {batch.outflow && (
-                            <Button variant="secondary" size="sm" onClick={() => handleDownloadInvoice(batch)} title="Download Invoice">
-                                <FileDown className="h-5 w-5 mr-2" />
-                                Invoice
-                            </Button>
-                        )}
+                        <Button variant="secondary" size="sm" onClick={() => handleDownloadInflowReceipt(batch)} title="Download Inflow Receipt">
+                            <FileDown className="h-5 w-5 mr-2" />
+                            Receipt
+                        </Button>
                     </CardFooter>
                   </Card>
                 ))}
@@ -297,12 +293,10 @@ export default function InventoryPage() {
                                 <Receipt className="h-5 w-5" />
                                 <span className="sr-only">Process Outflow for {batch.customerName}</span>
                             </Button>
-                             {batch.outflow && (
-                                <Button variant="ghost" size="icon" onClick={() => handleDownloadInvoice(batch)} title="Download Invoice">
-                                    <FileDown className="h-5 w-5" />
-                                    <span className="sr-only">Download Invoice</span>
-                                </Button>
-                            )}
+                            <Button variant="ghost" size="icon" onClick={() => handleDownloadInflowReceipt(batch)} title="Download Inflow Receipt">
+                                <FileDown className="h-5 w-5" />
+                                <span className="sr-only">Download Inflow Receipt</span>
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -346,6 +340,8 @@ function toDate(dateValue: any): Date {
     }
     return new Date(dateValue);
 }
+
+    
 
     
 
