@@ -23,7 +23,7 @@ service cloud.firestore {
     match /storageLocations/{locationId} {
         allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
         allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.auth.uid != null;
+        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
 
         // Rules for the 'areas' subcollection
         match /areas/{areaId} {
@@ -35,28 +35,28 @@ service cloud.firestore {
     match /cropBatches/{batchId} {
         allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
         allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.auth.uid != null;
+        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
     }
 
     // Rule for outflows
     match /outflows/{outflowId} {
         allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
         allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.auth.uid != null;
+        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
     }
     
     // Rule for cropTypes
     match /cropTypes/{cropTypeId} {
         allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
         allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.auth.uid != null;
+        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
     }
 
     // Rule for customers
     match /customers/{customerId} {
         allow get, update, delete: if isManagerOrAdmin() || (resource.data.ownerId == request.auth.uid);
         allow create: if isManagerOrAdmin() || (request.resource.data.ownerId == request.auth.uid);
-        allow list: if isManagerOrAdmin() || request.auth.uid != null;
+        allow list: if isManagerOrAdmin() || request.query.where.get('ownerId') == request.auth.uid;
     }
   }
 }
