@@ -36,6 +36,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     const [isProcessing, setIsProcessing] = useState(false);
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     const [amountPaid, setAmountPaid] = useState(0);
+    const [costPerBag, setCostPerBag] = useState(0);
     
     const location = locations?.find(l => l.id === batch?.storageLocationId);
 
@@ -49,69 +50,73 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         return batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
     }, [batch]);
 
+    // This useMemo calculates the initial cost and duration. It only runs when batch or cropType changes.
+    const { initialCostPerBag, totalMonths } = useMemo(() => {
+        if (!batch || !cropType) {
+            return { initialCostPerBag: 0, totalMonths: 0 };
+        }
+
+        const startDate = new Date(batch.dateAdded);
+        const endDate = new Date();
+        let months = differenceInMonths(endDate, startDate);
+        if (months < 1 && startDate.getTime() < endDate.getTime()) {
+            months = 1;
+        }
+        if (months <= 0) months = 1;
+
+        let remainingMonths = months;
+        let calculatedCost = 0;
+
+        const yearlyRate = cropType.rates['12'];
+        const halfYearlyRate = cropType.rates['6'];
+        const monthlyRate = cropType.rates['1'];
+
+        if (remainingMonths >= 12) {
+            const years = Math.floor(remainingMonths / 12);
+            calculatedCost += years * yearlyRate;
+            remainingMonths %= 12;
+        }
+
+        if (remainingMonths >= 6) {
+            calculatedCost += halfYearlyRate;
+            remainingMonths = 0;
+        }
+
+        if (remainingMonths > 0) {
+            calculatedCost += remainingMonths * monthlyRate;
+        }
+
+        return { initialCostPerBag: calculatedCost, totalMonths: months };
+
+    }, [batch, cropType]);
+
+    // This useMemo recalculates the final bill whenever the editable cost, quantity, or batch changes.
+    const { storageCost, finalBill } = useMemo(() => {
+        const storage = costPerBag * withdrawQuantity;
+        const bill = storage + (batch?.labourCharge || 0);
+        return { storageCost: storage, finalBill: bill };
+    }, [costPerBag, withdrawQuantity, batch]);
+
+
     useEffect(() => {
         if (isOpen && batch) {
             const batchTotal = batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
             setWithdrawQuantity(batchTotal);
+            // Set the editable costPerBag from the initial calculation
+            setCostPerBag(initialCostPerBag);
         } else if (!isOpen) {
             // Reset state when dialog closes
             setIsProcessing(false);
             setWithdrawQuantity(0);
             setAmountPaid(0);
+            setCostPerBag(0);
         }
-    }, [isOpen, batch]);
+    }, [isOpen, batch, initialCostPerBag]);
 
-    const { totalMonths, storageCost, costPerBag, finalBill } = useMemo(() => {
-        if (!batch || !cropType) {
-          return { totalMonths: 0, storageCost: 0, costPerBag: 0, finalBill: 0 };
-        }
-    
-        const startDate = new Date(batch.dateAdded);
-        const endDate = new Date();
-        let totalMonths = differenceInMonths(endDate, startDate);
-        if (totalMonths < 1 && startDate.getTime() < endDate.getTime()) {
-            totalMonths = 1;
-        }
-        if (totalMonths <= 0) totalMonths = 1;
-
-        // If quantity is 0, storage cost is 0, but labour charge might still apply
-        if (withdrawQuantity <= 0) {
-            const finalBill = batch.labourCharge || 0;
-            setAmountPaid(finalBill);
-            return { totalMonths, storageCost: 0, costPerBag: 0, finalBill };
-        }
-
-        let remainingMonths = totalMonths;
-        let costPerBag = 0;
-    
-        const yearlyRate = cropType.rates['12'];
-        const halfYearlyRate = cropType.rates['6'];
-        const monthlyRate = cropType.rates['1'];
-    
-        if (remainingMonths >= 12) {
-          const years = Math.floor(remainingMonths / 12);
-          costPerBag += years * yearlyRate;
-          remainingMonths %= 12;
-        }
-    
-        if (remainingMonths >= 6) {
-          costPerBag += halfYearlyRate;
-          remainingMonths = 0; 
-        }
-        
-        if (remainingMonths > 0) {
-             costPerBag += remainingMonths * monthlyRate;
-        }
-
-        const storageCost = costPerBag * withdrawQuantity;
-        const finalBill = storageCost + (batch.labourCharge || 0);
-        
-        // Auto-fill amount paid when bill is calculated
+    // Effect to update amountPaid whenever the finalBill changes
+    useEffect(() => {
         setAmountPaid(finalBill);
-
-        return { totalMonths, storageCost, costPerBag, finalBill };
-
-    }, [batch, cropType, withdrawQuantity]);
+    }, [finalBill]);
 
 
     async function handleOutflow() {
@@ -292,8 +297,21 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                     <p className="text-muted-foreground">Storage Duration:</p>
                     <p className="font-semibold">{totalMonths} months</p>
                 </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="costPerBag">Storage Cost per Bag</Label>
+                    <Input
+                        id="costPerBag"
+                        type="number"
+                        value={costPerBag}
+                        onWheel={(e) => (e.target as HTMLElement).blur()}
+                        onChange={(e) => setCostPerBag(Number(e.target.value))}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        Calculated rate: ₹{initialCostPerBag.toFixed(2)}
+                    </p>
+                </div>
                 <div className="flex justify-between items-baseline">
-                    <p className="text-muted-foreground">Storage Cost:</p>
+                    <p className="text-muted-foreground">Total Storage Cost:</p>
                     <p className="font-semibold">₹{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 {batch.labourCharge && batch.labourCharge > 0 && (
@@ -348,3 +366,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     </Dialog>
   );
 }
+
+    
