@@ -130,7 +130,7 @@ export default function ReportsPage() {
                         id="date"
                         variant={"outline"}
                         className={cn(
-                        "w-[300px] justify-start text-left font-normal",
+                        "w-full sm:w-[300px] justify-start text-left font-normal",
                         !date && "text-muted-foreground"
                         )}
                     >
@@ -163,7 +163,7 @@ export default function ReportsPage() {
             </div>
         }
       />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Potential Monthly Revenue</CardTitle>
@@ -213,7 +213,7 @@ export default function ReportsPage() {
           <CardTitle>Space Utilization by Location</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
+          <ChartContainer config={chartConfig} className="min-h-[200px] sm:min-h-[300px] w-full">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData} accessibilityLayer>
                 <XAxis

@@ -278,7 +278,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg w-full m-4">
         <DialogHeader>
           <DialogTitle>Add New Crop Batch</DialogTitle>
           <DialogDescription>
@@ -308,7 +308,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 )}
             />
             {isNewCustomer && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
                     control={form.control}
                     name="customerName"

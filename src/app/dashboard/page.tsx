@@ -3,9 +3,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote, FileDown } from "lucide-react";
+import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote, FileDown, MapPin, Calendar, Smartphone } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, formatDistanceToNow } from "date-fns";
 import { AddBatchDialog } from "@/components/add-batch-dialog";
@@ -92,7 +92,7 @@ export default function InventoryPage() {
     return rawBatches.map(batch => ({
       ...batch,
       quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
-    }))
+    })).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
   }, [rawBatches]);
 
   const getLocationName = (locationId: string) => locations?.find(l => l.id === locationId)?.name || '...';
@@ -102,7 +102,7 @@ export default function InventoryPage() {
   }
   const getCustomerMobile = (customerId: string) => customers?.find(c => c.id === customerId)?.mobileNumber || '...';
 
-  const handleRowClick = (batch: CropBatch) => {
+  const handleOutflowClick = (batch: CropBatch) => {
     setSelectedBatch(batch);
     setIsOutflowDialogOpen(true);
   };
@@ -123,7 +123,7 @@ export default function InventoryPage() {
           </div>
         }
       />
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Stored Quantity</CardTitle>
@@ -172,67 +172,104 @@ export default function InventoryPage() {
             <CardDescription>A list of all crop batches currently in storage. Click the receipt icon to process outflow.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Mobile</TableHead>
-                <TableHead>Crop Type</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Area(s)</TableHead>
-                <TableHead className="text-right">Quantity (bags)</TableHead>
-                <TableHead>Date Added</TableHead>
-                <TableHead className="text-center">Outflow</TableHead>
-                <TableHead className="text-center">Download</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                  </TableCell>
-                </TableRow>
-              ) : batches && batches.length > 0 ? batches.map((batch) => (
-                <TableRow key={batch.id}>
-                  <TableCell className="font-medium">{batch.customerName}</TableCell>
-                  <TableCell>{getCustomerMobile(batch.customerId)}</TableCell>
-                  <TableCell>{batch.cropType}</TableCell>
-                  <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
-                  <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
-                  <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Button variant="ghost" size="icon" onClick={() => handleRowClick(batch)} title="Process Outflow">
-                      <Receipt className="h-5 w-5" />
-                      <span className="sr-only">Process Outflow for {batch.customerName}</span>
-                    </Button>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {batch.invoiceData && (
-                        <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice">
-                            <FileDown className="h-5 w-5" />
-                            <span className="sr-only">Download Inflow Invoice</span>
+          {isLoading ? (
+            <div className="flex h-64 items-center justify-center">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : batches && batches.length > 0 ? (
+            <>
+              {/* Mobile View: Card List */}
+              <div className="grid gap-4 md:hidden">
+                {batches.map((batch) => (
+                  <Card key={batch.id} className="bg-muted/30">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                           <CardTitle>{batch.customerName}</CardTitle>
+                           <CardDescription>{batch.cropType}</CardDescription>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold">{batch.quantity.toLocaleString()} bags</p>
+                          <p className="text-xs text-muted-foreground">In Stock</p>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /><span>{getCustomerMobile(batch.customerId)}</span></div>
+                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>{getLocationName(batch.storageLocationId)} ({getAreaNames(batch.areaAllocations)})</span></div>
+                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span></div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                        <Button variant="ghost" size="sm" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice" disabled={!batch.invoiceData}>
+                            <FileDown className="h-5 w-5 mr-2" />
+                            Inflow
                         </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="h-24 text-center">
-                    No crop batches found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        <Button variant="outline" size="sm" onClick={() => handleOutflowClick(batch)} title="Process Outflow">
+                            <Receipt className="h-5 w-5 mr-2" />
+                            Outflow
+                        </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+              {/* Desktop View: Table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Mobile</TableHead>
+                      <TableHead>Crop Type</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Area(s)</TableHead>
+                      <TableHead className="text-right">Quantity (bags)</TableHead>
+                      <TableHead>Date Added</TableHead>
+                      <TableHead className="text-center">Outflow</TableHead>
+                      <TableHead className="text-center">Download</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {batches.map((batch) => (
+                      <TableRow key={batch.id}>
+                        <TableCell className="font-medium">{batch.customerName}</TableCell>
+                        <TableCell>{getCustomerMobile(batch.customerId)}</TableCell>
+                        <TableCell>{batch.cropType}</TableCell>
+                        <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
+                        <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
+                        <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" onClick={() => handleOutflowClick(batch)} title="Process Outflow">
+                            <Receipt className="h-5 w-5" />
+                            <span className="sr-only">Process Outflow for {batch.customerName}</span>
+                          </Button>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {batch.invoiceData && (
+                              <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice">
+                                  <FileDown className="h-5 w-5" />
+                                  <span className="sr-only">Download Inflow Invoice</span>
+                              </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          ) : (
+            <div className="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
+                <p className="text-sm text-muted-foreground">No crop batches found.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
       <AddBatchDialog
