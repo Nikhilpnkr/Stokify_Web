@@ -1,8 +1,47 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Users can only read and update their own profile.
+    // User documents are created automatically on sign-up.
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // A user can read/write a document if they are the owner.
+    // They can list a collection only if they query by their own ownerId.
+    function isOwner(collectionName) {
+      return request.auth != null && (
+        (request.method in ['get', 'update', 'delete'] && resource.data.ownerId == request.auth.uid) ||
+        (request.method == 'create' && request.resource.data.ownerId == request.auth.uid) ||
+        (request.method == 'list' && request.query.get('ownerId') == request.auth.uid)
+      );
+    }
+    
+    // Apply the isOwner rule to all primary data collections.
+    match /storageLocations/{locationId} {
+        allow read, write: if isOwner('storageLocations');
+        
+        // Rules for the 'areas' subcollection
+        match /areas/{areaId} {
+           allow read, write: if request.auth != null && get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid;
+        }
+    }
+    
+    match /cropBatches/{batchId} {
+        allow read, write: if isOwner('cropBatches');
+    }
+
+    match /outflows/{outflowId} {
+        allow read, write: if isOwner('outflows');
+    }
+    
+    match /cropTypes/{cropTypeId} {
+      allow read, write: if isOwner('cropTypes');
+    }
+
+    match /customers/{customerId} {
+      allow read, write: if isOwner('customers');
     }
   }
 }
