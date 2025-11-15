@@ -9,21 +9,19 @@ import type { StorageLocation } from '@/lib/data';
 
 const styles = {
     container: {
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+        fontFamily: 'Helvetica, Arial, sans-serif',
         color: '#333',
         backgroundColor: '#ffffff',
         padding: '40px',
         width: '800px',
-        border: '1px solid #eee',
-        boxShadow: '0 0 10px rgba(0, 0, 0, 0.05)',
     },
     header: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
-        borderBottom: '2px solid #333',
+        borderBottom: '2px solid #1a2e05',
         paddingBottom: '20px',
-        marginBottom: '20px',
+        marginBottom: '40px',
     },
     headerLeft: {
         display: 'flex',
@@ -32,19 +30,21 @@ const styles = {
     locationName: {
         fontSize: '28px',
         fontWeight: 'bold',
+        color: '#1a2e05',
     },
     locationAddress: {
         fontSize: '14px',
         color: '#555',
         marginTop: '4px',
+        maxWidth: '250px',
     },
     headerRight: {
         textAlign: 'right',
     },
     receiptTitle: {
-        fontSize: '24px',
-        fontWeight: '600',
-        color: '#111',
+        fontSize: '32px',
+        fontWeight: 'bold',
+        color: '#333',
     },
     receiptNumber: {
         fontSize: '14px',
@@ -53,18 +53,18 @@ const styles = {
     detailsSection: {
         display: 'flex',
         justifyContent: 'space-between',
-        marginBottom: '30px',
+        marginBottom: '40px',
     },
     detailsColumn: {
         width: '48%',
     },
     detailsTitle: {
-        fontSize: '14px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        color: '#555',
-        borderBottom: '1px solid #eee',
-        paddingBottom: '5px',
+        color: '#666',
         marginBottom: '10px',
+        textTransform: 'uppercase',
+        letterSpacing: '1px',
     },
     detailItem: {
         fontSize: '14px',
@@ -76,17 +76,18 @@ const styles = {
         marginBottom: '30px',
     } as React.CSSProperties,
     th: {
-        backgroundColor: '#f8f8f8',
-        borderBottom: '2px solid #ddd',
-        padding: '12px 8px',
+        backgroundColor: '#f9f9f9',
+        borderBottom: '2px solid #eee',
+        padding: '12px 15px',
         textAlign: 'left',
         fontSize: '12px',
         fontWeight: 'bold',
         textTransform: 'uppercase',
+        color: '#555'
     } as React.CSSProperties,
     td: {
         borderBottom: '1px solid #eee',
-        padding: '12px 8px',
+        padding: '15px',
         fontSize: '14px',
     },
     textRight: {
@@ -97,19 +98,19 @@ const styles = {
         justifyContent: 'flex-end',
     },
     summaryContainer: {
-        width: '40%',
+        width: '45%',
     },
     summaryRow: {
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '8px 0',
+        padding: '10px 0',
         fontSize: '14px',
     },
     summaryTotal: {
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '12px 0',
-        fontSize: '18px',
+        padding: '15px 0',
+        fontSize: '20px',
         fontWeight: 'bold',
         borderTop: '2px solid #333',
         marginTop: '10px',
@@ -117,15 +118,16 @@ const styles = {
     summaryBalanceDue: {
         display: 'flex',
         justifyContent: 'space-between',
-        padding: '12px 0',
-        fontSize: '18px',
+        padding: '12px',
+        fontSize: '20px',
         fontWeight: 'bold',
-        backgroundColor: '#fff5f5',
+        backgroundColor: '#fff0f0',
         color: '#c53030',
         marginTop: '10px',
+        borderRadius: '5px'
     },
     footer: {
-        marginTop: '40px',
+        marginTop: '50px',
         paddingTop: '20px',
         borderTop: '1px solid #eee',
         textAlign: 'center',
@@ -200,7 +202,7 @@ export function Invoice({ data }: InvoiceProps) {
 
             <section style={styles.detailsSection}>
                 <div style={styles.detailsColumn}>
-                    <h3 style={styles.detailsTitle}>Customer</h3>
+                    <h3 style={styles.detailsTitle}>Billed To</h3>
                     <p style={styles.detailItem}><strong>{data.customer.name}</strong></p>
                     <p style={styles.detailItem}>{data.customer.mobile}</p>
                 </div>
@@ -258,7 +260,7 @@ export function Invoice({ data }: InvoiceProps) {
                             </div>
                          }
                         <div style={styles.summaryTotal}>
-                            <span>Total Bill</span>
+                            <span>Total</span>
                             <span>₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
                         {isOutflow && (
@@ -294,3 +296,5 @@ export function Invoice({ data }: InvoiceProps) {
         </div>
     );
 }
+
+    
