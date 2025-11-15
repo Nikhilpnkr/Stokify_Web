@@ -3,16 +3,16 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Receipt } from "lucide-react";
+import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, formatDistanceToNow } from "date-fns";
 import { AddBatchDialog } from "@/components/add-batch-dialog";
 import { OutflowDialog } from "@/components/outflow-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { CropBatch, StorageLocation, CropType, Customer, StorageArea } from "@/lib/data";
+import type { CropBatch, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
 
 
 export default function InventoryPage() {
@@ -38,14 +38,31 @@ export default function InventoryPage() {
     user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
+   const outflowsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
 
   const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+  const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+  
+  const { totalQuantity, totalOutstandingBalance } = useMemo(() => {
+    const totalQty = rawBatches?.reduce((acc, b) => {
+        const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
+        return acc + batchQty;
+    }, 0) || 0;
+
+    const outstanding = outflows?.reduce((acc, o) => acc + o.balanceDue, 0) || 0;
+
+    return { totalQuantity: totalQty, totalOutstandingBalance: outstanding };
+  }, [rawBatches, outflows]);
+
 
   // Fetch all areas from all locations
   useEffect(() => {
@@ -89,13 +106,13 @@ export default function InventoryPage() {
     setIsOutflowDialogOpen(true);
   };
   
-  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas;
+  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
 
   return (
     <>
       <PageHeader
-        title="Crop Inflow / Inventory"
-        description="A list of all crop batches currently in storage. Click the receipt icon to process outflow."
+        title="Dashboard"
+        description="An overview of your crop inventory and business metrics."
         action={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setIsAddDialogOpen(true)} disabled={!user}>
@@ -105,8 +122,55 @@ export default function InventoryPage() {
           </div>
         }
       />
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Stored Quantity</CardTitle>
+            <Archive className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalQuantity.toLocaleString()} bags</div>
+            <p className="text-xs text-muted-foreground">Across {locations?.length || 0} locations</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{customers?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Currently storing crops</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Outstanding Balance</CardTitle>
+            <Banknote className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totalOutstandingBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            <p className="text-xs text-muted-foreground">Across all transactions</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Crop Batches</CardTitle>
+            <div className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{rawBatches?.length || 0}</div>
+            <p className="text-xs text-muted-foreground">Currently in storage</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+            <CardTitle>Current Inventory</CardTitle>
+            <CardDescription>A list of all crop batches currently in storage. Click the receipt icon to process outflow.</CardDescription>
+        </CardHeader>
+        <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -180,3 +244,5 @@ export default function InventoryPage() {
     </>
   );
 }
+
+    
