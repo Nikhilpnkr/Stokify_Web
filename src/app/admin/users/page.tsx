@@ -5,9 +5,9 @@ import { useMemo, useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Mail, Search } from "lucide-react";
+import { Loader2, Mail, Search, Trash2 } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase, updateDocumentNonBlocking, useDoc } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
+import { collection, query, where, doc, getDocs, writeBatch } from "firebase/firestore";
 import type { UserProfile, UserRole } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -19,11 +19,17 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { redirect } from "next/navigation";
+
 
 export default function UserManagementPage() {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [isDeleteAllOpen, setIsDeleteAllOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const currentUserProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null,
@@ -80,6 +86,62 @@ export default function UserManagementPage() {
       description: `User role has been successfully changed to ${newRole}.`,
     });
   };
+
+  async function handleDeleteAllData() {
+    if (!firestore || !allUsers) return;
+    setIsProcessing(true);
+
+    try {
+        const batch = writeBatch(firestore);
+        
+        // Delete all data associated with each user
+        for (const userToDelete of allUsers) {
+            const collectionsToDelete = ["cropBatches", "outflows", "payments", "customers", "cropTypes"];
+            for (const collectionName of collectionsToDelete) {
+                const q = query(collection(firestore, collectionName), where("ownerId", "==", userToDelete.uid));
+                const snapshot = await getDocs(q);
+                snapshot.forEach(doc => batch.delete(doc.ref));
+            }
+
+            const locationsQuery = query(collection(firestore, "storageLocations"), where("ownerId", "==", userToDelete.uid));
+            const locationsSnapshot = await getDocs(locationsQuery);
+            for (const locationDoc of locationsSnapshot.docs) {
+                const areasQuery = collection(firestore, "storageLocations", locationDoc.id, "areas");
+                const areasSnapshot = await getDocs(areasQuery);
+                areasSnapshot.forEach(areaDoc => batch.delete(areaDoc.ref));
+                batch.delete(locationDoc.ref);
+            }
+            
+            // Delete the user profile itself
+            const userProfileRef = doc(firestore, 'users', userToDelete.uid);
+            batch.delete(userProfileRef);
+        }
+
+        await batch.commit();
+        
+        toast({
+            title: "All Data Purged",
+            description: "All users and their associated application data have been deleted. You will be logged out.",
+            duration: 5000,
+        });
+        
+        // Redirect to login after a delay to allow toast to be seen
+        setTimeout(() => {
+            redirect('/login');
+        }, 3000);
+
+    } catch (error: any) {
+       console.error("Error deleting all data:", error);
+       toast({
+            variant: "destructive",
+            title: "Error Purging Data",
+            description: error.message || "An unexpected error occurred.",
+        });
+    } finally {
+        setIsProcessing(false);
+        setIsDeleteAllOpen(false);
+    }
+  }
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
 
@@ -205,6 +267,45 @@ export default function UserManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      <Card className="border-destructive mt-6">
+        <CardHeader>
+            <CardTitle>Danger Zone</CardTitle>
+            <CardDescription>
+            This action is permanent and will delete all users and all associated data.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+             <Button
+                variant="destructive"
+                onClick={() => setIsDeleteAllOpen(true)}
+                disabled={isProcessing}
+                >
+                {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                Delete All Users & Data
+            </Button>
+        </CardContent>
+      </Card>
+      
+      <AlertDialog open={isDeleteAllOpen} onOpenChange={setIsDeleteAllOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete ALL users and ALL associated data from the database. It is intended for a complete application reset.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAllData} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Everything
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
+
+    
