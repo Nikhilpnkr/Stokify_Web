@@ -5,13 +5,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
 
 export async function generateInvoicePdf(data: InvoiceData) {
+  // Ensure the date is a Date object, not a string from Firestore
+  const processedData = {
+    ...data,
+    date: typeof data.date === 'string' ? new Date(data.date) : data.date,
+  };
+
   const invoiceElement = document.createElement("div");
   // Position off-screen
   invoiceElement.style.position = "absolute";
   invoiceElement.style.left = "-9999px";
   invoiceElement.style.top = "-9999px";
   invoiceElement.style.width = "800px"; // A4-like width
-  invoiceElement.innerHTML = renderToStaticMarkup(Invoice({ data }));
+  invoiceElement.innerHTML = renderToStaticMarkup(Invoice({ data: processedData }));
   document.body.appendChild(invoiceElement);
 
   try {
