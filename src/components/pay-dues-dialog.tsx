@@ -19,7 +19,6 @@ import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import type { PaymentReceiptData } from "./payment-receipt";
 
 type PayDuesDialogProps = {
   isOpen: boolean;
@@ -71,23 +70,6 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         
         const newBalanceDue = outflow.balanceDue - amountToPay;
         
-        const receiptData: PaymentReceiptData = {
-            paymentId: newPaymentRef.id.slice(0, 8).toUpperCase(),
-            paymentDate: new Date(),
-            paymentMethod: paymentMethod,
-            amountPaid: amountToPay,
-            notes: notes,
-            customer: {
-                name: customer.name,
-                mobile: customer.mobileNumber,
-            },
-            outflowId: outflow.id.slice(0, 8).toUpperCase(),
-            outflowDate: new Date(outflow.date),
-            totalBill: outflow.totalBill,
-            previousBalance: outflow.balanceDue,
-            newBalance: newBalanceDue,
-        };
-        
         const newPayment: Payment = {
             id: newPaymentRef.id,
             outflowId: outflow.id,
@@ -97,7 +79,6 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             amount: amountToPay,
             paymentMethod,
             notes,
-            invoiceData: receiptData,
         };
 
         // Create a new payment document
