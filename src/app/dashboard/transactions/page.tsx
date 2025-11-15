@@ -14,10 +14,13 @@ import { Button } from "@/components/ui/button";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PayDuesDialog } from "@/components/pay-dues-dialog";
 
 export default function TransactionsPage() {
   const { firestore, user } = useFirebase();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedOutflow, setSelectedOutflow] = useState<Outflow | null>(null);
+  const [isPayDuesOpen, setIsPayDuesOpen] = useState(false);
 
   const outflowsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
@@ -53,6 +56,10 @@ export default function TransactionsPage() {
     return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [unsortedOutflows, customers, batches, searchTerm]);
 
+  const handlePayDuesClick = (outflow: Outflow) => {
+    setSelectedOutflow(outflow);
+    setIsPayDuesOpen(true);
+  }
 
   const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingBatches;
 
@@ -113,11 +120,17 @@ export default function TransactionsPage() {
                                 <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" /><span>{outflow.quantityWithdrawn.toLocaleString()} bags withdrawn</span></div>
                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(new Date(outflow.date), "MMM d, yyyy")}</span></div>
                             </CardContent>
-                             <CardFooter>
+                             <CardFooter className="flex flex-col items-stretch gap-2">
                                 {outflow.invoiceData && (
                                     <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(outflow.invoiceData)} title="Download Outflow Receipt" className="w-full">
                                         <FileDown className="h-4 w-4 mr-2" />
                                         Download Receipt
+                                    </Button>
+                                )}
+                                {outflow.balanceDue > 0 && (
+                                    <Button size="sm" onClick={() => handlePayDuesClick(outflow)} className="w-full">
+                                        <Banknote className="h-4 w-4 mr-2" />
+                                        Pay Dues
                                     </Button>
                                 )}
                             </CardFooter>
@@ -137,7 +150,7 @@ export default function TransactionsPage() {
                             <TableHead className="text-right">Total Bill</TableHead>
                             <TableHead className="text-right">Amount Paid</TableHead>
                             <TableHead className="text-right">Balance Due</TableHead>
-                            <TableHead className="text-center">Receipt</TableHead>
+                            <TableHead className="text-center">Action</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -160,15 +173,21 @@ export default function TransactionsPage() {
                                     {outflow.balanceDue > 0 ? (
                                         <Badge variant="destructive">₹{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Badge>
                                     ) : (
-                                        <span className="text-muted-foreground">-</span>
+                                        <Badge variant="secondary">Paid</Badge>
                                     )}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                {outflow.invoiceData && (
-                                    <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(outflow.invoiceData)} title="Download Outflow Receipt">
-                                        <FileDown className="h-5 w-5" />
-                                        <span className="sr-only">Download Outflow Receipt</span>
+                                {outflow.balanceDue > 0 ? (
+                                     <Button variant="secondary" size="sm" onClick={() => handlePayDuesClick(outflow)} title="Pay Dues">
+                                        Pay
                                     </Button>
+                                ) : (
+                                    outflow.invoiceData && (
+                                        <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(outflow.invoiceData)} title="Download Outflow Receipt">
+                                            <FileDown className="h-5 w-5" />
+                                            <span className="sr-only">Download Outflow Receipt</span>
+                                        </Button>
+                                    )
                                 )}
                                 </TableCell>
                             </TableRow>
@@ -185,6 +204,11 @@ export default function TransactionsPage() {
             )}
         </CardContent>
       </Card>
+      <PayDuesDialog 
+        isOpen={isPayDuesOpen}
+        setIsOpen={setIsPayDuesOpen}
+        outflow={selectedOutflow}
+      />
     </>
   );
 }
