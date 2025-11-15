@@ -15,10 +15,19 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth, useUser, useFirebase, setDocumentNonBlocking } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import type { UserRole } from "@/lib/data";
+
 
 export default function SignUpPage() {
   const auth = useAuth();
@@ -29,7 +38,10 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [role, setRole] = useState<UserRole>('user');
   const [isLoading, setIsLoading] = useState(false);
+
+  const roles: UserRole[] = ['admin', 'manager', 'assistant', 'user'];
 
   // If user is logged in, redirect to dashboard.
   useEffect(() => {
@@ -56,8 +68,7 @@ export default function SignUpPage() {
         displayName: displayName,
         email: email,
         mobileNumber: mobileNumber,
-        role: 'user', // Assign default role
-        ownerId: userCredential.user.uid, // The user owns their own profile
+        role: role,
       };
       setDocumentNonBlocking(userRef, userProfile, { merge: false });
 
@@ -129,6 +140,21 @@ export default function SignUpPage() {
                 value={mobileNumber}
                 onChange={(e) => setMobileNumber(e.target.value)}
               />
+            </div>
+             <div className="grid gap-2">
+                <Label htmlFor="role">Role</Label>
+                <Select onValueChange={(value: UserRole) => setRole(value)} defaultValue={role}>
+                    <SelectTrigger id="role">
+                        <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {roles.map(roleOption => (
+                        <SelectItem key={roleOption} value={roleOption} className="capitalize">
+                            {roleOption}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Password</Label>
