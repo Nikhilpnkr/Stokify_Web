@@ -13,7 +13,7 @@ import { OutflowDialog } from "@/components/outflow-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { CropBatch, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
-import { generateInflowPdf, generateInvoicePdf } from "@/lib/pdf";
+import { generateInflowPdf } from "@/lib/pdf";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
@@ -24,7 +24,7 @@ export default function InventoryPage() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const cropBatchesQuery = useMemoFirebase(() =>
@@ -107,7 +107,6 @@ export default function InventoryPage() {
       
       return {
         ...batch,
-        cropTypeName: batch.cropType,
         cropType: cropType,
         quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
         outflow,
@@ -122,7 +121,7 @@ export default function InventoryPage() {
     return allocations.map(alloc => allAreas.find(a => a.id === alloc.areaId)?.name).filter(Boolean).join(', ') || 'N/A';
   }
 
-  const handleOutflowClick = (batch: CropBatch) => {
+  const handleOutflowClick = (batch: any) => {
     setSelectedBatch(batch);
     setIsOutflowDialogOpen(true);
   };
@@ -231,7 +230,7 @@ export default function InventoryPage() {
                       <div className="flex justify-between items-start">
                         <div>
                            <CardTitle>{batch.customerName}</CardTitle>
-                           <CardDescription>{batch.cropTypeName}</CardDescription>
+                           <CardDescription>{batch.cropType?.name}</CardDescription>
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold">{batch.quantity.toLocaleString()} bags</p>
@@ -277,7 +276,7 @@ export default function InventoryPage() {
                       <TableRow key={batch.id}>
                         <TableCell className="font-medium">{batch.customerName}</TableCell>
                         <TableCell>{batch.customer?.mobileNumber || '...'}</TableCell>
-                        <TableCell>{batch.cropTypeName}</TableCell>
+                        <TableCell>{batch.cropType?.name}</TableCell>
                         <TableCell>{batch.location?.name || '...'}</TableCell>
                         <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
                         <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
@@ -327,7 +326,7 @@ export default function InventoryPage() {
             isOpen={isOutflowDialogOpen}
             setIsOpen={setIsOutflowDialogOpen}
             batch={selectedBatch}
-            cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
+            cropType={selectedBatch.cropType}
             locations={locations || []}
             allAreas={allAreas}
         />
@@ -343,3 +342,4 @@ function toDate(dateValue: any): Date {
     }
     return new Date(dateValue);
 }
+
