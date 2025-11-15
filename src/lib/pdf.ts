@@ -17,7 +17,7 @@ function toDate(dateValue: any): Date {
     return new Date(dateValue);
 }
 
-export async function generateInflowPdf(batch: CropBatch & { cropType: CropType }, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
+export async function generateInflowPdf(batch: CropBatch, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
   if (!user || !batch.cropType) {
@@ -41,7 +41,7 @@ export async function generateInflowPdf(batch: CropBatch & { cropType: CropType 
       email: user.email || 'N/A'
     },
     items: batch.areaAllocations.map(alloc => ({
-        description: batch.cropType.name,
+        description: (batch.cropType as unknown as CropType).name,
         quantity: alloc.quantity,
         unit: 'bags',
         storageArea: getAreaName(alloc.areaId),
@@ -50,7 +50,7 @@ export async function generateInflowPdf(batch: CropBatch & { cropType: CropType 
     location: location,
     labourCharge: batch.labourCharge,
     total: batch.labourCharge,
-    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${batch.cropType.name}.`,
+    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${(batch.cropType as unknown as CropType).name}.`,
   };
 
   const invoiceElement = document.createElement("div");
@@ -213,4 +213,5 @@ export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outfl
   }
 }
 
+    
     
