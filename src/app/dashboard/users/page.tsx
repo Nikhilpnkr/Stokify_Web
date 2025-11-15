@@ -57,7 +57,15 @@ export default function UserManagementPage() {
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
   
-  if (!isLoadingCurrentUser && currentUserProfile?.role !== 'admin' && currentUserProfile?.role !== 'manager') {
+  if (isLoadingCurrentUser) {
+    return (
+      <div className="flex h-48 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'manager')) {
     redirect('/dashboard');
   }
 
@@ -87,7 +95,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoadingUsers ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
@@ -107,7 +115,7 @@ export default function UserManagementPage() {
                       <Select
                         defaultValue={profile.role}
                         onValueChange={(value: UserRole) => handleRoleChange(profile.uid, value)}
-                        disabled={profile.uid === user?.uid && currentUserProfile?.role !== 'admin'}
+                        disabled={profile.uid === user?.uid || currentUserProfile?.role !== 'admin'}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select a role" />
