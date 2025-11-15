@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { redirect } from 'next/navigation';
 
 export default function UserManagementPage() {
   const { firestore, user } = useFirebase();
@@ -67,18 +66,6 @@ export default function UserManagementPage() {
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (!isLoading && (!currentUserProfile || currentUserProfile.role !== 'admin')) {
-    return redirect('/dashboard');
-  }
-
   const roles: UserRole[] = ['admin', 'manager', 'assistant', 'user'];
 
   return (
@@ -105,7 +92,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoadingUsers ? (
+              {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={4} className="h-24 text-center">
                     <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
