@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, useUser, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { useFirebase, useUser, useDoc, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import type { Outflow, Payment } from "@/lib/data";
+import type { Outflow, Payment, Customer } from "@/lib/data";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import type { PaymentReceiptData } from "./payment-receipt";
 
 type PayDuesDialogProps = {
   isOpen: boolean;
@@ -34,6 +35,11 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Online'>('Cash');
     const [notes, setNotes] = useState('');
 
+    const customerRef = useMemoFirebase(() =>
+        outflow ? doc(firestore, 'customers', outflow.customerId) : null,
+    [firestore, outflow]);
+    const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerRef);
+
     useEffect(() => {
         if (isOpen && outflow) {
             setAmountToPay(outflow.balanceDue);
@@ -46,7 +52,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     }, [isOpen, outflow]);
 
     async function handlePayment() {
-        if (!firestore || !outflow || !user) return;
+        if (!firestore || !outflow || !user || !customer) return;
 
         if (amountToPay <= 0) {
             toast({ variant: "destructive", title: "Invalid Amount", description: "Payment amount must be positive." });
@@ -63,6 +69,25 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         const newPaymentRef = doc(collection(firestore, "payments"));
         const outflowRef = doc(firestore, "outflows", outflow.id);
         
+        const newBalanceDue = outflow.balanceDue - amountToPay;
+        
+        const receiptData: PaymentReceiptData = {
+            paymentId: newPaymentRef.id.slice(0, 8).toUpperCase(),
+            paymentDate: new Date(),
+            paymentMethod: paymentMethod,
+            amountPaid: amountToPay,
+            notes: notes,
+            customer: {
+                name: customer.name,
+                mobile: customer.mobileNumber,
+            },
+            outflowId: outflow.id.slice(0, 8).toUpperCase(),
+            outflowDate: new Date(outflow.date),
+            totalBill: outflow.totalBill,
+            previousBalance: outflow.balanceDue,
+            newBalance: newBalanceDue,
+        };
+        
         const newPayment: Payment = {
             id: newPaymentRef.id,
             outflowId: outflow.id,
@@ -72,6 +97,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             amount: amountToPay,
             paymentMethod,
             notes,
+            invoiceData: receiptData,
         };
 
         // Create a new payment document
@@ -80,7 +106,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         // Update the outflow document
         const updatedOutflowData = {
             amountPaid: outflow.amountPaid + amountToPay,
-            balanceDue: outflow.balanceDue - amountToPay,
+            balanceDue: newBalanceDue,
         };
         updateDocumentNonBlocking(outflowRef, updatedOutflowData);
 
@@ -176,9 +202,9 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
           <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isProcessing}>Cancel</Button>
           <Button 
             onClick={handlePayment} 
-            disabled={isProcessing || amountToPay <= 0 || amountToPay > outflow.balanceDue}
+            disabled={isProcessing || amountToPay <= 0 || amountToPay > outflow.balanceDue || isLoadingCustomer}
           >
-             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+             {(isProcessing || isLoadingCustomer) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm Payment
           </Button>
         </DialogFooter>

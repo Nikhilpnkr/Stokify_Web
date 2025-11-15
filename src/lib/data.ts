@@ -1,5 +1,6 @@
 
 
+
 export type AreaAllocation = {
   areaId: string;
   quantity: number;
@@ -86,6 +87,7 @@ export type Payment = {
   amount: number;
   paymentMethod: 'Cash' | 'Card' | 'Online';
   notes?: string;
+  invoiceData?: any;
 };
 
 

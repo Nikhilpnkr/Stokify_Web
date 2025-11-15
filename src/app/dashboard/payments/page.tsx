@@ -3,15 +3,17 @@
 
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Search, CreditCard, Calendar, User, ShoppingBag } from "lucide-react";
+import { Loader2, Search, CreditCard, Calendar, User, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { Payment, Customer, Outflow } from "@/lib/data";
+import type { Payment, Customer } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { generatePaymentReceiptPdf } from "@/lib/pdf";
 
 export default function PaymentsPage() {
   const { firestore, user } = useFirebase();
@@ -86,7 +88,7 @@ export default function PaymentsPage() {
                                 <div className="flex justify-between items-start">
                                     <div>
                                         <CardTitle className="text-base">{getCustomerName(payment.customerId)}</CardTitle>
-                                        <CardDescription>Receipt #{payment.outflowId.slice(0,6)}</CardDescription>
+                                        <CardDescription>Receipt #{payment.id.slice(0,6)}</CardDescription>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-lg font-bold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
@@ -98,6 +100,13 @@ export default function PaymentsPage() {
                                 <div className="flex items-center gap-2 text-sm text-muted-foreground"><Calendar className="h-4 w-4" /><span>{format(new Date(payment.date), "MMM d, yyyy")}</span></div>
                                  {payment.notes && <p className="text-sm text-foreground mt-2">Notes: {payment.notes}</p>}
                             </CardContent>
+                             <CardFooter>
+                                {payment.invoiceData && (
+                                <Button variant="outline" size="sm" className="w-full" onClick={() => generatePaymentReceiptPdf(payment.invoiceData)}>
+                                    <FileDown className="mr-2 h-4 w-4" /> Download Receipt
+                                </Button>
+                                )}
+                            </CardFooter>
                         </Card>
                     ))}
                 </div>
@@ -113,6 +122,7 @@ export default function PaymentsPage() {
                             <TableHead>Method</TableHead>
                             <TableHead>Notes</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
+                             <TableHead className="text-center">Receipt</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -131,6 +141,14 @@ export default function PaymentsPage() {
                                 <TableCell><Badge variant="outline">{payment.paymentMethod}</Badge></TableCell>
                                 <TableCell className="text-sm text-muted-foreground">{payment.notes || '-'}</TableCell>
                                 <TableCell className="text-right font-semibold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-center">
+                                    {payment.invoiceData && (
+                                        <Button variant="ghost" size="icon" onClick={() => generatePaymentReceiptPdf(payment.invoiceData)} title="Download Payment Receipt">
+                                            <FileDown className="h-5 w-5" />
+                                            <span className="sr-only">Download Receipt</span>
+                                        </Button>
+                                    )}
+                                </TableCell>
                             </TableRow>
                             ))}
                         </TableBody>
