@@ -221,7 +221,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     const newBatch: Omit<CropBatch, 'quantity'> = {
       id: newDocRef.id,
-      cropType: selectedCropType.name,
+      cropType: values.cropTypeId,
       areaAllocations: values.areaAllocations,
       storageLocationId: values.locationId,
       dateAdded: values.dateAdded.toISOString(),
@@ -232,12 +232,12 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     };
     
     addDocumentNonBlocking(newDocRef, newBatch);
-    const fullBatch = { ...newBatch, quantity: totalQuantity };
+    const fullBatch = { ...newBatch, quantity: totalQuantity, cropType: selectedCropType };
 
     toast({
       title: "Success! Batch Added.",
       description: `New batch for ${finalCustomer.name} has been added.`,
-      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullBatch, finalCustomer, selectedLocation!, areas)}>Download Inflow Receipt</Button>,
+      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullBatch as any, finalCustomer, selectedLocation!, areas!)}>Download Inflow Receipt</Button>,
       duration: 10000,
     });
     setIsOpen(false);

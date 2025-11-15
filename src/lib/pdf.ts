@@ -41,7 +41,7 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
       email: user.email || 'N/A'
     },
     items: batch.areaAllocations.map(alloc => ({
-        description: batch.cropType,
+        description: batch.cropType.name,
         quantity: alloc.quantity,
         unit: 'bags',
         storageArea: getAreaName(alloc.areaId),
@@ -50,7 +50,7 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
     location: location,
     labourCharge: batch.labourCharge,
     total: batch.labourCharge,
-    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${batch.cropType}.`,
+    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${batch.cropType.name}.`,
   };
 
   const invoiceElement = document.createElement("div");

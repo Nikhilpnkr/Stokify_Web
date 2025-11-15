@@ -1,4 +1,5 @@
 
+
 export type AreaAllocation = {
   areaId: string;
   quantity: number;
@@ -115,5 +116,3 @@ export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {
   6: 36,
   12: 56,
 };
-
-    
