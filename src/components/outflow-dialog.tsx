@@ -14,12 +14,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow, StorageArea } from "@/lib/data";
+import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow, StorageArea, Payment } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -47,6 +48,8 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     const [withdrawQuantity, setWithdrawQuantity] = useState(0);
     const [amountPaid, setAmountPaid] = useState(0);
     const [costPerBag, setCostPerBag] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Online'>('Cash');
+    const [notes, setNotes] = useState('');
     
     const location = locations?.find(l => l.id === batch?.storageLocationId);
 
@@ -104,6 +107,8 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             const batchTotal = batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
             setWithdrawQuantity(batchTotal);
             setCostPerBag(initialCostPerBag);
+            setPaymentMethod('Cash');
+            setNotes('');
         } else if (!isOpen) {
             setIsProcessing(false);
             setWithdrawQuantity(0);
@@ -159,6 +164,22 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         };
         
         addDocumentNonBlocking(newOutflowRef, newOutflow);
+
+        // If an initial payment is made, create a payment record for it
+        if (amountPaid > 0) {
+            const newPaymentRef = doc(collection(firestore, "payments"));
+            const newPayment: Payment = {
+                id: newPaymentRef.id,
+                outflowId: newOutflow.id,
+                customerId: newOutflow.customerId,
+                ownerId: user.uid,
+                date: new Date().toISOString(),
+                amount: amountPaid,
+                paymentMethod: paymentMethod,
+                notes: notes || `Initial payment for outflow #${newOutflow.id.slice(0,6)}`,
+            };
+            addDocumentNonBlocking(newPaymentRef, newPayment);
+        }
 
         if (withdrawQuantity === totalQuantity) {
             deleteDocumentNonBlocking(batchRef);
@@ -291,20 +312,48 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                     </div>
                 </div>
 
-                <div className="grid gap-2">
-                    <Label htmlFor="amountPaid">Amount Paid</Label>
-                    <Input
-                        id="amountPaid"
-                        type="number"
-                        value={amountPaid}
-                        onWheel={(e) => (e.target as HTMLElement).blur()}
-                        onChange={(e) => {
-                            const val = Number(e.target.value);
-                            if (val >= 0 && val <= finalBill) setAmountPaid(val)
-                        }}
-                        max={finalBill}
-                        min={0}
-                    />
+                <div className="rounded-lg bg-muted/50 p-4 space-y-4">
+                     <div className="grid gap-2">
+                        <Label htmlFor="amountPaid">Amount Paid</Label>
+                        <Input
+                            id="amountPaid"
+                            type="number"
+                            value={amountPaid}
+                            onWheel={(e) => (e.target as HTMLElement).blur()}
+                            onChange={(e) => {
+                                const val = Number(e.target.value);
+                                if (val >= 0 && val <= finalBill) setAmountPaid(val)
+                            }}
+                            max={finalBill}
+                            min={0}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Payment Method</Label>
+                        <RadioGroup value={paymentMethod} onValueChange={(value: 'Cash' | 'Card' | 'Online') => setPaymentMethod(value)} className="flex space-x-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Cash" id="cash"/>
+                                <Label htmlFor="cash">Cash</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Card" id="card"/>
+                                <Label htmlFor="card">Card</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="Online" id="online"/>
+                                <Label htmlFor="online">Online</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
+                     <div className="grid gap-2">
+                        <Label htmlFor="notes">Payment Notes (Optional)</Label>
+                        <Input
+                            id="notes"
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="e.g., Initial payment"
+                        />
+                    </div>
                 </div>
 
                 <div className="rounded-lg bg-destructive/10 text-destructive-foreground p-4 space-y-2 border border-destructive/20">
