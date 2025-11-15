@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, useDoc, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import type { Outflow, Payment, Customer, PaymentReceiptData } from "@/lib/data";
+import type { Outflow, Payment, Customer } from "@/lib/data";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -72,7 +72,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         
         const newBalanceDue = outflow.balanceDue - amountToPay;
         
-        const newPayment: Omit<Payment, 'id' | 'receiptData'> & { id: string } = {
+        const newPayment: Payment = {
             id: newPaymentRef.id,
             outflowId: outflow.id,
             customerId: outflow.customerId,

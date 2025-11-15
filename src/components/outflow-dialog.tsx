@@ -20,7 +20,6 @@ import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
-import type { InvoiceData } from "@/components/invoice";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -151,7 +150,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
 
         const balanceDue = finalBill - amountPaid;
 
-        const newOutflow: Omit<Outflow, 'invoiceData'> = {
+        const newOutflow: Outflow = {
             id: newOutflowRef.id,
             cropBatchId: batch.id,
             customerId: batch.customerId,
@@ -161,13 +160,12 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
             totalBill: finalBill,
             amountPaid: amountPaid,
             balanceDue: balanceDue,
-            // invoiceData is removed. It will be generated on the fly.
             storageDuration: totalMonths,
             storageCost: storageCost,
             labourCharge: batch.labourCharge || 0,
         };
         
-        setDocumentNonBlocking(newOutflowRef, newOutflow as any, {merge: false});
+        setDocumentNonBlocking(newOutflowRef, newOutflow, {merge: false});
 
         if (withdrawQuantity === totalQuantity) {
             // Full withdrawal, delete the document
@@ -175,7 +173,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
             toast({
                 title: "Full Outflow Successful!",
                 description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow as Outflow, customer, location, cropType)}>Download PDF</Button>,
+                action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType)}>Download PDF</Button>,
                 duration: 10000,
             });
         } else {
@@ -216,14 +214,14 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
                 toast({
                     title: "Partial Outflow Successful!",
                     description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow as Outflow, customer, location, cropType)}>Download PDF</Button>,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType)}>Download PDF</Button>,
                     duration: 10000,
                 });
             } else {
                 toast({
                     title: "Bill Settled!",
                     description: `A bill for ${batch.customerName} was processed for ₹${finalBill.toLocaleString()}.`,
-                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow as Outflow, customer, location, cropType)}>Download PDF</Button>,
+                    action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType)}>Download PDF</Button>,
                     duration: 10000,
                 });
             }

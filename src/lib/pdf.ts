@@ -40,7 +40,7 @@ export async function generateInvoicePdf(outflow: Outflow, customer: Customer, l
       description: `Storage for ${cropType.name} (${outflow.storageDuration} months)`,
       quantity: outflow.quantityWithdrawn,
       unit: 'bags',
-      unitPrice: outflow.storageCost / outflow.quantityWithdrawn,
+      unitPrice: outflow.quantityWithdrawn > 0 ? outflow.storageCost / outflow.quantityWithdrawn : 0,
       total: outflow.storageCost,
     }],
     location: location,
