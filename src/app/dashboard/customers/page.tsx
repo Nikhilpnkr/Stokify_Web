@@ -78,14 +78,6 @@ export default function CustomersPage() {
 
   const isLoading = isLoadingCustomers || isLoadingOutflows;
 
-  if (isLoading && !allCustomers) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <>
       <PageHeader
@@ -111,8 +103,8 @@ export default function CustomersPage() {
         </div>
       </div>
       
-      {isLoading && customers.length === 0 ? (
-         <div className="flex items-center justify-center h-48">
+      {isLoading ? (
+         <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : customers && customers.length > 0 ? (
@@ -163,5 +155,3 @@ export default function CustomersPage() {
     </>
   );
 }
-
-    

@@ -109,14 +109,6 @@ export default function ReportsPage() {
     },
   } satisfies ChartConfig;
   
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <>
       <PageHeader
@@ -163,86 +155,94 @@ export default function ReportsPage() {
             </div>
         }
       />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Potential Monthly Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{potentialMonthlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-            <p className="text-xs text-muted-foreground">From batches in date range</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Stored Quantity</CardTitle>
-            <Archive className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalQuantity.toLocaleString()} bags</div>
-            <p className="text-xs text-muted-foreground">From batches in date range</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Overall Space Utilization</CardTitle>
-            <Wheat className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{spaceUtilization.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
-              {totalQuantity.toLocaleString()} / {totalCapacity.toLocaleString()} bags used
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Crop Batches</CardTitle>
-            <div className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalBatches}</div>
-            <p className="text-xs text-muted-foreground">Added in date range</p>
-          </CardContent>
-        </Card>
-      </div>
+       {isLoading ? (
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Potential Monthly Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">₹{potentialMonthlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                <p className="text-xs text-muted-foreground">From batches in date range</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Stored Quantity</CardTitle>
+                <Archive className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalQuantity.toLocaleString()} bags</div>
+                <p className="text-xs text-muted-foreground">From batches in date range</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Overall Space Utilization</CardTitle>
+                <Wheat className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{spaceUtilization.toFixed(1)}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {totalQuantity.toLocaleString()} / {totalCapacity.toLocaleString()} bags used
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Crop Batches</CardTitle>
+                <div className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalBatches}</div>
+                <p className="text-xs text-muted-foreground">Added in date range</p>
+              </CardContent>
+            </Card>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Space Utilization by Location</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="min-h-[200px] sm:min-h-[300px] w-full">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData} accessibilityLayer>
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  stroke="hsl(var(--foreground))"
-                  fontSize={12}
-                />
-                <YAxis
-                  stroke="hsl(var(--foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${Number(value) / 1000}k`}
-                />
-                <Tooltip
-                  cursor={{ fill: "hsl(var(--card))" }}
-                  content={<ChartTooltipContent />}
-                />
-                <Legend />
-                <Bar dataKey="capacity" fill="var(--color-capacity)" radius={4} />
-                <Bar dataKey="used" fill="var(--color-used)" radius={4} />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Space Utilization by Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="min-h-[200px] sm:min-h-[300px] w-full">
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData} accessibilityLayer>
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      tickMargin={10}
+                      axisLine={false}
+                      stroke="hsl(var(--foreground))"
+                      fontSize={12}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${Number(value) / 1000}k`}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "hsl(var(--card))" }}
+                      content={<ChartTooltipContent />}
+                    />
+                    <Legend />
+                    <Bar dataKey="capacity" fill="var(--color-capacity)" radius={4} />
+                    <Bar dataKey="used" fill="var(--color-used)" radius={4} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </>
   );
 }

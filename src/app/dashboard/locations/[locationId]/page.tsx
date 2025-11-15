@@ -61,6 +61,8 @@ export default function LocationDetailPage() {
       return { ...area, used, percentage };
     });
   }, [areas, batches]);
+  
+  const isLoading = isLoadingLocation || isLoadingAreas || isLoadingBatches;
 
   const handleDeleteConfirmation = (area: StorageArea) => {
     setAreaToDelete(area);
@@ -111,7 +113,7 @@ export default function LocationDetailPage() {
   }
 
 
-  if (isLoadingLocation || isLoadingAreas || isLoadingBatches) {
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -198,7 +200,11 @@ export default function LocationDetailPage() {
                  )}
             </CardHeader>
             <CardContent>
-                 {areasWithUsage.length > 0 ? (
+                 {isLoadingAreas ? (
+                    <div className="flex justify-center items-center h-48">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                    </div>
+                 ) : areasWithUsage.length > 0 ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         {areasWithUsage.map(area => (
                             <Card key={area.id} className="bg-muted/30">
@@ -277,5 +283,3 @@ export default function LocationDetailPage() {
     </>
   );
 }
-
-    

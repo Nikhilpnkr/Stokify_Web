@@ -85,14 +85,6 @@ export default function LocationsPage() {
 
   const isLoading = isLoadingLocations || isLoadingBatches;
 
-  if (isLoading && !allLocations) {
-    return (
-      <div className="flex items-center justify-center h-48">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <>
       <PageHeader
@@ -118,8 +110,8 @@ export default function LocationsPage() {
         </div>
       </div>
 
-      {isLoading && locationsWithUsage.length === 0 ? (
-         <div className="flex items-center justify-center h-48">
+      {isLoading ? (
+         <div className="flex items-center justify-center h-64">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : locationsWithUsage.length > 0 ? (
@@ -186,5 +178,3 @@ export default function LocationsPage() {
     </>
   );
 }
-
-    

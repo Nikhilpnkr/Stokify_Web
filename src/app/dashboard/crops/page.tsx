@@ -51,8 +51,10 @@ export default function CropTypesManagerPage() {
     if (!user) return;
 
     const cropTypesCol = collection(firestore, "cropTypes");
+    const newDocRef = doc(cropTypesCol);
     
     const newCropType = {
+      id: newDocRef.id,
       name: values.name,
       ownerId: user.uid,
       rates: {

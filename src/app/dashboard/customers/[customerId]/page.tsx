@@ -48,13 +48,14 @@ export default function CustomerDetailPage() {
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
-  const [isLoadingAreas, setIsLoadingAreas] = useState(false);
+  const [isLoadingAreas, setIsLoadingAreas] = useState(true);
 
   // Fetch all areas from all locations
   useEffect(() => {
     async function fetchAllAreas() {
       if (!locations || locations.length === 0 || !firestore) {
         setAllAreas([]);
+        setIsLoadingAreas(false);
         return;
       };
       setIsLoadingAreas(true);
@@ -231,7 +232,3 @@ export default function CustomerDetailPage() {
     </>
   );
 }
-
-    
-
-    
