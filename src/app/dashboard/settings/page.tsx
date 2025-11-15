@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useUser, useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
-import { doc } from "firebase/firestore";
+import { doc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { updateProfile, deleteUser } from "firebase/auth";
 import type { UserProfile } from "@/lib/data";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -31,6 +31,7 @@ export default function SettingsPage() {
   const { auth, firestore, user } = useFirebase();
   const { toast } = useToast();
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+  const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
@@ -114,6 +115,43 @@ export default function SettingsPage() {
       });
     } finally {
         setIsProcessing(false);
+    }
+  }
+
+  async function handleDeleteAllData() {
+    if (!user || !firestore) return;
+    setIsProcessing(true);
+    
+    try {
+      const batch = writeBatch(firestore);
+      
+      // Query and delete crop batches
+      const batchesQuery = query(collection(firestore, "cropBatches"), where("ownerId", "==", user.uid));
+      const batchesSnapshot = await getDocs(batchesQuery);
+      batchesSnapshot.forEach(doc => batch.delete(doc.ref));
+
+      // Query and delete outflows
+      const outflowsQuery = query(collection(firestore, "outflows"), where("ownerId", "==", user.uid));
+      const outflowsSnapshot = await getDocs(outflowsQuery);
+      outflowsSnapshot.forEach(doc => batch.delete(doc.ref));
+
+      await batch.commit();
+
+      toast({
+        title: "Data Deleted",
+        description: "All transactional data has been successfully deleted.",
+      });
+
+    } catch (error: any) {
+       console.error("Error deleting all data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error Deleting Data",
+        description: error.message || "An unexpected error occurred while deleting data.",
+      });
+    } finally {
+        setIsProcessing(false);
+        setIsDeleteDataOpen(false);
     }
   }
   
@@ -200,10 +238,22 @@ export default function SettingsPage() {
             <CardHeader>
                 <CardTitle>Danger Zone</CardTitle>
                 <CardDescription>
-                This action is permanent and cannot be undone.
+                These actions are permanent and cannot be undone.
                 </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+                 <div>
+                    <h4 className="font-medium text-sm">Delete All Transactional Data</h4>
+                    <p className="text-xs text-muted-foreground mb-2">Permanently deletes all crop batches and outflow records.</p>
+                    <Button
+                        variant="destructive"
+                        onClick={() => setIsDeleteDataOpen(true)}
+                        disabled={isProcessing}
+                        >
+                        {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Delete All Data
+                    </Button>
+                </div>
                  <div>
                     <h4 className="font-medium text-sm">Delete Account</h4>
                     <p className="text-xs text-muted-foreground mb-2">Permanently deletes your account and all associated data.</p>
@@ -233,6 +283,24 @@ export default function SettingsPage() {
             <AlertDialogAction onClick={handleDeleteAccount} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isDeleteDataOpen} onOpenChange={setIsDeleteDataOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is permanent. This will permanently delete all crop batch and transaction records. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isProcessing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAllData} disabled={isProcessing} className="bg-destructive hover:bg-destructive/90">
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete All Data
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
