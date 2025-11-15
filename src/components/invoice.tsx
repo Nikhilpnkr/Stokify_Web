@@ -172,12 +172,12 @@ export function Invoice({ data }: InvoiceProps) {
     const isChargeable = isOutflow || (data.labourCharge && data.labourCharge > 0);
     
     let subTotal = data.subTotal || 0;
-    if (data.type === 'Inflow' && data.labourCharge) {
+    if (!isOutflow && data.labourCharge) {
         subTotal = data.labourCharge;
     }
 
     let total = data.total || 0;
-    if (data.type === 'Inflow' && data.labourCharge) {
+    if (!isOutflow && data.labourCharge) {
         total = data.labourCharge;
     }
 
@@ -192,7 +192,7 @@ export function Invoice({ data }: InvoiceProps) {
                     </div>
                 </div>
                 <div style={styles.headerRight}>
-                    <h2 style={styles.receiptTitle}>{data.type} Receipt</h2>
+                    <h2 style={styles.receiptTitle}>{data.type === 'Inflow' ? 'Inflow Receipt' : 'Outflow Invoice'}</h2>
                     <p style={styles.receiptNumber}># {data.receiptNumber}</p>
                     <p style={styles.receiptNumber}>Date: {format(data.date, "MMM d, yyyy")}</p>
                 </div>
@@ -200,7 +200,7 @@ export function Invoice({ data }: InvoiceProps) {
 
             <section style={styles.detailsSection}>
                 <div style={styles.detailsColumn}>
-                    <h3 style={styles.detailsTitle}>Billed To</h3>
+                    <h3 style={styles.detailsTitle}>Customer</h3>
                     <p style={styles.detailItem}><strong>{data.customer.name}</strong></p>
                     <p style={styles.detailItem}>{data.customer.mobile}</p>
                 </div>
@@ -217,8 +217,8 @@ export function Invoice({ data }: InvoiceProps) {
                         <tr>
                             <th style={styles.th}>Description</th>
                             <th style={{...styles.th, ...styles.textRight}}>Quantity</th>
-                            {isChargeable && <th style={{...styles.th, ...styles.textRight}}>Unit Price</th>}
-                            {isChargeable && <th style={{...styles.th, ...styles.textRight}}>Total</th>}
+                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Unit Price</th>}
+                            {isOutflow && <th style={{...styles.th, ...styles.textRight}}>Total</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -228,8 +228,8 @@ export function Invoice({ data }: InvoiceProps) {
                                     {item.description}
                                 </td>
                                 <td style={{...styles.td, ...styles.textRight}}>{item.quantity.toLocaleString()} {item.unit}</td>
-                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>₹{isOutflow ? (item.unitPrice?.toFixed(2) || '0.00') : '-'}</td>}
-                                {isChargeable && <td style={{...styles.td, ...styles.textRight}}>₹{isOutflow ? (item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00') : '-'}</td>}
+                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>₹{item.unitPrice?.toFixed(2) || '0.00'}</td>}
+                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>₹{item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>}
                             </tr>
                         ))}
                     </tbody>
@@ -251,24 +251,30 @@ export function Invoice({ data }: InvoiceProps) {
                              <span>₹{data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                            </div>
                          ) : null}
-                         <div style={styles.summaryRow}>
-                            <span>Taxes</span>
-                            <span>₹0.00</span>
-                        </div>
+                         {isOutflow && 
+                            <div style={styles.summaryRow}>
+                                <span>Taxes</span>
+                                <span>₹0.00</span>
+                            </div>
+                         }
                         <div style={styles.summaryTotal}>
                             <span>Total Bill</span>
                             <span>₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
-                        <div style={styles.summaryRow}>
-                            <span>Amount Paid</span>
-                            <span>₹{(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                        </div>
-                         {data.balanceDue && data.balanceDue > 0 ? (
-                            <div style={styles.summaryBalanceDue}>
-                                <span>Balance Due</span>
-                                <span>₹{data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            </div>
-                         ) : null}
+                        {isOutflow && (
+                            <>
+                                <div style={styles.summaryRow}>
+                                    <span>Amount Paid</span>
+                                    <span>₹{(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                                {data.balanceDue && data.balanceDue > 0 ? (
+                                    <div style={styles.summaryBalanceDue}>
+                                        <span>Balance Due</span>
+                                        <span>₹{data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    </div>
+                                ) : null}
+                            </>
+                        )}
                     </div>
                 </section>
             )}

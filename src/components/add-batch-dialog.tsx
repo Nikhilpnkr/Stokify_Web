@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -35,8 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { PlusCircle, Trash2, Calendar as CalendarIcon } from "lucide-react";
-import { generateInvoicePdf } from "@/lib/pdf";
-import type { InvoiceData } from "@/components/invoice";
+import { generateInflowPdf } from "@/lib/pdf";
 import { Combobox } from "@/components/ui/combobox";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
@@ -233,7 +233,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     const cropBatchesCol = collection(firestore, "cropBatches");
     const newDocRef = doc(cropBatchesCol);
 
-    const newBatch = {
+    const newBatch: CropBatch = {
       id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
@@ -243,6 +243,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       customerId: finalCustomer.id,
       customerName: finalCustomer.name,
       labourCharge: totalLabourCharge,
+      quantity: totalQuantity, // derived for convenience
     };
     
     setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
@@ -250,6 +251,8 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     toast({
       title: "Success! Batch Added.",
       description: `New batch for ${finalCustomer.name} has been added.`,
+      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(newBatch, finalCustomer, selectedLocation!)}>Download Inflow Receipt</Button>,
+      duration: 10000,
     });
     setIsOpen(false);
     form.reset();

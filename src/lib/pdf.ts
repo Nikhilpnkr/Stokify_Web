@@ -1,10 +1,11 @@
 
+
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
-import { PaymentReceipt, PaymentReceiptProps } from "@/components/payment-receipt";
-import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData } from "./data";
+import { PaymentReceipt } from "@/components/payment-receipt";
+import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData, CropBatch } from "./data";
 import { getAuth } from "firebase/auth";
 
 function toDate(dateValue: any): Date {
@@ -13,6 +14,70 @@ function toDate(dateValue: any): Date {
         return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
     }
     return new Date(dateValue);
+}
+
+export async function generateInflowPdf(batch: CropBatch, customer: Customer, location: StorageLocation) {
+  const user = getAuth().currentUser;
+
+  if (!user) {
+    console.error("User not authenticated");
+    return;
+  }
+
+  const invoiceData: InvoiceData = {
+    type: 'Inflow',
+    receiptNumber: batch.id.slice(0, 8).toUpperCase(),
+    date: toDate(batch.dateAdded),
+    customer: {
+      name: customer.name,
+      mobile: customer.mobileNumber,
+    },
+    user: {
+      name: user.displayName || 'N/A',
+      email: user.email || 'N/A'
+    },
+    items: [{
+      description: `Initial deposit of ${batch.cropType}`,
+      quantity: batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0),
+      unit: 'bags',
+    }],
+    location: location,
+    labourCharge: batch.labourCharge,
+    notes: `This receipt confirms the inflow of ${batch.cropType}.`,
+  };
+
+  const invoiceElement = document.createElement("div");
+  invoiceElement.style.position = "absolute";
+  invoiceElement.style.left = "-9999px";
+  invoiceElement.style.top = "-9999px";
+  invoiceElement.style.width = "800px";
+  invoiceElement.innerHTML = renderToStaticMarkup(Invoice({ data: invoiceData }));
+  document.body.appendChild(invoiceElement);
+
+  try {
+    const canvas = await html2canvas(invoiceElement, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "px",
+      format: [canvas.width, canvas.height],
+    });
+
+    pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+    
+    const fileName = `inflow-receipt-${invoiceData.receiptNumber}.pdf`;
+    pdf.save(fileName);
+
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+  } finally {
+    document.body.removeChild(invoiceElement);
+  }
 }
 
 export async function generateInvoicePdf(outflow: Outflow, customer: Customer, location: StorageLocation, cropType: CropType) {
