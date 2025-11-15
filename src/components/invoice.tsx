@@ -3,6 +3,7 @@
 import { format } from 'date-fns';
 import { Leaf } from 'lucide-react';
 import React from 'react';
+import type { StorageLocation } from '@/lib/data';
 
 // Using inline styles for compatibility with server-side rendering and PDF generation
 
@@ -28,15 +29,14 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
     },
-    logo: {
-        width: '40px',
-        height: '40px',
-        marginRight: '12px',
-        color: '#22c55e', // A green color
-    },
-    companyName: {
+    locationName: {
         fontSize: '28px',
         fontWeight: 'bold',
+    },
+    locationAddress: {
+        fontSize: '14px',
+        color: '#555',
+        marginTop: '4px',
     },
     headerRight: {
         textAlign: 'right',
@@ -153,7 +153,7 @@ export interface InvoiceData {
         unitPrice?: number;
         total?: number;
     }[];
-    location?: string;
+    location: StorageLocation;
     labourCharge?: number;
     subTotal?: number;
     total?: number;
@@ -186,8 +186,10 @@ export function Invoice({ data }: InvoiceProps) {
         <div style={styles.container}>
             <header style={styles.header}>
                 <div style={styles.headerLeft}>
-                    <Leaf style={styles.logo} />
-                    <h1 style={styles.companyName}>Stokify</h1>
+                     <div>
+                        <h1 style={styles.locationName}>{data.location.name}</h1>
+                        <p style={styles.locationAddress}>{data.location.address}</p>
+                    </div>
                 </div>
                 <div style={styles.headerRight}>
                     <h2 style={styles.receiptTitle}>{data.type} Receipt</h2>
@@ -204,9 +206,8 @@ export function Invoice({ data }: InvoiceProps) {
                 </div>
                 <div style={styles.detailsColumn}>
                     <h3 style={styles.detailsTitle}>From</h3>
-                    <p style={styles.detailItem}><strong>Stokify Inc.</strong></p>
+                    <p style={styles.detailItem}><strong>{data.location.name}</strong></p>
                     <p style={styles.detailItem}>Processed by: {data.user.name}</p>
-                    <p style={styles.detailItem}>{data.user.email}</p>
                 </div>
             </section>
 
@@ -225,7 +226,6 @@ export function Invoice({ data }: InvoiceProps) {
                             <tr key={index}>
                                 <td style={styles.td}>
                                     {item.description}
-                                    {data.location && <div style={{ fontSize: '12px', color: '#666' }}>at {data.location}</div>}
                                 </td>
                                 <td style={{...styles.td, ...styles.textRight}}>{item.quantity.toLocaleString()} {item.unit}</td>
                                 {isChargeable && <td style={{...styles.td, ...styles.textRight}}>₹{isOutflow ? (item.unitPrice?.toFixed(2) || '0.00') : '-'}</td>}

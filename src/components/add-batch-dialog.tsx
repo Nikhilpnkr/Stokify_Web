@@ -250,7 +250,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         quantity: totalQuantity,
         unit: 'bags'
       }],
-      location: selectedLocation.name,
+      location: selectedLocation,
       labourCharge: totalLabourCharge,
     };
 
@@ -537,5 +537,3 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
-
-    
