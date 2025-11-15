@@ -2,7 +2,7 @@
 {
   "indexes": [
     {
-      "collectionGroup": "outflows",
+      "collectionGroup": "auditLogs",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -30,7 +30,7 @@
       ]
     },
     {
-      "collectionGroup": "auditLogs",
+      "collectionGroup": "outflows",
       "queryScope": "COLLECTION",
       "fields": [
         {
