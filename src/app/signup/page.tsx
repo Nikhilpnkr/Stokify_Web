@@ -56,6 +56,7 @@ export default function SignUpPage() {
         displayName: displayName,
         email: email,
         mobileNumber: mobileNumber,
+        role: 'user', // Assign default role
       };
       setDocumentNonBlocking(userRef, userProfile, { merge: false });
 

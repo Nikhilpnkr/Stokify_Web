@@ -18,6 +18,7 @@ import { updateProfile, deleteUser } from "firebase/auth";
 import type { UserProfile, StorageLocation } from "@/lib/data";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { redirect } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 
 
 const profileFormSchema = z.object({
@@ -229,6 +230,14 @@ export default function SettingsPage() {
                     </FormItem>
                   )}
                 />
+                 <FormItem>
+                    <FormLabel>Account Role</FormLabel>
+                    <div>
+                        <Badge variant={userProfile?.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+                            {userProfile?.role || 'user'}
+                        </Badge>
+                    </div>
+                </FormItem>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save Changes

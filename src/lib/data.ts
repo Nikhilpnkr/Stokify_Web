@@ -40,6 +40,7 @@ export type UserProfile = {
   displayName: string;
   email: string;
   mobileNumber?: string;
+  role: 'user' | 'admin';
 };
 
 export type CropType = {

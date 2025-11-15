@@ -165,12 +165,18 @@
         "mobileNumber": {
           "type": "string",
           "description": "The user's mobile phone number."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the system.",
+          "enum": ["user", "admin"]
         }
       },
       "required": [
         "uid",
         "displayName",
-        "email"
+        "email",
+        "role"
       ]
     },
     "CropType": {
@@ -339,6 +345,6 @@
         "description": "Stores customer information managed by a user."
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A `customers` collection is added to store information about the clients who own the crops. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse. A new top-level `outflows` collection is added to track individual withdrawal transactions and payments, providing a clear separation between inventory and financial records."
+    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information, now with a 'role' for tiered access. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A `customers` collection is added to store information about the clients who own the crops. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse. A new top-level `outflows` collection is added to track individual withdrawal transactions and payments, providing a clear separation between inventory and financial records."
   }
 }
