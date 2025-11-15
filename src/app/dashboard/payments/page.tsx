@@ -8,12 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Search, CreditCard, Calendar, User, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { Payment, Customer, Outflow } from "@/lib/data";
+import type { Payment, Customer, Outflow, PaymentReceiptData } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { generateInvoicePdf, generatePaymentReceiptPdf } from "@/lib/pdf";
+import { generatePaymentReceiptPdf } from "@/lib/pdf";
 
 export default function PaymentsPage() {
   const { firestore, user } = useFirebase();
@@ -31,15 +31,7 @@ export default function PaymentsPage() {
   );
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
-  const outflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
-
   const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
-  
-  const getOutflowInvoiceData = (outflowId: string) => outflows?.find(o => o.id === outflowId)?.invoiceData || null;
 
   const payments = useMemo(() => {
     if (!unsortedPayments) return [];
@@ -53,7 +45,7 @@ export default function PaymentsPage() {
     return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [unsortedPayments, customers, searchTerm]);
 
-  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows;
+  const isLoading = isLoadingPayments || isLoadingCustomers;
 
   return (
     <>
@@ -90,9 +82,7 @@ export default function PaymentsPage() {
             <>
                 {/* Mobile View */}
                 <div className="grid gap-4 md:hidden">
-                    {payments.map((payment) => {
-                        const invoiceData = getOutflowInvoiceData(payment.outflowId);
-                        return (
+                    {payments.map((payment) => (
                         <Card key={payment.id} className="bg-muted/30">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
@@ -111,14 +101,14 @@ export default function PaymentsPage() {
                                  {payment.notes && <p className="text-sm text-foreground mt-2">Notes: {payment.notes}</p>}
                             </CardContent>
                              <CardFooter className="flex flex-col gap-2 items-stretch">
-                                {invoiceData && (
-                                    <Button variant="outline" size="sm" className="w-full" onClick={() => generateInvoicePdf(invoiceData)}>
-                                        <FileDown className="mr-2 h-4 w-4" /> Download Original Invoice
+                                {payment.receiptData && (
+                                    <Button variant="outline" size="sm" className="w-full" onClick={() => generatePaymentReceiptPdf(payment.receiptData as PaymentReceiptData)}>
+                                        <FileDown className="mr-2 h-4 w-4" /> Download Receipt
                                     </Button>
                                 )}
                             </CardFooter>
                         </Card>
-                    )})}
+                    ))}
                 </div>
 
                 {/* Desktop View */}
@@ -132,13 +122,11 @@ export default function PaymentsPage() {
                             <TableHead>Method</TableHead>
                             <TableHead>Notes</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-center">Invoice</TableHead>
+                            <TableHead className="text-center">Receipt</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payments.map((payment) => {
-                                const invoiceData = getOutflowInvoiceData(payment.outflowId);
-                                return (
+                            {payments.map((payment) => (
                                 <TableRow key={payment.id}>
                                     <TableCell>
                                         <div className="flex flex-col">
@@ -154,15 +142,15 @@ export default function PaymentsPage() {
                                     <TableCell className="text-sm text-muted-foreground">{payment.notes || '-'}</TableCell>
                                     <TableCell className="text-right font-semibold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                     <TableCell className="text-center">
-                                        {invoiceData && (
-                                            <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(invoiceData)} title="Download Original Invoice">
+                                        {payment.receiptData && (
+                                            <Button variant="ghost" size="icon" onClick={() => generatePaymentReceiptPdf(payment.receiptData as PaymentReceiptData)} title="Download Payment Receipt">
                                                 <FileDown className="h-5 w-5" />
-                                                <span className="sr-only">Download Invoice</span>
+                                                <span className="sr-only">Download Receipt</span>
                                             </Button>
                                         )}
                                     </TableCell>
                                 </TableRow>
-                            )})}
+                            ))}
                         </TableBody>
                     </Table>
                 </div>
@@ -178,3 +166,5 @@ export default function PaymentsPage() {
     </>
   );
 }
+
+    

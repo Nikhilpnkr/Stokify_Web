@@ -1,5 +1,4 @@
 
-
 export type AreaAllocation = {
   areaId: string;
   quantity: number;
@@ -86,7 +85,25 @@ export type Payment = {
   amount: number;
   paymentMethod: 'Cash' | 'Card' | 'Online';
   notes?: string;
+  receiptData: any;
 };
+
+export interface PaymentReceiptData {
+  paymentId: string;
+  paymentDate: Date;
+  paymentMethod: string;
+  amountPaid: number;
+  notes?: string;
+  customer: {
+      name: string;
+      mobile: string;
+  };
+  outflowId: string;
+  outflowDate: Date;
+  totalBill: number;
+  previousBalance: number;
+  newBalance: number;
+}
 
 
 // This can now be used as a default or fallback.
@@ -95,3 +112,5 @@ export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {
   6: 36,
   12: 56,
 };
+
+    

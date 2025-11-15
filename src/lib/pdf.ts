@@ -1,5 +1,4 @@
 
-
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -99,3 +98,5 @@ export async function generatePaymentReceiptPdf(data: PaymentReceiptData) {
     document.body.removeChild(receiptElement);
   }
 }
+
+    

@@ -14,11 +14,13 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, useDoc, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import type { Outflow, Payment, Customer } from "@/lib/data";
+import type { Outflow, Payment, Customer, PaymentReceiptData } from "@/lib/data";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { generatePaymentReceiptPdf } from "@/lib/pdf";
+
 
 type PayDuesDialogProps = {
   isOpen: boolean;
@@ -69,8 +71,25 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         const outflowRef = doc(firestore, "outflows", outflow.id);
         
         const newBalanceDue = outflow.balanceDue - amountToPay;
+
+        const receiptData: PaymentReceiptData = {
+          paymentId: newPaymentRef.id.slice(0, 8).toUpperCase(),
+          paymentDate: new Date(),
+          paymentMethod,
+          amountPaid: amountToPay,
+          customer: {
+            name: customer.name,
+            mobile: customer.mobileNumber,
+          },
+          outflowId: outflow.id.slice(0, 8).toUpperCase(),
+          outflowDate: new Date(outflow.date),
+          totalBill: outflow.totalBill,
+          previousBalance: outflow.balanceDue,
+          newBalance: newBalanceDue,
+          notes,
+        };
         
-        const newPayment: Payment = {
+        const newPayment: Omit<Payment, 'id'> & { id: string } = {
             id: newPaymentRef.id,
             outflowId: outflow.id,
             customerId: outflow.customerId,
@@ -79,6 +98,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             amount: amountToPay,
             paymentMethod,
             notes,
+            receiptData,
         };
 
         // Create a new payment document
@@ -94,6 +114,8 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         toast({
             title: "Payment Successful!",
             description: `Paid ₹${amountToPay.toLocaleString()} towards the balance.`,
+            action: <Button variant="outline" size="sm" onClick={() => generatePaymentReceiptPdf(receiptData)}>Download Receipt</Button>,
+            duration: 10000,
         });
 
         setIsProcessing(false);
@@ -193,3 +215,5 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     </Dialog>
   );
 }
+
+    

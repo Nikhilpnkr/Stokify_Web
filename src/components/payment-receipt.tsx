@@ -1,6 +1,7 @@
 
 import { format } from 'date-fns';
 import React from 'react';
+import type { PaymentReceiptData } from '@/lib/data';
 
 const styles = {
     container: {
@@ -115,22 +116,6 @@ const styles = {
     },
 };
 
-export interface PaymentReceiptData {
-    paymentId: string;
-    paymentDate: Date;
-    paymentMethod: string;
-    amountPaid: number;
-    notes?: string;
-    customer: {
-        name: string;
-        mobile: string;
-    };
-    outflowId: string;
-    outflowDate: Date;
-    totalBill: number;
-    previousBalance: number;
-    newBalance: number;
-}
 
 interface PaymentReceiptProps {
     data: PaymentReceiptData;
@@ -215,3 +200,4 @@ export function PaymentReceipt({ data }: PaymentReceiptProps) {
     );
 }
 
+    
