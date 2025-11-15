@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, query, where } from "firebase/firestore";
 import type { Outflow, Customer, CropBatch } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,16 @@ export default function TransactionsPage() {
   const { firestore, user } = useFirebase();
 
   const outflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid), orderBy('date', 'desc')) : null,
+    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
+  const { data: unsortedOutflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
+
+  const outflows = useMemo(() => {
+    if (!unsortedOutflows) return [];
+    return [...unsortedOutflows].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [unsortedOutflows]);
+
 
   const customersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
