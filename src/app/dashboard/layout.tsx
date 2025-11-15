@@ -14,14 +14,13 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarInset,
-  SidebarTrigger,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import {
   Leaf,
   Warehouse,
   BarChart,
   LayoutDashboard,
-  Menu,
   LogIn,
   LogOut,
   Loader2,
@@ -43,7 +42,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth, useUser, useDoc, useMemoFirebase, useFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
 import type { UserProfile } from "@/lib/data";
@@ -123,7 +121,6 @@ function UserNav() {
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isMobile = useIsMobile();
   const { user, isUserLoading, firestore } = useFirebase();
 
   const userProfileRef = useMemoFirebase(() => 
@@ -150,6 +147,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="flex min-h-screen">
         <Sidebar>
+          <SidebarRail />
           <SidebarHeader className="p-4">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Leaf className="h-8 w-8 text-primary" />
@@ -213,7 +211,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </Sidebar>
         <SidebarInset>
           <header className="flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 lg:px-6 sticky top-0 z-30">
-            {isMobile && <SidebarTrigger><Menu /></SidebarTrigger>}
             <div className="flex-1">
               {/* Maybe add breadcrumbs here later */}
             </div>
@@ -225,5 +222,3 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
-    
