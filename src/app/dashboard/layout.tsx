@@ -52,7 +52,6 @@ const navItems = [
   { href: "/dashboard", label: "Inventory", icon: LayoutDashboard },
   { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
-  { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
 ];
