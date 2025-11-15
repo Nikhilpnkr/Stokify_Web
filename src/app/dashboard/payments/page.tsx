@@ -13,7 +13,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { generatePaymentReceiptPdf } from "@/lib/pdf";
+import { generatePaymentReceiptPdf, generateInvoicePdf } from "@/lib/pdf";
 
 export default function PaymentsPage() {
   const { firestore, user } = useFirebase();
@@ -31,7 +31,14 @@ export default function PaymentsPage() {
   );
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
 
+  const outflowsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
+  const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
+
   const getCustomerName = (customerId: string) => customers?.find(c => c.id === customerId)?.name || 'N/A';
+  const getOutflowInvoiceData = (outflowId: string) => outflows?.find(o => o.id === outflowId)?.invoiceData || null;
 
   const payments = useMemo(() => {
     if (!unsortedPayments) return [];
@@ -45,7 +52,7 @@ export default function PaymentsPage() {
     return [...filtered].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [unsortedPayments, customers, searchTerm]);
 
-  const isLoading = isLoadingPayments || isLoadingCustomers;
+  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows;
 
   return (
     <>
@@ -82,7 +89,9 @@ export default function PaymentsPage() {
             <>
                 {/* Mobile View */}
                 <div className="grid gap-4 md:hidden">
-                    {payments.map((payment) => (
+                    {payments.map((payment) => {
+                      const invoiceData = getOutflowInvoiceData(payment.outflowId);
+                      return (
                         <Card key={payment.id} className="bg-muted/30">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
@@ -106,9 +115,14 @@ export default function PaymentsPage() {
                                         <FileDown className="mr-2 h-4 w-4" /> Download Receipt
                                     </Button>
                                 )}
+                                {invoiceData && (
+                                    <Button variant="secondary" size="sm" className="w-full" onClick={() => generateInvoicePdf(invoiceData)}>
+                                        <FileDown className="mr-2 h-4 w-4" /> Download Invoice
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
-                    ))}
+                    )})}
                 </div>
 
                 {/* Desktop View */}
@@ -122,11 +136,13 @@ export default function PaymentsPage() {
                             <TableHead>Method</TableHead>
                             <TableHead>Notes</TableHead>
                             <TableHead className="text-right">Amount</TableHead>
-                            <TableHead className="text-center">Receipt</TableHead>
+                            <TableHead className="text-center">Downloads</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {payments.map((payment) => (
+                            {payments.map((payment) => {
+                              const invoiceData = getOutflowInvoiceData(payment.outflowId);
+                              return (
                                 <TableRow key={payment.id}>
                                     <TableCell>
                                         <div className="flex flex-col">
@@ -142,15 +158,24 @@ export default function PaymentsPage() {
                                     <TableCell className="text-sm text-muted-foreground">{payment.notes || '-'}</TableCell>
                                     <TableCell className="text-right font-semibold">₹{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                                     <TableCell className="text-center">
-                                        {payment.receiptData && (
-                                            <Button variant="ghost" size="icon" onClick={() => generatePaymentReceiptPdf(payment.receiptData as PaymentReceiptData)} title="Download Payment Receipt">
-                                                <FileDown className="h-5 w-5" />
-                                                <span className="sr-only">Download Receipt</span>
-                                            </Button>
-                                        )}
+                                        <div className="flex justify-center gap-2">
+                                            {payment.receiptData && (
+                                                <Button variant="ghost" size="icon" onClick={() => generatePaymentReceiptPdf(payment.receiptData as PaymentReceiptData)} title="Download Payment Receipt">
+                                                    <FileDown className="h-5 w-5" />
+                                                    <span className="sr-only">Download Receipt</span>
+                                                </Button>
+                                            )}
+                                             {invoiceData && (
+                                                <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(invoiceData)} title="Download Outflow Invoice">
+                                                    <FileDown className="h-5 w-5 text-muted-foreground" />
+                                                    <span className="sr-only">Download Invoice</span>
+                                                </Button>
+                                            )}
+                                        </div>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                              )
+                            })}
                         </TableBody>
                     </Table>
                 </div>
@@ -166,5 +191,6 @@ export default function PaymentsPage() {
     </>
   );
 }
+
 
     
