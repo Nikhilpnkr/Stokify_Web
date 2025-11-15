@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
@@ -275,6 +275,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
                     <div>
                         <p className="font-medium text-muted-foreground">Customer</p>
                         <p className="font-semibold">{batch.customerName}</p>
+                    </div>
+                     <div>
+                        <p className="font-medium text-muted-foreground">Mobile</p>
+                        <p className="font-semibold">{customer?.mobileNumber}</p>
                     </div>
                     <div>
                         <p className="font-medium text-muted-foreground">Crop Type</p>
