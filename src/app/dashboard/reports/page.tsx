@@ -1,20 +1,29 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Archive, Wheat, Loader2 } from "lucide-react";
+import { DollarSign, Archive, Wheat, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { CropBatch, StorageLocation, CropType } from "@/lib/data";
-import { differenceInMonths } from "date-fns";
+import { addDays, format, startOfMonth } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 export default function ReportsPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: new Date(),
+  });
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -30,10 +39,25 @@ export default function ReportsPage() {
   );
 
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
-  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+  const { data: allBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
+  
+  const filteredBatches = useMemo(() => {
+    if (!allBatches) return [];
+    return allBatches.filter(batch => {
+      const batchDate = new Date(batch.dateAdded);
+      const from = date?.from ? new Date(date.from.setHours(0,0,0,0)) : null;
+      const to = date?.to ? new Date(date.to.setHours(23,59,59,999)): null;
+
+      if (from && batchDate < from) return false;
+      if (to && batchDate > to) return false;
+      return true;
+    });
+  }, [allBatches, date]);
+
 
   const { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
+    const batches = filteredBatches;
     if (!batches || !locations || !cropTypes) {
       return { totalBatches: 0, totalQuantity: 0, potentialMonthlyRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
     }
@@ -70,7 +94,7 @@ export default function ReportsPage() {
     });
 
     return { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData };
-  }, [batches, locations, cropTypes]);
+  }, [filteredBatches, locations, cropTypes]);
   
   const isLoading = isLoadingLocations || isLoadingBatches || isLoadingCropTypes;
 
@@ -98,6 +122,46 @@ export default function ReportsPage() {
       <PageHeader
         title="Storage Reports"
         description="An overview of your storage costs and space utilization."
+        action={
+            <div className="grid gap-2">
+                <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        id="date"
+                        variant={"outline"}
+                        className={cn(
+                        "w-[300px] justify-start text-left font-normal",
+                        !date && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date?.from ? (
+                        date.to ? (
+                            <>
+                            {format(date.from, "LLL dd, y")} -{" "}
+                            {format(date.to, "LLL dd, y")}
+                            </>
+                        ) : (
+                            format(date.from, "LLL dd, y")
+                        )
+                        ) : (
+                        <span>Pick a date</span>
+                        )}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={date?.from}
+                        selected={date}
+                        onSelect={setDate}
+                        numberOfMonths={2}
+                    />
+                    </PopoverContent>
+                </Popover>
+            </div>
+        }
       />
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -107,7 +171,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${potentialMonthlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-            <p className="text-xs text-muted-foreground">Calculated from the 1-month rate</p>
+            <p className="text-xs text-muted-foreground">From batches in date range</p>
           </CardContent>
         </Card>
         <Card>
@@ -117,7 +181,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalQuantity.toLocaleString()} bags</div>
-            <p className="text-xs text-muted-foreground">Across all locations</p>
+            <p className="text-xs text-muted-foreground">From batches in date range</p>
           </CardContent>
         </Card>
         <Card>
@@ -139,7 +203,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalBatches}</div>
-            <p className="text-xs text-muted-foreground">Currently in storage</p>
+            <p className="text-xs text-muted-foreground">Added in date range</p>
           </CardContent>
         </Card>
       </div>
