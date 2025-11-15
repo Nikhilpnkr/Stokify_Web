@@ -378,5 +378,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         </Dialog>
     );
 }
-
-    

@@ -45,8 +45,7 @@ type BulkAddAreasDialogProps = {
 
 export function BulkAddAreasDialog({ isOpen, setIsOpen, locationId }: BulkAddAreasDialogProps) {
     const { toast } = useToast();
-    const { firestore } = useFirebase();
-    const { user } = useUser();
+    const { firestore, user } = useFirebase();
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
