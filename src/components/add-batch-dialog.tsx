@@ -34,10 +34,14 @@ import type { CropType, StorageLocation, StorageArea, Customer, CropBatch } from
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import { PlusCircle, Trash2 } from "lucide-react";
+import { PlusCircle, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { generateInvoicePdf } from "@/lib/pdf";
 import type { InvoiceData } from "@/components/invoice";
 import { Combobox } from "@/components/ui/combobox";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),
@@ -65,6 +69,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     customerMobile: z.string().min(10, "A valid mobile number is required.").refine(val => !customers.some(c => c.mobileNumber === val && c.id !== form.getValues('customerId')), { message: "This mobile number is already taken."}),
     cropTypeId: z.string().min(1, "Please select a crop type."),
     locationId: z.string().min(1, "Please select a storage location."),
+    dateAdded: z.date(),
     areaAllocations: z.array(areaAllocationSchema).min(1, "At least one area allocation is required."),
     labourChargePerBag: z.coerce.number().optional(),
   }).refine((data) => {
@@ -95,6 +100,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       customerMobile: "",
       cropTypeId: "",
       locationId: "",
+      dateAdded: new Date(),
       areaAllocations: [{ areaId: "", quantity: 0 }],
       labourChargePerBag: 0,
     },
@@ -173,6 +179,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             customerMobile: "",
             cropTypeId: "",
             locationId: "",
+            dateAdded: new Date(),
             areaAllocations: [{ areaId: "", quantity: 0 }],
             labourChargePerBag: 0,
         });
@@ -229,7 +236,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     const invoiceData: InvoiceData = {
       type: 'Inflow',
       receiptNumber: newDocRef.id.slice(0, 8).toUpperCase(),
-      date: new Date(),
+      date: values.dateAdded,
       customer: {
         name: customerName,
         mobile: values.customerMobile,
@@ -252,7 +259,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
       storageLocationId: values.locationId,
-      dateAdded: new Date().toISOString(),
+      dateAdded: values.dateAdded.toISOString(),
       ownerId: user.uid,
       customerId,
       customerName,
@@ -337,30 +344,73 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                     />
                 </div>
             )}
-            <FormField
-              control={form.control}
-              name="cropTypeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Crop Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a crop type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {cropTypes.map((ct) => (
-                        <SelectItem key={ct.id} value={ct.id}>
-                          {ct.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField
+                control={form.control}
+                name="cropTypeId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Crop Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select a crop type" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {cropTypes.map((ct) => (
+                            <SelectItem key={ct.id} value={ct.id}>
+                            {ct.name}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="dateAdded"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col pt-2">
+                        <FormLabel>Date Added</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                            <FormControl>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "pl-3 text-left font-normal",
+                                    !field.value && "text-muted-foreground"
+                                )}
+                                >
+                                {field.value ? (
+                                    format(field.value, "PPP")
+                                ) : (
+                                    <span>Pick a date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                mode="single"
+                                selected={field.value}
+                                onSelect={field.onChange}
+                                disabled={(date) =>
+                                date > new Date() || date < new Date("1900-01-01")
+                                }
+                                initialFocus
+                            />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            </div>
 
             <FormField
               control={form.control}
@@ -487,3 +537,5 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
+
+    
