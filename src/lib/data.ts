@@ -16,6 +16,7 @@ export type CropBatch = {
   customerName: string;
   labourCharge?: number;
   quantity: number; // This is a derived field for easier access
+  invoiceData?: any;
 };
 
 export type StorageLocation = {

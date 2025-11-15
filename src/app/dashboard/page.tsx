@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote } from "lucide-react";
+import { PlusCircle, Loader2, Receipt, Users, Archive, Banknote, FileDown } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,6 +13,7 @@ import { OutflowDialog } from "@/components/outflow-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import type { CropBatch, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
+import { generateInvoicePdf } from "@/lib/pdf";
 
 
 export default function InventoryPage() {
@@ -207,11 +208,17 @@ export default function InventoryPage() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleRowClick(batch)}>
+                  <TableCell className="text-right space-x-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleRowClick(batch)} title="Process Outflow">
                       <Receipt className="h-5 w-5" />
                       <span className="sr-only">Process Outflow for {batch.customerName}</span>
                     </Button>
+                    {batch.invoiceData && (
+                        <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(batch.invoiceData)} title="Download Inflow Invoice">
+                            <FileDown className="h-5 w-5" />
+                            <span className="sr-only">Download Inflow Invoice</span>
+                        </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               )) : (
@@ -244,5 +251,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-    

@@ -188,20 +188,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     const cropBatchesCol = collection(firestore, "cropBatches");
     const newDocRef = doc(cropBatchesCol);
 
-    const newBatch = {
-      id: newDocRef.id,
-      cropType: selectedCropType.name,
-      areaAllocations: values.areaAllocations,
-      storageLocationId: values.locationId,
-      dateAdded: new Date().toISOString(),
-      ownerId: user.uid,
-      customerId,
-      customerName,
-      labourCharge: totalLabourCharge
-    };
-    
-    setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
-
     const invoiceData: InvoiceData = {
       type: 'Inflow',
       receiptNumber: newDocRef.id.slice(0, 8).toUpperCase(),
@@ -222,6 +208,21 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       location: selectedLocation.name,
       labourCharge: totalLabourCharge,
     };
+
+    const newBatch = {
+      id: newDocRef.id,
+      cropType: selectedCropType.name,
+      areaAllocations: values.areaAllocations,
+      storageLocationId: values.locationId,
+      dateAdded: new Date().toISOString(),
+      ownerId: user.uid,
+      customerId,
+      customerName,
+      labourCharge: totalLabourCharge,
+      invoiceData: invoiceData
+    };
+    
+    setDocumentNonBlocking(newDocRef, newBatch, { merge: false });
 
     toast({
       title: "Success! Batch Added.",

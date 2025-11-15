@@ -55,6 +55,10 @@
         "labourCharge": {
             "type": "number",
             "description": "Total labour charge for the inflow of this batch."
+        },
+        "invoiceData": {
+            "type": "object",
+            "description": "A snapshot of the data used to generate the invoice for this inflow transaction."
         }
       },
       "required": [
