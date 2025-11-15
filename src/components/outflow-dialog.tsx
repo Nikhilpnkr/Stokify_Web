@@ -370,4 +370,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations }:
     </Dialog>
   );
 }
-
