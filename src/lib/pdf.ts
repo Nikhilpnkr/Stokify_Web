@@ -4,7 +4,7 @@ import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
 import { PaymentReceipt, PaymentReceiptProps } from "@/components/payment-receipt";
-import type { Outflow, Payment, Customer, StorageLocation, CropType } from "./data";
+import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData } from "./data";
 import { getAuth } from "firebase/auth";
 
 function toDate(dateValue: any): Date {
@@ -88,7 +88,7 @@ export async function generateInvoicePdf(outflow: Outflow, customer: Customer, l
 
 export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outflow, customer: Customer) {
 
-  const receiptData: PaymentReceiptProps['data'] = {
+  const receiptData: PaymentReceiptData = {
     paymentId: payment.id.slice(0, 8).toUpperCase(),
     paymentDate: toDate(payment.date),
     paymentMethod: payment.paymentMethod,
@@ -102,7 +102,7 @@ export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outfl
     outflowDate: toDate(outflow.date),
     totalBill: outflow.totalBill,
     previousBalance: outflow.balanceDue + payment.amount, // Recalculate previous balance
-    newBalance: outflow.balanceDue,
+    newBalance: outflow.balanceDue, // The current balance IS the new balance
   };
 
 
