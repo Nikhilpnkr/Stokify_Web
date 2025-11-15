@@ -143,7 +143,7 @@ export default function SettingsPage() {
       const locationsSnapshot = await getDocs(locationsQuery);
       
       for (const locationDoc of locationsSnapshot.docs) {
-          const areasQuery = query(collection(firestore, "storageLocations", locationDoc.id, "areas"));
+          const areasQuery = query(collection(firestore, "storageLocations", locationDoc.id, "areas"), where("ownerId", "==", user.uid));
           const areasSnapshot = await getDocs(areasQuery);
           areasSnapshot.forEach(areaDoc => batch.delete(areaDoc.ref));
           batch.delete(locationDoc.ref);
@@ -326,5 +326,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    
