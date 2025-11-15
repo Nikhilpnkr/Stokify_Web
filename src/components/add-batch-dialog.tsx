@@ -221,7 +221,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     const newBatch: Omit<CropBatch, 'quantity'> = {
       id: newDocRef.id,
-      cropType: values.cropTypeId,
+      cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
       storageLocationId: values.locationId,
       dateAdded: values.dateAdded.toISOString(),
@@ -504,3 +504,5 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
+
+    

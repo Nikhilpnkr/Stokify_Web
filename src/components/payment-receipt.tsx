@@ -199,3 +199,5 @@ export function PaymentReceipt({ data }: PaymentReceiptProps) {
         </div>
     );
 }
+
+    

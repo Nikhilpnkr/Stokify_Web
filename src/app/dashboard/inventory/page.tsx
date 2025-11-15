@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -126,7 +127,7 @@ export default function InventoryPage() {
   
   const handleDownloadInflowReceipt = (batch: (typeof batches)[0]) => {
     if (batch.customer && batch.location && batch.cropType) {
-      generateInflowPdf(batch as (CropBatch & { cropType: CropType }), batch.customer, batch.location, allAreas);
+      generateInflowPdf(batch, batch.customer, batch.location, allAreas);
     } else {
       toast({
         variant: "destructive",
@@ -289,6 +290,8 @@ export default function InventoryPage() {
       )}
     </>
   );
+
+    
 
     
 

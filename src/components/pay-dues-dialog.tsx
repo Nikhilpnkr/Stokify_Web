@@ -199,3 +199,5 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     </Dialog>
   );
 }
+
+    

@@ -1,5 +1,4 @@
 
-
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -17,7 +16,7 @@ function toDate(dateValue: any): Date {
     return new Date(dateValue);
 }
 
-export async function generateInflowPdf(batch: CropBatch, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
+export async function generateInflowPdf(batch: CropBatch & { cropType: CropType }, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
   if (!user || !batch.cropType) {
@@ -41,7 +40,7 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
       email: user.email || 'N/A'
     },
     items: batch.areaAllocations.map(alloc => ({
-        description: (batch.cropType as unknown as CropType).name,
+        description: batch.cropType.name,
         quantity: alloc.quantity,
         unit: 'bags',
         storageArea: getAreaName(alloc.areaId),
@@ -50,7 +49,7 @@ export async function generateInflowPdf(batch: CropBatch, customer: Customer, lo
     location: location,
     labourCharge: batch.labourCharge,
     total: batch.labourCharge,
-    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${(batch.cropType as unknown as CropType).name}.`,
+    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${batch.cropType.name}.`,
   };
 
   const invoiceElement = document.createElement("div");
@@ -213,5 +212,4 @@ export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outfl
   }
 }
 
-    
     
