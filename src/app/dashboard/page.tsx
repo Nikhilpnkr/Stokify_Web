@@ -103,15 +103,16 @@ export default function InventoryPage() {
       const outflow = outflows.find(o => o.cropBatchId === batch.id);
       const customer = customers.find(c => c.id === batch.customerId);
       const location = locations.find(l => l.id === batch.storageLocationId);
-      const cropType = cropTypes.find(ct => ct.name === batch.cropType);
+      const cropTypeData = cropTypes.find(ct => ct.name === batch.cropType);
       
       return {
         ...batch,
+        cropTypeName: batch.cropType, // Keep the original string name
+        cropType: cropTypeData, // Assign the full object
         quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
         outflow,
         customer,
         location,
-        cropType,
       }
     }).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
   }, [rawBatches, outflows, customers, locations, cropTypes, searchTerm]);
@@ -230,7 +231,7 @@ export default function InventoryPage() {
                       <div className="flex justify-between items-start">
                         <div>
                            <CardTitle>{batch.customerName}</CardTitle>
-                           <CardDescription>{batch.cropType}</CardDescription>
+                           <CardDescription>{batch.cropTypeName}</CardDescription>
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold">{batch.quantity.toLocaleString()} bags</p>
@@ -278,7 +279,7 @@ export default function InventoryPage() {
                       <TableRow key={batch.id}>
                         <TableCell className="font-medium">{batch.customerName}</TableCell>
                         <TableCell>{batch.customer?.mobileNumber || '...'}</TableCell>
-                        <TableCell>{batch.cropType}</TableCell>
+                        <TableCell>{batch.cropTypeName}</TableCell>
                         <TableCell>{batch.location?.name || '...'}</TableCell>
                         <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
                         <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
@@ -345,6 +346,8 @@ function toDate(dateValue: any): Date {
     }
     return new Date(dateValue);
 }
+
+    
 
     
 
