@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase, updateDocumentNonBlocking, useDoc } from "@/firebase";
-import { collection, query, doc } from "firebase/firestore";
+import { collection, query, where, doc } from "firebase/firestore";
 import type { UserProfile, UserRole } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,8 +31,8 @@ export default function UserManagementPage() {
   const { data: currentUserProfile, isLoading: isLoadingCurrentUser } = useDoc<UserProfile>(currentUserProfileRef);
 
   const usersQuery = useMemoFirebase(() => 
-    (currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'manager') ? query(collection(firestore, 'users')) : null,
-    [firestore, currentUserProfile]
+    user ? query(collection(firestore, 'users'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
   );
   const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
@@ -56,7 +56,7 @@ export default function UserManagementPage() {
   };
 
   const isLoading = isLoadingUsers || isLoadingCurrentUser;
-  
+
   if (isLoadingCurrentUser) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -66,8 +66,6 @@ export default function UserManagementPage() {
   }
   
   if (!currentUserProfile || (currentUserProfile.role !== 'admin' && currentUserProfile.role !== 'manager')) {
-    // This check now correctly runs after isLoadingCurrentUser is false.
-    // If there's no profile or the role is insufficient, then redirect.
     return redirect('/dashboard');
   }
 
