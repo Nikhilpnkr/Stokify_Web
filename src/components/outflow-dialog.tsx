@@ -21,6 +21,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { sendSms } from "@/lib/sms";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -96,11 +97,12 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         return { initialCostPerBag: calculatedCost, totalMonths: months };
     }, [batch, cropType]);
 
-    const { storageCost, finalBill } = useMemo(() => {
+    const { storageCost, finalBill, insuranceCharge } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
+        const insurance = (cropType?.insurance || 0) * withdrawQuantity;
         const bill = storage + (batch?.labourCharge || 0);
-        return { storageCost: storage, finalBill: bill };
-    }, [costPerBag, withdrawQuantity, batch]);
+        return { storageCost: storage, finalBill: bill, insuranceCharge: insurance };
+    }, [costPerBag, withdrawQuantity, batch, cropType]);
 
     useEffect(() => {
         if (isOpen && batch) {
@@ -143,7 +145,6 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         const newOutflowRef = doc(collection(firestore, "outflows"));
 
         const balanceDue = finalBill - amountPaid;
-        const insuranceCharge = (cropType?.insurance || 0) * withdrawQuantity;
 
         const newOutflow: Omit<Outflow, 'id'> & { id: string } = {
             id: newOutflowRef.id,
@@ -179,7 +180,15 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                 notes: notes || `Initial payment for outflow #${newOutflow.id.slice(0,6)}`,
             };
             addDocumentNonBlocking(newPaymentRef, newPayment);
+            
+            // Send SMS for payment
+            const paymentSms = `Dear ${customer.name}, we have received a payment of INR ${amountPaid.toFixed(2)}. Your balance due for this transaction is INR ${balanceDue.toFixed(2)}. Thank you!`;
+            sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
         }
+
+        // Send SMS for outflow
+        const outflowSms = `Dear ${customer.name}, an outflow of ${withdrawQuantity} bags of ${cropType.name} has been processed from ${location.name}. Total bill: INR ${finalBill.toFixed(2)}.`;
+        sendSms({ to: customer.mobileNumber, message: outflowSms }).catch(console.error);
 
         if (withdrawQuantity === totalQuantity) {
             deleteDocumentNonBlocking(batchRef);
@@ -378,5 +387,3 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         </Dialog>
     );
 }
-
-    

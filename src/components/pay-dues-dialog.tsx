@@ -20,6 +20,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { generatePaymentReceiptPdf } from "@/lib/pdf";
+import { sendSms } from "@/lib/sms";
 
 
 type PayDuesDialogProps = {
@@ -94,6 +95,10 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         updateDocumentNonBlocking(outflowRef, updatedOutflowData);
 
         const updatedOutflow = { ...outflow, ...updatedOutflowData };
+
+        // Send SMS for payment
+        const paymentSms = `Dear ${customer.name}, we have received a payment of INR ${amountToPay.toFixed(2)}. Your new balance for transaction #${outflow.id.slice(0, 8).toUpperCase()} is INR ${newBalanceDue.toFixed(2)}. Thank you!`;
+        sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
 
         toast({
             title: "Payment Successful!",

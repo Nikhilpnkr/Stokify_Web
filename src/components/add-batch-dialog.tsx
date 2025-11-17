@@ -41,6 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { sendSms } from "@/lib/sms";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),
@@ -208,6 +209,11 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             ownerId: user.uid
         };
         addDocumentNonBlocking(newCustomerRef, finalCustomer);
+        sendSms({
+            to: finalCustomer.mobileNumber,
+            message: `Welcome to Stokify, ${finalCustomer.name}! Your account has been created.`
+        }).catch(console.error);
+
     } else {
         const existingCustomer = customers.find(c => c.id === values.customerId);
         if (!existingCustomer) {
@@ -219,7 +225,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     const newDocRef = doc(collection(firestore, "cropBatches"));
 
-    const newBatch = {
+    const newBatch: CropBatch = {
       id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
@@ -228,11 +234,20 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       ownerId: user.uid,
       customerId: finalCustomer.id,
       labourCharge: totalLabourCharge,
+      quantity: totalQuantity,
     };
     
     addDocumentNonBlocking(newDocRef, newBatch);
 
-    const fullBatchForPdf = { ...newBatch, quantity: totalQuantity, cropType: selectedCropType };
+    // Send SMS notification
+    const smsMessage = `Dear ${finalCustomer.name}, a new batch of ${totalQuantity} bags of ${selectedCropType.name} has been successfully stored at ${selectedLocation.name} on ${format(new Date(newBatch.dateAdded), 'MMM d, yyyy')}.`;
+    sendSms({
+        to: finalCustomer.mobileNumber,
+        message: smsMessage
+    }).catch(console.error);
+
+
+    const fullBatchForPdf = { ...newBatch, cropType: selectedCropType };
 
     toast({
       title: "Success! Batch Added.",
@@ -504,5 +519,3 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
-
-    
