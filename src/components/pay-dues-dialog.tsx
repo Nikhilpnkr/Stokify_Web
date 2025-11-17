@@ -97,7 +97,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         const updatedOutflow = { ...outflow, ...updatedOutflowData };
 
         // Send SMS for payment
-        const paymentSms = `Dear ${customer.name}, we have received a payment of INR ${amountToPay.toFixed(2)}. Your new balance for transaction #${outflow.id.slice(0, 8).toUpperCase()} is INR ${newBalanceDue.toFixed(2)}. Thank you!`;
+        const paymentSms = `Stokify: Payment of INR ${amountToPay.toFixed(2)} received. New balance for txn #${outflow.id.slice(0, 6)} is INR ${newBalanceDue.toFixed(2)}.`;
         sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
 
         toast({
@@ -204,3 +204,5 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     </Dialog>
   );
 }
+
+    

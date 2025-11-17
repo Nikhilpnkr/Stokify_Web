@@ -182,12 +182,12 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             addDocumentNonBlocking(newPaymentRef, newPayment);
             
             // Send SMS for payment
-            const paymentSms = `Dear ${customer.name}, we have received a payment of INR ${amountPaid.toFixed(2)}. Your balance due for this transaction is INR ${balanceDue.toFixed(2)}. Thank you!`;
+            const paymentSms = `Stokify: Payment of INR ${amountPaid.toFixed(2)} received. New balance is INR ${balanceDue.toFixed(2)}. Thank you.`;
             sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
         }
 
         // Send SMS for outflow
-        const outflowSms = `Dear ${customer.name}, an outflow of ${withdrawQuantity} bags of ${cropType.name} has been processed from ${location.name}. Total bill: INR ${finalBill.toFixed(2)}.`;
+        const outflowSms = `Stokify: Outflow of ${withdrawQuantity} bags of ${cropType.name} from ${location.name} processed. Total bill: INR ${finalBill.toFixed(2)}.`;
         sendSms({ to: customer.mobileNumber, message: outflowSms }).catch(console.error);
 
         if (withdrawQuantity === totalQuantity) {
@@ -387,3 +387,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         </Dialog>
     );
 }
+
+    

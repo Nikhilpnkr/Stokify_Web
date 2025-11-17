@@ -211,7 +211,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         addDocumentNonBlocking(newCustomerRef, finalCustomer);
         sendSms({
             to: finalCustomer.mobileNumber,
-            message: `Welcome to Stokify, ${finalCustomer.name}! Your account has been created.`
+            message: `Welcome to Stokify ${finalCustomer.name}. Your account has been created.`
         }).catch(console.error);
 
     } else {
@@ -240,7 +240,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     addDocumentNonBlocking(newDocRef, newBatch);
 
     // Send SMS notification
-    const smsMessage = `Dear ${finalCustomer.name}, a new batch of ${totalQuantity} bags of ${selectedCropType.name} has been successfully stored at ${selectedLocation.name} on ${format(new Date(newBatch.dateAdded), 'MMM d, yyyy')}.`;
+    const smsMessage = `Stokify: ${finalCustomer.name}, your inflow of ${totalQuantity} bags of ${selectedCropType.name} at ${selectedLocation.name} on ${format(new Date(newBatch.dateAdded), 'MMM d, yyyy')} is confirmed.`;
     sendSms({
         to: finalCustomer.mobileNumber,
         message: smsMessage
@@ -519,3 +519,5 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
+
+    
