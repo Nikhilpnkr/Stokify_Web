@@ -182,12 +182,12 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             addDocumentNonBlocking(newPaymentRef, newPayment);
             
             // Send SMS for payment
-            const paymentSms = `Stokify: Payment of INR ${amountPaid.toFixed(2)} received. New balance is INR ${balanceDue.toFixed(2)}. Thank you.`;
+            const paymentSms = `Stokify: Payment of Rps ${amountPaid.toFixed(2)} received. New balance is Rps ${balanceDue.toFixed(2)}. Thank you.`;
             sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
         }
 
         // Send SMS for outflow
-        const outflowSms = `Stokify: Outflow of ${withdrawQuantity} bags of ${cropType.name} from ${location.name} processed. Total bill: INR ${finalBill.toFixed(2)}.`;
+        const outflowSms = `Stokify: Outflow of ${withdrawQuantity} bags of ${cropType.name} from ${location.name} processed. Total bill: Rps ${finalBill.toFixed(2)}.`;
         sendSms({ to: customer.mobileNumber, message: outflowSms }).catch(console.error);
 
         if (withdrawQuantity === totalQuantity) {
@@ -302,22 +302,22 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                             onChange={(e) => setCostPerBag(Number(e.target.value))}
                         />
                         <p className="text-xs text-muted-foreground">
-                            Calculated rate: ₹{initialCostPerBag.toFixed(2)}
+                            Calculated rate: Rps {initialCostPerBag.toFixed(2)}
                         </p>
                     </div>
                     <div className="flex justify-between items-baseline">
                         <p className="text-muted-foreground">Total Cost (Qty x Rate):</p>
-                        <p className="font-semibold">₹{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="font-semibold">Rps {storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                     {batch.labourCharge && batch.labourCharge > 0 && (
                         <div className="flex justify-between items-baseline">
                             <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
-                            <p className="font-semibold">₹{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="font-semibold">Rps {batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                         </div>
                     )}
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                         <p className="text-lg font-bold">Final Bill:</p>
-                        <p className="text-2xl font-bold text-primary">₹{finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-2xl font-bold text-primary">Rps {finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                 </div>
 
@@ -368,7 +368,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                 <div className="rounded-lg bg-destructive/10 text-destructive-foreground p-4 space-y-2 border border-destructive/20">
                     <div className="flex justify-between items-center">
                         <p className="text-lg font-bold">Balance Due:</p>
-                        <p className="text-2xl font-bold">₹{(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-2xl font-bold">Rps {(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                     </div>
                 </div>
             </div>

@@ -225,7 +225,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     const newDocRef = doc(collection(firestore, "cropBatches"));
 
-    const newBatch: CropBatch = {
+    const newBatch: Omit<CropBatch, 'quantity'> = {
       id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
@@ -234,7 +234,6 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       ownerId: user.uid,
       customerId: finalCustomer.id,
       labourCharge: totalLabourCharge,
-      quantity: totalQuantity,
     };
     
     addDocumentNonBlocking(newDocRef, newBatch);
@@ -247,7 +246,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     }).catch(console.error);
 
 
-    const fullBatchForPdf = { ...newBatch, cropType: selectedCropType };
+    const fullBatchForPdf = { ...newBatch, cropType: selectedCropType, quantity: totalQuantity };
 
     toast({
       title: "Success! Batch Added.",
@@ -504,7 +503,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </div>
                 <div className="flex justify-between">
                     <span>Total Labour Charge:</span>
-                    <span>₹{totalLabourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>Rps {totalLabourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
             </div>
 

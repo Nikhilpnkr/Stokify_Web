@@ -239,8 +239,8 @@ export function Invoice({ data }: InvoiceProps) {
                                 <td style={styles.td}>{item.quantity.toLocaleString()}</td>
                                 <td style={styles.td}>{item.description}</td>
                                 <td style={styles.td}>{item.storageArea || 'N/A'}</td>
-                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>₹{item.unitPrice?.toFixed(2) || '0.00'}</td>}
-                                <td style={{...styles.td, ...styles.textRight}}>₹{item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
+                                {isOutflow && <td style={{...styles.td, ...styles.textRight}}>Rps {item.unitPrice?.toFixed(2) || '0.00'}</td>}
+                                <td style={{...styles.td, ...styles.textRight}}>Rps {item.total?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -253,31 +253,31 @@ export function Invoice({ data }: InvoiceProps) {
                         {isOutflow && (
                             <div style={styles.summaryRow}>
                                 <span>Subtotal</span>
-                                <span>₹{subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                                <span>Rps {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                             </div>
                         )}
                          {data.labourCharge && data.labourCharge > 0 ? (
                            <div style={styles.summaryRow}>
                              <span>Labour Charges</span>
-                             <span>₹{data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                             <span>Rps {data.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                            </div>
                          ) : null}
                         
                         <div style={styles.summaryTotal}>
                             <span>Total</span>
-                            <span>₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
+                            <span>Rps {total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}</span>
                         </div>
 
                         {isOutflow && (
                             <>
                                 <div style={styles.summaryRow}>
                                     <span>Amount Paid</span>
-                                    <span>₹{(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                    <span>Rps {(data.amountPaid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 </div>
                                 {data.balanceDue !== undefined && data.balanceDue > 0 ? (
                                     <div style={styles.summaryBalanceDue}>
                                         <span>Balance Due</span>
-                                        <span>₹{data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                        <span>Rps {data.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
                                 ) : null}
                             </>
