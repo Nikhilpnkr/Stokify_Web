@@ -219,7 +219,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     const newDocRef = doc(collection(firestore, "cropBatches"));
 
-    const newBatch: Omit<CropBatch, 'quantity'> = {
+    const newBatch = {
       id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
@@ -227,18 +227,17 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       dateAdded: values.dateAdded.toISOString(),
       ownerId: user.uid,
       customerId: finalCustomer.id,
-      customerName: finalCustomer.name,
       labourCharge: totalLabourCharge,
     };
     
     addDocumentNonBlocking(newDocRef, newBatch);
 
-    const fullBatch = { ...newBatch, quantity: totalQuantity, cropType: selectedCropType };
+    const fullBatchForPdf = { ...newBatch, quantity: totalQuantity, cropType: selectedCropType };
 
     toast({
       title: "Success! Batch Added.",
       description: `New batch for ${finalCustomer.name} has been added.`,
-      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullBatch as any, finalCustomer, selectedLocation!, areas!)}>Download Inflow Receipt</Button>,
+      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullBatchForPdf as any, finalCustomer, selectedLocation!, areas!)}>Download Inflow Receipt</Button>,
       duration: 10000,
     });
     setIsOpen(false);
@@ -505,3 +504,5 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
+
+    

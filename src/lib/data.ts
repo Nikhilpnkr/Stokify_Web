@@ -13,7 +13,6 @@ export type CropBatch = {
   dateAdded: string;
   ownerId: string;
   customerId: string;
-  customerName: string;
   labourCharge?: number;
   quantity: number; // This is a derived field for easier access
 };
@@ -81,7 +80,7 @@ export type Outflow = {
   storageDuration: number;
   storageCost: number;
   labourCharge: number;
-  insuranceCharge?: number;
+  insuranceCharge: number;
 };
 
 export type Payment = {
@@ -129,3 +128,5 @@ export const STORAGE_RATES: { [key in 1 | 6 | 12]: number } = {
   6: 36,
   12: 56,
 };
+
+    

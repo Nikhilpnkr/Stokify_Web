@@ -185,7 +185,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             deleteDocumentNonBlocking(batchRef);
             toast({
                 title: "Full Outflow Successful!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                description: `${withdrawQuantity} bags for ${customer.name} removed.`,
                 action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
                 duration: 10000,
             });
@@ -215,7 +215,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             
             toast({
                 title: withdrawQuantity > 0 ? "Partial Outflow Successful!" : "Bill Settled!",
-                description: `${withdrawQuantity} bags for ${batch.customerName} removed.`,
+                description: `${withdrawQuantity} bags for ${customer.name} removed.`,
                 action: <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(newOutflow, customer, location, cropType, allAreas)}>Download PDF</Button>,
                 duration: 10000,
             });
@@ -241,7 +241,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                     <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                             <p className="font-medium text-muted-foreground">Customer</p>
-                            <p className="font-semibold">{batch.customerName}</p>
+                            <p className="font-semibold">{customer?.name}</p>
                         </div>
                         <div>
                             <p className="font-medium text-muted-foreground">Mobile</p>
@@ -378,3 +378,5 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         </Dialog>
     );
 }
+
+    

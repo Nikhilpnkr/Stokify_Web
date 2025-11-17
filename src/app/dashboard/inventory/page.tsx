@@ -103,14 +103,14 @@ export default function InventoryPage() {
       
       return {
         ...batch,
+        customer,
+        location,
         cropType: cropType,
         quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
         outflow,
-        customer,
-        location,
       }
     }).filter(batch => {
-        return batch.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        return (batch.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                (batch.cropType?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     }).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
   }, [rawBatches, outflows, customers, locations, cropTypes, searchTerm]);
@@ -186,7 +186,7 @@ export default function InventoryPage() {
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
-                           <CardTitle>{batch.customerName}</CardTitle>
+                           <CardTitle>{batch.customer?.name || '...'}</CardTitle>
                            <CardDescription>{batch.cropType?.name}</CardDescription>
                         </div>
                         <div className="text-right">
@@ -231,7 +231,7 @@ export default function InventoryPage() {
                   <TableBody>
                     {batches.map((batch) => (
                       <TableRow key={batch.id}>
-                        <TableCell className="font-medium">{batch.customerName}</TableCell>
+                        <TableCell className="font-medium">{batch.customer?.name || '...'}</TableCell>
                         <TableCell>{batch.customer?.mobileNumber || '...'}</TableCell>
                         <TableCell>{batch.cropType?.name}</TableCell>
                         <TableCell>{batch.location?.name || '...'}</TableCell>
@@ -249,7 +249,7 @@ export default function InventoryPage() {
                           <div className="flex justify-center items-center gap-1">
                             <Button variant="ghost" size="icon" onClick={() => handleOutflowClick(batch)} title="Process Outflow">
                                 <Receipt className="h-5 w-5" />
-                                <span className="sr-only">Process Outflow for {batch.customerName}</span>
+                                <span className="sr-only">Process Outflow for {batch.customer?.name}</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleDownloadInflowReceipt(batch)} title="Download Inflow Receipt">
                                 <FileDown className="h-5 w-5" />
@@ -290,11 +290,5 @@ export default function InventoryPage() {
       )}
     </>
   );
-
-    
-
-    
-
-    
 
     
