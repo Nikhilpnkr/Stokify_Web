@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
 import type { Customer } from "@/lib/data";
-import { sendSmsAction } from "@/app/actions/sms";
+import { sendSmsAction } from "@/lib/actions";
 
 type AddCustomerDialogProps = {
   isOpen: boolean;

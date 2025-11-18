@@ -41,7 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { sendSmsAction } from "@/app/actions/sms";
+import { sendSmsAction } from "@/lib/actions";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),

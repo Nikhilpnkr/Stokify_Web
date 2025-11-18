@@ -20,7 +20,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { generatePaymentReceiptPdf } from "@/lib/pdf";
-import { sendSmsAction } from "@/app/actions/sms";
+import { sendSmsAction } from "@/lib/actions";
 
 
 type PayDuesDialogProps = {

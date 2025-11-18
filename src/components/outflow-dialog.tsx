@@ -21,7 +21,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { sendSmsAction } from "@/app/actions/sms";
+import { sendSmsAction } from "@/lib/actions";
 
 type OutflowDialogProps = {
   isOpen: boolean;
