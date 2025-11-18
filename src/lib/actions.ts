@@ -1,7 +1,7 @@
 
 "use server";
 
-const TEXTBEE_API_URL = "https://api.textbee.dev/api/v1/messaging";
+import Twilio from 'twilio';
 
 type SendSmsActionParams = {
     to: string;
@@ -10,49 +10,29 @@ type SendSmsActionParams = {
 
 export async function sendSmsAction(params: SendSmsActionParams) {
     const { to, message } = params;
-    const apiKey = process.env.TEXTBEE_API_KEY;
-    const deviceId = process.env.TEXTBEE_DEVICE_ID;
+    
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
 
-    if (!apiKey) {
-        const errorMessage = "API key for SMS service is not configured on the server.";
-        console.error("sendSmsAction Error:", errorMessage);
-        return { success: false, error: errorMessage };
-    }
-     if (!deviceId) {
-        const errorMessage = "Device ID for SMS service is not configured on the server.";
+    if (!accountSid || !authToken || !fromNumber) {
+        const errorMessage = "Twilio credentials are not configured on the server.";
         console.error("sendSmsAction Error:", errorMessage);
         return { success: false, error: errorMessage };
     }
 
-    const formattedTo = to.startsWith('+') ? to.substring(1) : to;
-    const sanitizedMessage = message.replace(/Rps/g, 'INR');
+    const client = Twilio(accountSid, authToken);
+    const formattedTo = `+${to}`;
 
     try {
-        const response = await fetch(TEXTBEE_API_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                apiKey: apiKey,
-                deviceId: deviceId, 
-                sms: {
-                    to: [formattedTo],
-                    message: sanitizedMessage,
-                },
-            }),
+        const response = await client.messages.create({
+            body: message,
+            from: fromNumber,
+            to: formattedTo
         });
 
-        if (!response.ok) {
-            const responseData = await response.json().catch(() => ({ message: 'Failed to parse error response from Textbee' }));
-            console.error('Textbee API Error:', responseData);
-            const apiErrorMessage = responseData.message || `Failed to send SMS with status: ${response.status}`;
-            throw new Error(apiErrorMessage);
-        }
-
-        const responseData = await response.json();
-        console.log("SMS sent successfully via server action:", responseData);
-        return { success: true, data: responseData };
+        console.log("SMS sent successfully via server action:", response.sid);
+        return { success: true, data: { sid: response.sid } };
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
