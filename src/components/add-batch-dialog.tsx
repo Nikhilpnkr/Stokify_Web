@@ -41,7 +41,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { sendSms } from "@/lib/sms";
+import { sendSmsAction } from "@/app/actions/sms";
 
 const areaAllocationSchema = z.object({
     areaId: z.string().min(1, "Area is required."),
@@ -209,10 +209,17 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
             ownerId: user.uid
         };
         addDocumentNonBlocking(newCustomerRef, finalCustomer);
-        sendSms({
+        sendSmsAction({
             to: finalCustomer.mobileNumber,
             message: `Welcome to Stokify ${finalCustomer.name}. Your account has been created.`
-        }).catch(console.error);
+        }).then(result => {
+            if(result.success) {
+                toast({
+                    title: "SMS Sent",
+                    description: `Welcome message sent to ${finalCustomer.name}.`,
+                });
+            }
+        });
 
     } else {
         const existingCustomer = customers.find(c => c.id === values.customerId);
@@ -240,10 +247,17 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
     // Send SMS notification
     const smsMessage = `Stokify: ${finalCustomer.name}, your inflow of ${totalQuantity} bags of ${selectedCropType.name} at ${selectedLocation.name} on ${format(new Date(newBatch.dateAdded), 'MMM d, yyyy')} is confirmed.`;
-    sendSms({
+    sendSmsAction({
         to: finalCustomer.mobileNumber,
         message: smsMessage
-    }).catch(console.error);
+    }).then(result => {
+        if(result.success) {
+            toast({
+                title: "SMS Sent",
+                description: "Inflow confirmation sent to customer.",
+            });
+        }
+    });
 
 
     const fullBatchForPdf = { ...newBatch, cropType: selectedCropType, quantity: totalQuantity };

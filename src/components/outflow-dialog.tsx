@@ -21,7 +21,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { sendSms } from "@/lib/sms";
+import { sendSmsAction } from "@/app/actions/sms";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -183,12 +183,26 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             
             // Send SMS for payment
             const paymentSms = `Stokify: Payment of ${amountPaid.toFixed(2)} Rps received. New balance is ${balanceDue.toFixed(2)} Rps. Thank you.`;
-            sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
+            sendSmsAction({ to: customer.mobileNumber, message: paymentSms }).then(result => {
+                if (result.success) {
+                    toast({
+                        title: "SMS Sent",
+                        description: "Payment confirmation sent to customer.",
+                    });
+                }
+            });
         }
 
         // Send SMS for outflow
         const outflowSms = `Stokify: Outflow of ${withdrawQuantity} bags of ${cropType.name} from ${location.name} processed. Total bill: ${finalBill.toFixed(2)} Rps.`;
-        sendSms({ to: customer.mobileNumber, message: outflowSms }).catch(console.error);
+        sendSmsAction({ to: customer.mobileNumber, message: outflowSms }).then(result => {
+            if (result.success) {
+                toast({
+                    title: "SMS Sent",
+                    description: "Outflow notification sent to customer.",
+                });
+            }
+        });
 
         if (withdrawQuantity === totalQuantity) {
             deleteDocumentNonBlocking(batchRef);

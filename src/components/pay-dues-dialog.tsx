@@ -20,7 +20,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { generatePaymentReceiptPdf } from "@/lib/pdf";
-import { sendSms } from "@/lib/sms";
+import { sendSmsAction } from "@/app/actions/sms";
 
 
 type PayDuesDialogProps = {
@@ -98,7 +98,14 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
 
         // Send SMS for payment
         const paymentSms = `Stokify: Payment of ${amountToPay.toFixed(2)} Rps received. New balance for txn #${outflow.id.slice(0, 6)} is ${newBalanceDue.toFixed(2)} Rps.`;
-        sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
+        sendSmsAction({ to: customer.mobileNumber, message: paymentSms }).then(result => {
+            if (result.success) {
+                toast({
+                    title: "SMS Sent",
+                    description: "Payment confirmation sent to customer.",
+                });
+            }
+        });
 
         toast({
             title: "Payment Successful!",
