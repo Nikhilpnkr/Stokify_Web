@@ -148,9 +148,9 @@ export default function TransactionsPage() {
                                         <CardDescription>{outflow.cropTypeName}</CardDescription>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-lg font-bold">Rps {outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        <p className="text-lg font-bold">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</p>
                                         {outflow.balanceDue > 0 ? (
-                                            <Badge variant="destructive">Due: Rps {outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</Badge>
+                                            <Badge variant="destructive">Due: {outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</Badge>
                                         ) : (
                                             <Badge variant="secondary">Paid</Badge>
                                         )}
@@ -206,11 +206,11 @@ export default function TransactionsPage() {
                                 <TableCell className="font-medium">{outflow.customerName}</TableCell>
                                 <TableCell>{outflow.cropTypeName}</TableCell>
                                 <TableCell className="text-right">{outflow.quantityWithdrawn.toLocaleString()} bags</TableCell>
-                                <TableCell className="text-right">Rps {outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                                <TableCell className="text-right">Rps {outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                                <TableCell className="text-right">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</TableCell>
+                                <TableCell className="text-right">{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</TableCell>
                                 <TableCell className="text-right">
                                     {outflow.balanceDue > 0 ? (
-                                        <Badge variant="destructive">Rps {outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Badge>
+                                        <Badge variant="destructive">{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</Badge>
                                     ) : (
                                         <Badge variant="secondary">Paid</Badge>
                                     )}

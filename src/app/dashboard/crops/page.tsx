@@ -269,19 +269,19 @@ export default function CropTypesManagerPage() {
                                     <ul className="text-sm space-y-1">
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">1 Month:</span>
-                                            <span className="font-semibold">Rps {ct.rates ? ct.rates['1'] : '0'}</span>
+                                            <span className="font-semibold">{ct.rates ? ct.rates['1'] : '0'} Rps</span>
                                         </li>
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">6 Months:</span>
-                                            <span className="font-semibold">Rps {ct.rates ? ct.rates['6'] : '0'}</span>
+                                            <span className="font-semibold">{ct.rates ? ct.rates['6'] : '0'} Rps</span>
                                         </li>
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">1 Year:</span>
-                                            <span className="font-semibold">Rps {ct.rates ? ct.rates['12'] : '0'}</span>
+                                            <span className="font-semibold">{ct.rates ? ct.rates['12'] : '0'} Rps</span>
                                         </li>
                                         <li className="flex justify-between items-baseline mt-2 pt-2 border-t">
                                             <span className="text-muted-foreground">Insurance:</span>
-                                            <span className="font-semibold">Rps {ct.insurance || '0'}</span>
+                                            <span className="font-semibold">{ct.insurance || '0'} Rps</span>
                                         </li>
                                     </ul>
                                 </CardContent>

@@ -97,12 +97,12 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
         const updatedOutflow = { ...outflow, ...updatedOutflowData };
 
         // Send SMS for payment
-        const paymentSms = `Stokify: Payment of Rps ${amountToPay.toFixed(2)} received. New balance for txn #${outflow.id.slice(0, 6)} is Rps ${newBalanceDue.toFixed(2)}.`;
+        const paymentSms = `Stokify: Payment of ${amountToPay.toFixed(2)} Rps received. New balance for txn #${outflow.id.slice(0, 6)} is ${newBalanceDue.toFixed(2)} Rps.`;
         sendSms({ to: customer.mobileNumber, message: paymentSms }).catch(console.error);
 
         toast({
             title: "Payment Successful!",
-            description: `Paid Rps ${amountToPay.toLocaleString()} towards the balance.`,
+            description: `Paid ${amountToPay.toLocaleString()} Rps towards the balance.`,
             action: <Button variant="outline" size="sm" onClick={() => generatePaymentReceiptPdf(newPayment, updatedOutflow, customer)}>Download Receipt</Button>,
             duration: 10000,
         });
@@ -126,15 +126,15 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                  <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Total Bill:</p>
-                    <p className="font-semibold">Rps {outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="font-semibold">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
                 </div>
                 <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Current Amount Paid:</p>
-                    <p className="font-semibold">Rps {outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="font-semibold">{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
                 </div>
                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
                     <p className="text-lg font-bold">Balance Due:</p>
-                    <p className="text-xl font-bold text-destructive">Rps {outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="text-xl font-bold text-destructive">{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
                 </div>
             </div>
 
@@ -186,7 +186,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
              <div className="rounded-lg bg-primary/10 text-primary-foreground p-4 space-y-2 border border-primary/20">
                 <div className="flex justify-between items-center">
                     <p className="text-lg font-bold text-primary">New Balance:</p>
-                    <p className="text-2xl font-bold text-primary">Rps {(outflow.balanceDue - amountToPay).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                    <p className="text-2xl font-bold text-primary">{(outflow.balanceDue - amountToPay).toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
                 </div>
             </div>
         </div>
@@ -204,5 +204,3 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
     </Dialog>
   );
 }
-
-    

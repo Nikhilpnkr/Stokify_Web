@@ -134,7 +134,7 @@ export default function CustomersPage() {
                     {balance && balance > 0 && (
                         <div>
                             <Badge variant="destructive">
-                                Balance: Rps {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                Balance: {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps
                             </Badge>
                         </div>
                     )}

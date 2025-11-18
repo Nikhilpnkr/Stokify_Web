@@ -10,6 +10,7 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/compone
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { CropBatch, StorageLocation, Customer, Outflow } from "@/lib/data";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
@@ -116,7 +117,7 @@ export default function DashboardPage() {
                     <Banknote className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">Rps {totalOutstandingBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div className="text-2xl font-bold">{totalOutstandingBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Rps</div>
                     <p className="text-xs text-muted-foreground">Across all transactions</p>
                 </CardContent>
                 </Card>

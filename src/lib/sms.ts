@@ -17,6 +17,9 @@ export async function sendSms({ to, message }: SendSmsParams) {
     // Textbee expects numbers with country code but without '+'
     const formattedTo = to.startsWith('+') ? to.substring(1) : to;
     
+    // Sanitize message: remove symbols, keep it simple
+    const sanitizedMessage = message.replace(/₹/g, 'Rps');
+    
     try {
         const response = await fetch(TEXTBEE_API_URL, {
             method: 'POST',
@@ -27,7 +30,7 @@ export async function sendSms({ to, message }: SendSmsParams) {
                 apiKey,
                 sms: {
                     to: [formattedTo],
-                    message,
+                    message: sanitizedMessage,
                 },
             }),
         });

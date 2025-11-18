@@ -503,7 +503,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
                 </div>
                 <div className="flex justify-between">
                     <span>Total Labour Charge:</span>
-                    <span>Rps {totalLabourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>{totalLabourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</span>
                 </div>
             </div>
 
@@ -518,5 +518,3 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     </Dialog>
   );
 }
-
-    
