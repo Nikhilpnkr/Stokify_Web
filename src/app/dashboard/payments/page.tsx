@@ -153,7 +153,7 @@ export default function PaymentsPage() {
                                       <CardDescription>Receipt #{payment.id.slice(0,6)}</CardDescription>
                                   </div>
                                   <div className="text-right">
-                                      <p className="text-lg font-bold">{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
+                                      <p className="text-lg font-bold">{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</p>
                                       <Badge variant="secondary">{payment.paymentMethod}</Badge>
                                   </div>
                               </div>
@@ -203,7 +203,7 @@ export default function PaymentsPage() {
                                   <TableCell>#{payment.outflowId.slice(0, 8).toUpperCase()}</TableCell>
                                   <TableCell><Badge variant="outline">{payment.paymentMethod}</Badge></TableCell>
                                   <TableCell className="text-sm text-muted-foreground">{payment.notes || '-'}</TableCell>
-                                  <TableCell className="text-right font-semibold">{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</TableCell>
+                                  <TableCell className="text-right font-semibold">{payment.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</TableCell>
                                   <TableCell className="text-center">
                                       <div className="flex justify-center gap-2">
                                           <Button variant="ghost" size="icon" onClick={() => payment.outflow && payment.customer && generatePaymentReceiptPdf(payment, payment.outflow, payment.customer)} title="Download Payment Receipt" disabled={!payment.outflow || !payment.customer}>

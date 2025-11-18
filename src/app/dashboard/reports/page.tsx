@@ -198,7 +198,7 @@ export default function ReportsPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Rps</div>
+                <div className="text-2xl font-bold">{potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Rp</div>
                 <p className="text-xs text-muted-foreground">From batches in date range</p>
               </CardContent>
             </Card>

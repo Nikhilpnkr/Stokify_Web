@@ -158,7 +158,7 @@ export function PaymentReceipt({ data }: PaymentReceiptProps) {
                     <tbody>
                         <tr>
                             <td style={styles.td}>Payment Received</td>
-                            <td style={{...styles.td, ...styles.textRight, fontWeight: 'bold'}}>{data.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</td>
+                            <td style={{...styles.td, ...styles.textRight, fontWeight: 'bold'}}>{data.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</td>
                         </tr>
                     </tbody>
                 </table>
@@ -168,19 +168,19 @@ export function PaymentReceipt({ data }: PaymentReceiptProps) {
                 <div style={styles.summaryContainer}>
                     <div style={styles.summaryRow}>
                         <span>Original Bill Amount</span>
-                        <span>{data.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</span>
+                        <span>{data.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</span>
                     </div>
                     <div style={styles.summaryRow}>
                         <span>Balance Before Payment</span>
-                        <span>{data.previousBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</span>
+                        <span>{data.previousBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</span>
                     </div>
                      <div style={{...styles.summaryRow, backgroundColor: '#e6f7ff' }}>
                         <span>This Payment</span>
-                        <span style={{fontWeight: 'bold'}}>- {data.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</span>
+                        <span style={{fontWeight: 'bold'}}>- {data.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</span>
                     </div>
                     <div style={styles.summaryTotal}>
                         <span>Remaining Balance</span>
-                        <span>{data.newBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</span>
+                        <span>{data.newBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</span>
                     </div>
                 </div>
             </section>

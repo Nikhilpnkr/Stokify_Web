@@ -295,22 +295,22 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                             onChange={(e) => setCostPerBag(Number(e.target.value))}
                         />
                         <p className="text-xs text-muted-foreground">
-                            Calculated rate: {initialCostPerBag.toFixed(2)} Rps
+                            Calculated rate: {initialCostPerBag.toFixed(2)} Rp
                         </p>
                     </div>
                     <div className="flex justify-between items-baseline">
                         <p className="text-muted-foreground">Total Cost (Qty x Rate):</p>
-                        <p className="font-semibold">{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</p>
+                        <p className="font-semibold">{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
                     {batch.labourCharge && batch.labourCharge > 0 && (
                         <div className="flex justify-between items-baseline">
                             <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
-                            <p className="font-semibold">{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</p>
+                            <p className="font-semibold">{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                         </div>
                     )}
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                         <p className="text-lg font-bold">Final Bill:</p>
-                        <p className="text-2xl font-bold text-primary">{finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</p>
+                        <p className="text-2xl font-bold text-primary">{finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
                 </div>
 
@@ -361,7 +361,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                 <div className="rounded-lg bg-destructive/10 text-destructive-foreground p-4 space-y-2 border border-destructive/20">
                     <div className="flex justify-between items-center">
                         <p className="text-lg font-bold">Balance Due:</p>
-                        <p className="text-2xl font-bold">{(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rps</p>
+                        <p className="text-2xl font-bold">{(finalBill - amountPaid).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
                 </div>
             </div>

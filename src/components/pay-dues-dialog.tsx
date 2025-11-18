@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -95,7 +96,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
 
         toast({
             title: "Payment Successful!",
-            description: `Paid ${amountToPay.toLocaleString()} Rps towards the balance.`,
+            description: `Paid ${amountToPay.toLocaleString()} Rp towards the balance.`,
             action: <Button variant="outline" size="sm" onClick={() => generatePaymentReceiptPdf(newPayment, updatedOutflow, customer)}>Download Receipt</Button>,
             duration: 10000,
         });
@@ -119,15 +120,15 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             <div className="rounded-lg bg-muted/50 p-4 space-y-2">
                  <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Total Bill:</p>
-                    <p className="font-semibold">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
+                    <p className="font-semibold">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</p>
                 </div>
                 <div className="flex justify-between items-baseline">
                     <p className="text-muted-foreground">Current Amount Paid:</p>
-                    <p className="font-semibold">{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
+                    <p className="font-semibold">{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</p>
                 </div>
                  <div className="flex justify-between items-center mt-2 pt-2 border-t">
                     <p className="text-lg font-bold">Balance Due:</p>
-                    <p className="text-xl font-bold text-destructive">{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
+                    <p className="text-xl font-bold text-destructive">{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</p>
                 </div>
             </div>
 
@@ -179,7 +180,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
              <div className="rounded-lg bg-primary/10 text-primary-foreground p-4 space-y-2 border border-primary/20">
                 <div className="flex justify-between items-center">
                     <p className="text-lg font-bold text-primary">New Balance:</p>
-                    <p className="text-2xl font-bold text-primary">{(outflow.balanceDue - amountToPay).toLocaleString(undefined, { minimumFractionDigits: 2 })} Rps</p>
+                    <p className="text-2xl font-bold text-primary">{(outflow.balanceDue - amountToPay).toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</p>
                 </div>
             </div>
         </div>
