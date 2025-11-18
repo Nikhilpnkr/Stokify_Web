@@ -1,4 +1,7 @@
 
+
+"use server";
+
 const TEXTBEE_API_URL = "https://api.textbee.dev/api/v1/messaging";
 
 type SendSmsParams = {
