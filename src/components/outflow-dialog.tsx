@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -21,7 +20,6 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { generateInvoicePdf } from "@/lib/pdf";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
-import { sendSmsAction } from "@/lib/actions";
 
 type OutflowDialogProps = {
   isOpen: boolean;
@@ -180,29 +178,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                 notes: notes || `Initial payment for outflow #${newOutflow.id.slice(0,6)}`,
             };
             addDocumentNonBlocking(newPaymentRef, newPayment);
-            
-            // Send SMS for payment
-            const paymentSms = `Stokify: Payment of ${amountPaid.toFixed(2)} Rps received. New balance is ${balanceDue.toFixed(2)} Rps. Thank you.`;
-            sendSmsAction({ to: customer.mobileNumber, message: paymentSms }).then(result => {
-                if (result.success) {
-                    toast({
-                        title: "SMS Sent",
-                        description: "Payment confirmation sent to customer.",
-                    });
-                }
-            });
         }
-
-        // Send SMS for outflow
-        const outflowSms = `Stokify: Outflow of ${withdrawQuantity} bags of ${cropType.name} from ${location.name} processed. Total bill: ${finalBill.toFixed(2)} Rps.`;
-        sendSmsAction({ to: customer.mobileNumber, message: outflowSms }).then(result => {
-            if (result.success) {
-                toast({
-                    title: "SMS Sent",
-                    description: "Outflow notification sent to customer.",
-                });
-            }
-        });
 
         if (withdrawQuantity === totalQuantity) {
             deleteDocumentNonBlocking(batchRef);

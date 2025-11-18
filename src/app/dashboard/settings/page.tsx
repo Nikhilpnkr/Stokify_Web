@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,7 +18,6 @@ import type { UserProfile } from "@/lib/data";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { sendSmsAction } from "@/lib/actions";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Display name must be at least 2 characters."),
@@ -33,7 +31,6 @@ export default function SettingsPage() {
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isSendingSms, setIsSendingSms] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -188,24 +185,6 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleSendTestSms() {
-    setIsSendingSms(true);
-    const result = await sendSmsAction({ to: '9121414605', message: 'hi' });
-    if (result.success) {
-      toast({
-        title: "Test SMS Sent",
-        description: "A test SMS was sent successfully.",
-      });
-    } else {
-      toast({
-        variant: "destructive",
-        title: "Failed to Send SMS",
-        description: result.error || "An unknown error occurred.",
-      });
-    }
-    setIsSendingSms(false);
-  }
-
   const isLoading = isLoadingProfile || form.formState.isSubmitting;
 
   return (
@@ -283,29 +262,6 @@ export default function SettingsPage() {
             </Form>
             )}
           </CardContent>
-        </Card>
-
-        <Card>
-            <CardHeader>
-                <CardTitle>Testing</CardTitle>
-                <CardDescription>
-                Use these actions to test system functionality.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <div>
-                    <h4 className="font-medium text-sm">Send Test SMS</h4>
-                    <p className="text-xs text-muted-foreground mb-2">Sends a predefined test message to a hardcoded phone number.</p>
-                    <Button
-                        variant="secondary"
-                        onClick={handleSendTestSms}
-                        disabled={isSendingSms}
-                        >
-                        {isSendingSms && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Send Test SMS
-                    </Button>
-                </div>
-            </CardContent>
         </Card>
 
         <Card className="border-destructive">

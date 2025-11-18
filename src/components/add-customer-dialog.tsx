@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -75,18 +74,6 @@ export function AddCustomerDialog({ isOpen, setIsOpen, existingCustomers }: AddC
 
     addDocumentNonBlocking(newDocRef, newCustomer);
     
-    sendSmsAction({
-        to: newCustomer.mobileNumber,
-        message: `Welcome to Stokify ${newCustomer.name}. Your account has been created.`
-    }).then(result => {
-        if(result.success) {
-            toast({
-                title: "SMS Sent",
-                description: `Welcome message sent to ${newCustomer.name}.`,
-            });
-        }
-    });
-
     toast({
         title: "Success!",
         description: `Customer "${values.name}" has been added.`,
