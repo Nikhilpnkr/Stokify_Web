@@ -29,6 +29,7 @@ export async function sendSmsAction(params: SendSmsActionParams) {
             },
             body: JSON.stringify({
                 apiKey: apiKey,
+                deviceId: "YOUR_DEVICE_ID", // Added deviceId here
                 sms: {
                     to: [formattedTo],
                     message: sanitizedMessage,
@@ -36,14 +37,14 @@ export async function sendSmsAction(params: SendSmsActionParams) {
             }),
         });
 
-        const responseData = await response.json();
-
         if (!response.ok) {
+            const responseData = await response.json().catch(() => ({ message: 'Failed to parse error response from Textbee' }));
             console.error('Textbee API Error:', responseData);
             const apiErrorMessage = responseData.message || `Failed to send SMS with status: ${response.status}`;
             throw new Error(apiErrorMessage);
         }
 
+        const responseData = await response.json();
         console.log("SMS sent successfully via server action:", responseData);
         return { success: true, data: responseData };
 
