@@ -10,13 +10,15 @@ export async function sendSmsAction(to: string, message: string): Promise<{ succ
   }
 
   const payload = {
+    apiKey,
+    deviceId,
     sms: {
       to,
       message,
     },
   };
 
-  const url = `https://api.textbee.dev/api/v1/gateway/messages?apiKey=${apiKey}&deviceId=${deviceId}`;
+  const url = 'https://api.textbee.dev/api/v1/gateway/messages';
 
   try {
     const response = await fetch(url, {
