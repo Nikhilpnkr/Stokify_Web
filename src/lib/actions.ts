@@ -5,20 +5,21 @@ export async function sendSmsAction(to: string, message: string): Promise<{ succ
   const deviceId = process.env.TEXTBEE_DEVICE_ID;
 
   if (!apiKey || !deviceId) {
-    console.error('SMS Error: API key or Device ID is not configured on the server.');
-    return { success: false, message: 'SMS service is not configured on the server.' };
+    const errorMessage = 'SMS Error: API key or Device ID is not configured on the server.';
+    console.error(errorMessage);
+    return { success: false, message: errorMessage };
   }
 
+  // Construct the correct URL with deviceId in the path and apiKey as a query param.
+  const url = `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/sendSMS?apiKey=${apiKey}`;
+
+  // The payload now only contains the sms object.
   const payload = {
-    apiKey,
-    deviceId,
     sms: {
       to,
       message,
     },
   };
-
-  const url = 'https://api.textbee.dev/api/v1/gateway/messages';
 
   try {
     const response = await fetch(url, {
