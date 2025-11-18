@@ -10,20 +10,17 @@ type SendSmsActionParams = {
 
 export async function sendSmsAction(params: SendSmsActionParams) {
     const { to, message } = params;
-    // This will be read from the server's environment variables
     const apiKey = process.env.TEXTBEE_API_KEY;
 
     if (!apiKey) {
-        console.error("TEXTBEE_API_KEY is not set on the server. SMS will not be sent.");
-        return { success: false, error: "API key not configured on the server." };
+        const errorMessage = "API key for SMS service is not configured on the server.";
+        console.error("sendSmsAction Error:", errorMessage);
+        return { success: false, error: errorMessage };
     }
 
-    // Textbee expects numbers with country code but without '+'
     const formattedTo = to.startsWith('+') ? to.substring(1) : to;
-    
-    // Sanitize message - this is a good practice
     const sanitizedMessage = message.replace(/Rps/g, 'INR');
-    
+
     try {
         const response = await fetch(TEXTBEE_API_URL, {
             method: 'POST',
@@ -43,7 +40,8 @@ export async function sendSmsAction(params: SendSmsActionParams) {
 
         if (!response.ok) {
             console.error('Textbee API Error:', responseData);
-            throw new Error(responseData.message || `Failed to send SMS with status: ${response.status}`);
+            const apiErrorMessage = responseData.message || `Failed to send SMS with status: ${response.status}`;
+            throw new Error(apiErrorMessage);
         }
 
         console.log("SMS sent successfully via server action:", responseData);
