@@ -82,10 +82,10 @@ export default function ReportsPage() {
   }, [allBatches, date]);
 
 
-  const { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
+  const { totalBatches, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
     const batches = filteredBatches;
     if (!batches || !locations || !cropTypes || isLoadingAreas) {
-      return { totalBatches: 0, totalQuantity: 0, potentialMonthlyRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
+      return { totalBatches: 0, totalQuantity: 0, potentialRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
     }
 
     const totalBatches = batches.length;
@@ -95,15 +95,16 @@ export default function ReportsPage() {
         return acc + batchQty;
     }, 0);
     
-    // NOTE: This is an estimation based on the 6-month rate divided by 6.
-    const potentialMonthlyRevenue = batches.reduce((acc, b) => {
+    // NOTE: This estimation uses the 6-month rate as a baseline potential revenue.
+    const potentialRevenue = batches.reduce((acc, b) => {
         const cropType = cropTypes.find(ct => ct.name === b.cropType);
         if (!cropType) return acc;
 
         const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
-        const monthlyRate = cropType.rates['6'] / 6; // Prorated monthly from 6-month rate
+        const storageRate = cropType.rates['6']; // Use the 6-month rate
+        const insuranceCost = (cropType.insurance || 0) * batchQty;
 
-        return acc + (batchQty * monthlyRate);
+        return acc + (batchQty * storageRate) + insuranceCost;
     }, 0);
 
     const totalCapacity = allAreas.reduce((acc, area) => acc + area.capacity, 0);
@@ -122,7 +123,7 @@ export default function ReportsPage() {
       };
     });
 
-    return { totalBatches, totalQuantity, potentialMonthlyRevenue, totalCapacity, spaceUtilization, chartData };
+    return { totalBatches, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData };
   }, [filteredBatches, locations, cropTypes, allAreas, isLoadingAreas]);
   
   const isLoading = isLoadingLocations || isLoadingBatches || isLoadingCropTypes || isLoadingAreas;
@@ -193,11 +194,11 @@ export default function ReportsPage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Potential Monthly Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">Potential Revenue</CardTitle>
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{potentialMonthlyRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Rps</div>
+                <div className="text-2xl font-bold">{potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Rps</div>
                 <p className="text-xs text-muted-foreground">From batches in date range</p>
               </CardContent>
             </Card>

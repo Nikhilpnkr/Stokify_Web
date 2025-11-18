@@ -78,17 +78,20 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         const yearlyRate = cropType.rates['12'];
         const halfYearlyRate = cropType.rates['6'];
 
-        if (months <= 6) {
+        const numYears = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+
+        calculatedCost += numYears * yearlyRate;
+
+        if (remainingMonths > 6) {
+          calculatedCost += yearlyRate;
+        } else if (remainingMonths > 0) {
+          calculatedCost += halfYearlyRate;
+        } else if (numYears === 0) { // If it's less than a year but more than 0 months
             calculatedCost = halfYearlyRate;
-        } else {
-            const numYears = Math.floor(months / 12);
-            calculatedCost += numYears * yearlyRate;
-            
-            const remainingMonths = months % 12;
-            if (remainingMonths > 0) {
-                 calculatedCost += halfYearlyRate;
-            }
         }
+        
+        if (months === 0) calculatedCost = halfYearlyRate; // Minimum charge is for 6 months
         
         calculatedCost += cropType.insurance || 0;
 
