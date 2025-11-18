@@ -13,11 +13,12 @@ import { Loader2 } from "lucide-react";
 import { useUser, useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { doc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
-import { updateProfile, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { updateProfile, deleteUser } from "firebase/auth";
 import type { UserProfile } from "@/lib/data";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { sendSmsAction } from "@/lib/actions";
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, "Display name must be at least 2 characters."),
@@ -31,6 +32,7 @@ export default function SettingsPage() {
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSendingSms, setIsSendingSms] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -86,6 +88,24 @@ export default function SettingsPage() {
       title: "Profile updated",
       description: "Your profile has been successfully updated.",
     });
+  }
+  
+  async function handleSendTestSms() {
+    setIsSendingSms(true);
+    const result = await sendSmsAction("9121414605", "hi");
+    if (result.success) {
+      toast({
+        title: "SMS Sent!",
+        description: "Test SMS was sent successfully.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "SMS Failed",
+        description: result.message,
+      });
+    }
+    setIsSendingSms(false);
   }
 
   async function deleteAllData(showToast = true) {
@@ -262,6 +282,29 @@ export default function SettingsPage() {
             </Form>
             )}
           </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Testing</CardTitle>
+                <CardDescription>
+                    Use these actions to test system integrations.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <div>
+                    <h4 className="font-medium text-sm">Send Test SMS</h4>
+                    <p className="text-xs text-muted-foreground mb-2">Sends a test SMS message to a pre-defined number to verify the SMS integration is working correctly.</p>
+                    <Button
+                        variant="secondary"
+                        onClick={handleSendTestSms}
+                        disabled={isSendingSms}
+                        >
+                        {isSendingSms && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Send Test SMS
+                    </Button>
+                </div>
+            </CardContent>
         </Card>
 
         <Card className="border-destructive">
