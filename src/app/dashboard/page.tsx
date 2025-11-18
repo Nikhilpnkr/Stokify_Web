@@ -2,8 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Users, Archive, Banknote } from "lucide-react";
+import { Loader2, Users, Archive, Banknote } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
@@ -11,8 +10,6 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/compone
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import type { CropBatch, StorageLocation, Customer, Outflow } from "@/lib/data";
-import Link from "next/link";
-
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
@@ -84,14 +81,6 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="An overview of your crop inventory and business metrics."
-        action={
-          <Button asChild>
-            <Link href="/dashboard/inventory">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Batch
-            </Link>
-          </Button>
-        }
       />
       
       {isLoading ? (
