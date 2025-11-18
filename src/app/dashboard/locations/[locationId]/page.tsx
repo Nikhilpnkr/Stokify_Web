@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, writeBatch, getDocs } from "firebase/firestore";
+import { doc, collection, query, where, writeBatch, getDocs } from "firebase/firestore";
 import type { StorageLocation, StorageArea, CropBatch } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, Warehouse, MapPin, Phone, Trash2, Layers, PlusCircle } from "lucide-react";
