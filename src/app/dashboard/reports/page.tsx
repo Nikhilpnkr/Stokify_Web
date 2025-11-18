@@ -95,12 +95,13 @@ export default function ReportsPage() {
         return acc + batchQty;
     }, 0);
     
+    // NOTE: This is an estimation based on the 6-month rate divided by 6.
     const potentialMonthlyRevenue = batches.reduce((acc, b) => {
         const cropType = cropTypes.find(ct => ct.name === b.cropType);
         if (!cropType) return acc;
 
         const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
-        const monthlyRate = cropType.rates['1'];
+        const monthlyRate = cropType.rates['6'] / 6; // Prorated monthly from 6-month rate
 
         return acc + (batchQty * monthlyRate);
     }, 0);

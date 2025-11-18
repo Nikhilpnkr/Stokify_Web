@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -76,10 +77,9 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         let calculatedCost = 0;
         const yearlyRate = cropType.rates['12'];
         const halfYearlyRate = cropType.rates['6'];
-        const monthlyRate = cropType.rates['1'];
 
-        if (months <= 5) {
-            calculatedCost = months * monthlyRate;
+        if (months <= 6) {
+            calculatedCost = halfYearlyRate;
         } else {
             const numYears = Math.floor(months / 12);
             calculatedCost += numYears * yearlyRate;

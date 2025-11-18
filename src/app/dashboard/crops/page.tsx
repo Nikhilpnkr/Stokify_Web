@@ -20,7 +20,6 @@ import { STORAGE_RATES } from "@/lib/data";
 
 const cropTypeFormSchema = z.object({
   name: z.string().min(2, "Crop name must be at least 2 characters."),
-  rate1: z.coerce.number().min(0, "Rate must be a positive number."),
   rate6: z.coerce.number().min(0, "Rate must be a positive number."),
   rate12: z.coerce.number().min(0, "Rate must be a positive number."),
   insurance: z.coerce.number().min(0, "Insurance must be a positive number.").optional(),
@@ -43,7 +42,6 @@ export default function CropTypesManagerPage() {
     resolver: zodResolver(cropTypeFormSchema),
     defaultValues: {
       name: "",
-      rate1: STORAGE_RATES[1],
       rate6: STORAGE_RATES[6],
       rate12: STORAGE_RATES[12],
       insurance: 0,
@@ -56,7 +54,6 @@ export default function CropTypesManagerPage() {
     setEditingCropTypeId(cropType.id);
     form.reset({
         name: cropType.name,
-        rate1: cropType.rates['1'],
         rate6: cropType.rates['6'],
         rate12: cropType.rates['12'],
         insurance: cropType.insurance || 0,
@@ -67,7 +64,6 @@ export default function CropTypesManagerPage() {
     setEditingCropTypeId(null);
     form.reset({
       name: "",
-      rate1: STORAGE_RATES[1],
       rate6: STORAGE_RATES[6],
       rate12: STORAGE_RATES[12],
       insurance: 0,
@@ -82,7 +78,6 @@ export default function CropTypesManagerPage() {
       name: values.name,
       ownerId: user.uid,
       rates: {
-        '1': values.rate1,
         '6': values.rate6,
         '12': values.rate12,
       },
@@ -161,20 +156,7 @@ export default function CropTypesManagerPage() {
                         />
                         <div>
                             <p className="text-sm font-medium mb-2">Storage Rates (per bag)</p>
-                            <div className="grid grid-cols-3 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="rate1"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                        <FormLabel>1 Month</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                            <div className="grid grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
                                     name="rate6"
@@ -267,10 +249,6 @@ export default function CropTypesManagerPage() {
                                 </CardHeader>
                                 <CardContent>
                                     <ul className="text-sm space-y-1">
-                                        <li className="flex justify-between items-baseline">
-                                            <span className="text-muted-foreground">1 Month:</span>
-                                            <span className="font-semibold">{ct.rates ? ct.rates['1'] : '0'} Rps</span>
-                                        </li>
                                         <li className="flex justify-between items-baseline">
                                             <span className="text-muted-foreground">6 Months:</span>
                                             <span className="font-semibold">{ct.rates ? ct.rates['6'] : '0'} Rps</span>
