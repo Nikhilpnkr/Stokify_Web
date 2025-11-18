@@ -1,6 +1,8 @@
 
 "use server";
 
+import { env } from "process";
+
 const TEXTBEE_API_URL = "https://api.textbee.dev/api/v1/messaging";
 
 type SendSmsActionParams = {
@@ -11,9 +13,15 @@ type SendSmsActionParams = {
 export async function sendSmsAction(params: SendSmsActionParams) {
     const { to, message } = params;
     const apiKey = process.env.TEXTBEE_API_KEY;
+    const apiId = process.env.TEXTBEE_DEVICE_ID;
 
     if (!apiKey) {
         const errorMessage = "API key for SMS service is not configured on the server.";
+        console.error("sendSmsAction Error:", errorMessage);
+        return { success: false, error: errorMessage };
+    }
+     if (!apiId) {
+        const errorMessage = "Device ID for SMS service is not configured on the server.";
         console.error("sendSmsAction Error:", errorMessage);
         return { success: false, error: errorMessage };
     }
@@ -29,7 +37,7 @@ export async function sendSmsAction(params: SendSmsActionParams) {
             },
             body: JSON.stringify({
                 apiKey: apiKey,
-                deviceId: "YOUR_DEVICE_ID", // Added deviceId here
+                deviceId: apiId, // Added deviceId here
                 sms: {
                     to: [formattedTo],
                     message: sanitizedMessage,
