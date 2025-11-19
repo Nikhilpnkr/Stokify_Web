@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CropType, StorageLocation, StorageArea, Customer, CropBatch, Outflow } from "@/lib/data";
+import type { CropType, StorageLocation, StorageArea, Customer, Inflow, Outflow } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
@@ -47,16 +47,16 @@ const areaAllocationSchema = z.object({
     quantity: z.coerce.number().min(1, "Min 1."),
 });
 
-type AddBatchDialogProps = {
+type AddInflowDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   locations: StorageLocation[];
   cropTypes: CropType[];
   customers: Customer[];
-  allBatches: CropBatch[];
+  allInflows: Inflow[];
 };
 
-export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, customers, allBatches }: AddBatchDialogProps) {
+export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, customers, allInflows }: AddInflowDialogProps) {
   const { toast } = useToast();
   const { firestore, user } = useFirebase();
   const [areasWithUsage, setAreasWithUsage] = useState<any[]>([]);
@@ -78,7 +78,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       const areaIds = data.areaAllocations.map(alloc => alloc.areaId);
       return new Set(areaIds).size === areaIds.length;
     }, {
-        message: "Each storage area can only be used once per batch.",
+        message: "Each storage area can only be used once per inflow.",
         path: ["areaAllocations"],
     })
     .refine((data) => {
@@ -146,7 +146,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     }
     const calculatedUsage = areas
       .map(area => {
-        const used = allBatches
+        const used = allInflows
           .flatMap(b => b.areaAllocations || [])
           .filter(alloc => alloc.areaId === area.id)
           .reduce((acc, alloc) => acc + alloc.quantity, 0);
@@ -155,7 +155,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       })
       .sort((a, b) => a.name.localeCompare(b.name));
     setAreasWithUsage(calculatedUsage);
-  }, [areas, allBatches]);
+  }, [areas, allInflows]);
   
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -218,9 +218,9 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
         finalCustomer = existingCustomer;
     }
 
-    const newDocRef = doc(collection(firestore, "cropBatches"));
+    const newDocRef = doc(collection(firestore, "inflows"));
 
-    const newBatch: Omit<CropBatch, 'quantity'> = {
+    const newInflow: Omit<Inflow, 'quantity'> = {
       id: newDocRef.id,
       cropType: selectedCropType.name,
       areaAllocations: values.areaAllocations,
@@ -231,14 +231,14 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
       labourCharge: totalLabourCharge,
     };
     
-    addDocumentNonBlocking(newDocRef, newBatch);
+    addDocumentNonBlocking(newDocRef, newInflow);
 
-    const fullBatchForPdf = { ...newBatch, cropType: selectedCropType, quantity: totalQuantity };
+    const fullInflowForPdf = { ...newInflow, cropType: selectedCropType, quantity: totalQuantity };
 
     toast({
-      title: "Success! Batch Added.",
-      description: `New batch for ${finalCustomer.name} has been added.`,
-      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullBatchForPdf as any, finalCustomer, selectedLocation!, areas!)}>Download Inflow Receipt</Button>,
+      title: "Success! Inflow Added.",
+      description: `New inflow for ${finalCustomer.name} has been added.`,
+      action: <Button variant="outline" size="sm" onClick={() => generateInflowPdf(fullInflowForPdf as any, finalCustomer, selectedLocation!, areas!)}>Download Inflow Receipt</Button>,
       duration: 10000,
     });
     setIsOpen(false);
@@ -254,9 +254,9 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-lg w-full m-4">
         <DialogHeader>
-          <DialogTitle>Add New Crop Batch</DialogTitle>
+          <DialogTitle>Add New Crop Inflow</DialogTitle>
           <DialogDescription>
-            Fill in the details below to add a new batch to your inventory.
+            Fill in the details below to add a new inflow to your inventory.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -496,7 +496,7 @@ export function AddBatchDialog({ isOpen, setIsOpen, locations, cropTypes, custom
 
             <DialogFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                Add Batch
+                Add Inflow
               </Button>
             </DialogFooter>
           </form>

@@ -5,7 +5,7 @@ export type AreaAllocation = {
   quantity: number;
 }
 
-export type CropBatch = {
+export type Inflow = {
   id: string;
   cropType: string;
   areaAllocations: AreaAllocation[];
@@ -64,7 +64,7 @@ export type Customer = {
 
 export type Outflow = {
   id: string;
-  cropBatchId: string;
+  inflowId: string;
   customerId: string;
   ownerId: string;
   date: string;

@@ -49,7 +49,7 @@ import { doc } from "firebase/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/inventory", label: "Inventory", icon: Archive },
+  { href: "/dashboard/inflows", label: "Inflows", icon: Archive },
   { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },

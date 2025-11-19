@@ -9,7 +9,7 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { CropBatch, StorageLocation, CropType, StorageArea } from "@/lib/data";
+import type { Inflow, StorageLocation, CropType, StorageArea } from "@/lib/data";
 import { addDays, format, startOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,8 @@ export default function ReportsPage() {
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const batchesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+  const inflowsQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
   const cropTypesQuery = useMemoFirebase(() =>
@@ -39,7 +39,7 @@ export default function ReportsPage() {
   );
 
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
-  const { data: allBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+  const { data: allInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
@@ -68,43 +68,43 @@ export default function ReportsPage() {
     if(locations) fetchAllAreas();
   }, [locations, firestore]);
 
-  const filteredBatches = useMemo(() => {
-    if (!allBatches) return [];
-    return allBatches.filter(batch => {
-      const batchDate = new Date(batch.dateAdded);
+  const filteredInflows = useMemo(() => {
+    if (!allInflows) return [];
+    return allInflows.filter(inflow => {
+      const inflowDate = new Date(inflow.dateAdded);
       const from = date?.from ? new Date(date.from.setHours(0,0,0,0)) : null;
       const to = date?.to ? new Date(date.to.setHours(23,59,59,999)): null;
 
-      if (from && batchDate < from) return false;
-      if (to && batchDate > to) return false;
+      if (from && inflowDate < from) return false;
+      if (to && inflowDate > to) return false;
       return true;
     });
-  }, [allBatches, date]);
+  }, [allInflows, date]);
 
 
-  const { totalBatches, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
-    const batches = filteredBatches;
-    if (!batches || !locations || !cropTypes || isLoadingAreas) {
-      return { totalBatches: 0, totalQuantity: 0, potentialRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
+  const { totalInflows, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData } = useMemo(() => {
+    const inflows = filteredInflows;
+    if (!inflows || !locations || !cropTypes || isLoadingAreas) {
+      return { totalInflows: 0, totalQuantity: 0, potentialRevenue: 0, totalCapacity: 0, spaceUtilization: 0, chartData: [] };
     }
 
-    const totalBatches = batches.length;
+    const totalInflows = inflows.length;
     
-    const totalQuantity = batches.reduce((acc, b) => {
-        const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
-        return acc + batchQty;
+    const totalQuantity = inflows.reduce((acc, b) => {
+        const inflowQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
+        return acc + inflowQty;
     }, 0);
     
     // NOTE: This estimation uses the 6-month rate as a baseline potential revenue.
-    const potentialRevenue = batches.reduce((acc, b) => {
+    const potentialRevenue = inflows.reduce((acc, b) => {
         const cropType = cropTypes.find(ct => ct.name === b.cropType);
         if (!cropType) return acc;
 
-        const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
+        const inflowQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
         const storageRate = cropType.rates['6']; // Use the 6-month rate
-        const insuranceCost = (cropType.insurance || 0) * batchQty;
+        const insuranceCost = (cropType.insurance || 0) * inflowQty;
 
-        return acc + (batchQty * storageRate) + insuranceCost;
+        return acc + (inflowQty * storageRate) + insuranceCost;
     }, 0);
 
     const totalCapacity = allAreas.reduce((acc, area) => acc + area.capacity, 0);
@@ -113,7 +113,7 @@ export default function ReportsPage() {
     const chartData = locations.map(location => {
         const locationAreas = allAreas.filter(a => a.storageLocationId === location.id);
         const capacity = locationAreas.reduce((acc, area) => acc + area.capacity, 0);
-      const used = batches
+      const used = inflows
         .filter(b => b.storageLocationId === location.id)
         .reduce((acc, b) => acc + (b.areaAllocations?.reduce((s, a) => s + a.quantity, 0) || 0), 0);
       return {
@@ -123,10 +123,10 @@ export default function ReportsPage() {
       };
     });
 
-    return { totalBatches, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData };
-  }, [filteredBatches, locations, cropTypes, allAreas, isLoadingAreas]);
+    return { totalInflows, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData };
+  }, [filteredInflows, locations, cropTypes, allAreas, isLoadingAreas]);
   
-  const isLoading = isLoadingLocations || isLoadingBatches || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isLoadingLocations || isLoadingInflows || isLoadingCropTypes || isLoadingAreas;
 
   const chartConfig = {
     capacity: {
@@ -199,7 +199,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{potentialRevenue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} Rp</div>
-                <p className="text-xs text-muted-foreground">From batches in date range</p>
+                <p className="text-xs text-muted-foreground">From inflows in date range</p>
               </CardContent>
             </Card>
             <Card>
@@ -209,7 +209,7 @@ export default function ReportsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalQuantity.toLocaleString()} bags</div>
-                <p className="text-xs text-muted-foreground">From batches in date range</p>
+                <p className="text-xs text-muted-foreground">From inflows in date range</p>
               </CardContent>
             </Card>
             <Card>
@@ -226,11 +226,11 @@ export default function ReportsPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Crop Batches</CardTitle>
+                <CardTitle className="text-sm font-medium">Active Crop Inflows</CardTitle>
                 <div className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalBatches}</div>
+                <div className="text-2xl font-bold">{totalInflows}</div>
                 <p className="text-xs text-muted-foreground">Added in date range</p>
               </CardContent>
             </Card>

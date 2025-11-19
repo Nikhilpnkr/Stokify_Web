@@ -5,7 +5,7 @@ import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where, writeBatch, getDocs } from "firebase/firestore";
-import type { StorageLocation, StorageArea, CropBatch } from "@/lib/data";
+import type { StorageLocation, StorageArea, Inflow } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, Warehouse, MapPin, Phone, Trash2, Layers, PlusCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -40,25 +40,25 @@ export default function LocationDetailPage() {
   );
   const { data: areas, isLoading: isLoadingAreas } = useCollection<StorageArea>(areasQuery);
 
-  const batchesQuery = useMemoFirebase(() => 
-    user && locationId ? query(collection(firestore, 'cropBatches'), where('storageLocationId', '==', locationId), where('ownerId', '==', user.uid)) : null,
+  const inflowsQuery = useMemoFirebase(() => 
+    user && locationId ? query(collection(firestore, 'inflows'), where('storageLocationId', '==', locationId), where('ownerId', '==', user.uid)) : null,
     [user, firestore, locationId]
   );
-  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+  const { data: inflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
 
   const areasWithUsage = useMemo(() => {
-    if (!areas || !batches) return [];
+    if (!areas || !inflows) return [];
     return areas.map(area => {
-      const used = batches
+      const used = inflows
         .flatMap(b => b.areaAllocations || [])
         .filter(alloc => alloc.areaId === area.id)
         .reduce((acc, alloc) => acc + alloc.quantity, 0);
       const percentage = area.capacity > 0 ? (used / area.capacity) * 100 : 0;
       return { ...area, used, percentage };
     });
-  }, [areas, batches]);
+  }, [areas, inflows]);
   
-  const isLoading = isLoadingLocation || isLoadingAreas || isLoadingBatches;
+  const isLoading = isLoadingLocation || isLoadingAreas || isLoadingInflows;
 
   const handleDeleteConfirmation = (area: StorageArea) => {
     setAreaToDelete(area);
@@ -249,7 +249,7 @@ export default function LocationDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the area "{areaToDelete?.name}". All batch data associated with this area might be orphaned.
+              This action cannot be undone. This will permanently delete the area "{areaToDelete?.name}". All inflow data associated with this area might be orphaned.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

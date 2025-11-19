@@ -23,8 +23,8 @@ service cloud.firestore {
         }
     }
     
-    // A user can only interact with batches they own.
-    match /cropBatches/{batchId} {
+    // A user can only interact with inflows they own.
+    match /inflows/{inflowId} {
         allow read, write: if resource.data.ownerId == request.auth.uid;
         allow create: if request.resource.data.ownerId == request.auth.uid;
         allow list: if request.query.where.get('ownerId') == request.auth.uid;

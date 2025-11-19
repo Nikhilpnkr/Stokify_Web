@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where, getDocs } from "firebase/firestore";
-import type { Customer, CropBatch, StorageLocation, StorageArea, CropType } from "@/lib/data";
+import type { Customer, Inflow, StorageLocation, StorageArea, CropType } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, User, Phone, MapPin, Calendar, Archive } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -18,7 +18,7 @@ export default function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const { firestore, user } = useFirebase();
 
-  const [selectedBatch, setSelectedBatch] = useState<CropBatch | null>(null);
+  const [selectedInflow, setSelectedInflow] = useState<Inflow | null>(null);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
   
   // Document reference for the specific customer
@@ -28,12 +28,12 @@ export default function CustomerDetailPage() {
   );
   const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerRef);
 
-  // Query for all crop batches for this customer
-  const batchesQuery = useMemoFirebase(() => 
-    (user && customerId) ? query(collection(firestore, 'cropBatches'), where('customerId', '==', customerId), where('ownerId', '==', user.uid)) : null,
+  // Query for all crop inflows for this customer
+  const inflowsQuery = useMemoFirebase(() => 
+    (user && customerId) ? query(collection(firestore, 'inflows'), where('customerId', '==', customerId), where('ownerId', '==', user.uid)) : null,
     [firestore, user, customerId]
   );
-  const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+  const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -73,13 +73,13 @@ export default function CustomerDetailPage() {
     if(locations) fetchAllAreas();
   }, [locations, firestore]);
 
-  const batches = useMemo(() => {
-    if (!rawBatches) return [];
-    return rawBatches.map(batch => ({
-      ...batch,
-      quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
+  const inflows = useMemo(() => {
+    if (!rawInflows) return [];
+    return rawInflows.map(inflow => ({
+      ...inflow,
+      quantity: inflow.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
     })).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
-  }, [rawBatches]);
+  }, [rawInflows]);
 
   const getLocationName = (locationId: string) => locations?.find(l => l.id === locationId)?.name || '...';
   const getAreaNames = (allocations: {areaId: string, quantity: number}[]) => {
@@ -87,12 +87,12 @@ export default function CustomerDetailPage() {
     return allocations.map(alloc => allAreas.find(a => a.id === alloc.areaId)?.name).filter(Boolean).join(', ') || 'N/A';
   }
   
-  const handleRowClick = (batch: CropBatch) => {
-    setSelectedBatch(batch);
+  const handleRowClick = (inflow: Inflow) => {
+    setSelectedInflow(inflow);
     setIsOutflowDialogOpen(true);
   };
 
-  const isLoading = isLoadingCustomer || isLoadingBatches || isLoadingLocations || isLoadingAreas || isLoadingCropTypes;
+  const isLoading = isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes;
 
   if (isLoading) {
     return (
@@ -114,7 +114,7 @@ export default function CustomerDetailPage() {
     <>
       <PageHeader
         title={customer.name}
-        description="A summary of all batches stored by this customer."
+        description="A summary of all inflows stored by this customer."
       />
       
       <div className="grid gap-6">
@@ -136,12 +136,12 @@ export default function CustomerDetailPage() {
             </CardHeader>
         </Card>
 
-        {/* Batches Section */}
+        {/* Inflows Section */}
         <Card>
             <CardHeader>
-                <CardTitle>Stored Batches</CardTitle>
+                <CardTitle>Stored Inflows</CardTitle>
                 <CardDescription>
-                    {batches?.length || 0} active batches found for this customer.
+                    {inflows?.length || 0} active inflows found for this customer.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -149,29 +149,29 @@ export default function CustomerDetailPage() {
                     <div className="flex justify-center items-center h-48">
                         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                     </div>
-                ) : batches && batches.length > 0 ? (
+                ) : inflows && inflows.length > 0 ? (
                     <>
                     {/* Mobile View */}
                     <div className="grid gap-4 md:hidden">
-                        {batches.map((batch) => (
-                            <Card key={batch.id} onClick={() => handleRowClick(batch)} className="cursor-pointer bg-muted/30">
+                        {inflows.map((inflow) => (
+                            <Card key={inflow.id} onClick={() => handleRowClick(inflow)} className="cursor-pointer bg-muted/30">
                                 <CardHeader>
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <CardTitle>{batch.cropType}</CardTitle>
+                                            <CardTitle>{inflow.cropType}</CardTitle>
                                             <CardDescription>
-                                                {getLocationName(batch.storageLocationId)} ({getAreaNames(batch.areaAllocations)})
+                                                {getLocationName(inflow.storageLocationId)} ({getAreaNames(inflow.areaAllocations)})
                                             </CardDescription>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xl font-bold">{batch.quantity.toLocaleString()} bags</p>
+                                            <p className="text-xl font-bold">{inflow.quantity.toLocaleString()} bags</p>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardFooter>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                         <Calendar className="h-4 w-4" />
-                                        <span>Added {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}</span>
+                                        <span>Added {formatDistanceToNow(new Date(inflow.dateAdded), { addSuffix: true })}</span>
                                     </div>
                                 </CardFooter>
                             </Card>
@@ -191,17 +191,17 @@ export default function CustomerDetailPage() {
                             </TableRow>
                             </TableHeader>
                             <TableBody>
-                            {batches.map((batch) => (
-                                <TableRow key={batch.id} onClick={() => handleRowClick(batch)} className="cursor-pointer">
-                                <TableCell>{batch.cropType}</TableCell>
-                                <TableCell>{getLocationName(batch.storageLocationId)}</TableCell>
-                                <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
-                                <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
+                            {inflows.map((inflow) => (
+                                <TableRow key={inflow.id} onClick={() => handleRowClick(inflow)} className="cursor-pointer">
+                                <TableCell>{inflow.cropType}</TableCell>
+                                <TableCell>{getLocationName(inflow.storageLocationId)}</TableCell>
+                                <TableCell>{getAreaNames(inflow.areaAllocations)}</TableCell>
+                                <TableCell className="text-right">{inflow.quantity.toLocaleString()}</TableCell>
                                 <TableCell>
                                     <div className="flex flex-col">
-                                    <span>{format(new Date(batch.dateAdded), "MMM d, yyyy")}</span>
+                                    <span>{format(new Date(inflow.dateAdded), "MMM d, yyyy")}</span>
                                     <span className="text-xs text-muted-foreground">
-                                        {formatDistanceToNow(new Date(batch.dateAdded), { addSuffix: true })}
+                                        {formatDistanceToNow(new Date(inflow.dateAdded), { addSuffix: true })}
                                     </span>
                                     </div>
                                 </TableCell>
@@ -214,18 +214,18 @@ export default function CustomerDetailPage() {
                 ) : (
                     <div className="h-48 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
                         <Archive className="h-10 w-10 text-muted-foreground" />
-                        <p className="mt-4 text-sm text-muted-foreground">No crop batches found for this customer.</p>
+                        <p className="mt-4 text-sm text-muted-foreground">No crop inflows found for this customer.</p>
                     </div>
                 )}
             </CardContent>
         </Card>
       </div>
-      {selectedBatch && (
+      {selectedInflow && (
         <OutflowDialog
             isOpen={isOutflowDialogOpen}
             setIsOpen={setIsOutflowDialogOpen}
-            batch={selectedBatch}
-            cropType={cropTypes?.find(ct => ct.name === selectedBatch.cropType)}
+            inflow={selectedInflow}
+            cropType={cropTypes?.find(ct => ct.name === selectedInflow.cropType)}
             locations={locations || []}
             allAreas={allAreas}
         />

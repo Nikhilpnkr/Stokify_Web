@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking, useDoc, useMemoFirebase } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import type { CropBatch, CropType, AreaAllocation, StorageLocation, Customer, Outflow, StorageArea, Payment } from "@/lib/data";
+import type { Inflow, CropType, AreaAllocation, StorageLocation, Customer, Outflow, StorageArea, Payment } from "@/lib/data";
 import { differenceInMonths, format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
@@ -25,7 +25,7 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 type OutflowDialogProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  batch: CropBatch | null;
+  inflow: Inflow | null;
   cropType: CropType | undefined;
   locations: StorageLocation[];
   allAreas: StorageArea[];
@@ -41,7 +41,7 @@ function toDate(dateValue: any): Date {
     return date;
 }
 
-export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, allAreas }: OutflowDialogProps) {
+export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, allAreas }: OutflowDialogProps) {
     const { toast } = useToast();
     const { firestore, user } = useFirebase();
     const [isProcessing, setIsProcessing] = useState(false);
@@ -51,24 +51,24 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
     const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Online'>('Cash');
     const [notes, setNotes] = useState('');
     
-    const location = locations?.find(l => l.id === batch?.storageLocationId);
+    const location = locations?.find(l => l.id === inflow?.storageLocationId);
 
     const customerRef = useMemoFirebase(() => 
-        batch ? doc(firestore, 'customers', batch.customerId) : null, 
-    [batch, firestore]);
+        inflow ? doc(firestore, 'customers', inflow.customerId) : null, 
+    [inflow, firestore]);
     const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerRef);
 
     const totalQuantity = useMemo(() => {
-        if (!batch) return 0;
-        return batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
-    }, [batch]);
+        if (!inflow) return 0;
+        return inflow.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+    }, [inflow]);
 
     const { initialCostPerBag, totalMonths } = useMemo(() => {
-        if (!batch || !cropType) {
+        if (!inflow || !cropType) {
             return { initialCostPerBag: 0, totalMonths: 0 };
         }
 
-        const startDate = toDate(batch.dateAdded);
+        const startDate = toDate(inflow.dateAdded);
         const endDate = new Date();
         let months = differenceInMonths(endDate, startDate);
         if (months < 1 && endDate.getTime() > startDate.getTime()) months = 1;
@@ -96,19 +96,19 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         calculatedCost += cropType.insurance || 0;
 
         return { initialCostPerBag: calculatedCost, totalMonths: months };
-    }, [batch, cropType]);
+    }, [inflow, cropType]);
 
     const { storageCost, finalBill, insuranceCharge } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
         const insurance = (cropType?.insurance || 0) * withdrawQuantity;
-        const bill = storage + (batch?.labourCharge || 0);
+        const bill = storage + (inflow?.labourCharge || 0);
         return { storageCost: storage, finalBill: bill, insuranceCharge: insurance };
-    }, [costPerBag, withdrawQuantity, batch, cropType]);
+    }, [costPerBag, withdrawQuantity, inflow, cropType]);
 
     useEffect(() => {
-        if (isOpen && batch) {
-            const batchTotal = batch.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
-            setWithdrawQuantity(batchTotal);
+        if (isOpen && inflow) {
+            const inflowTotal = inflow.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
+            setWithdrawQuantity(inflowTotal);
             setCostPerBag(initialCostPerBag);
             setPaymentMethod('Cash');
             setNotes('');
@@ -118,14 +118,14 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             setAmountPaid(0);
             setCostPerBag(0);
         }
-    }, [isOpen, batch, initialCostPerBag]);
+    }, [isOpen, inflow, initialCostPerBag]);
 
     useEffect(() => {
         setAmountPaid(finalBill);
     }, [finalBill]);
 
     async function handleOutflow() {
-        if (!firestore || !batch || !user || !cropType || !location || !customer) return;
+        if (!firestore || !inflow || !user || !cropType || !location || !customer) return;
         
         if (withdrawQuantity > totalQuantity) {
             toast({ variant: "destructive", title: "Invalid Quantity" });
@@ -142,15 +142,15 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
 
         setIsProcessing(true);
 
-        const batchRef = doc(firestore, "cropBatches", batch.id);
+        const inflowRef = doc(firestore, "inflows", inflow.id);
         const newOutflowRef = doc(collection(firestore, "outflows"));
 
         const balanceDue = finalBill - amountPaid;
 
         const newOutflow: Omit<Outflow, 'id'> & { id: string } = {
             id: newOutflowRef.id,
-            cropBatchId: batch.id,
-            customerId: batch.customerId,
+            inflowId: inflow.id,
+            customerId: inflow.customerId,
             ownerId: user.uid,
             date: new Date().toISOString(),
             quantityWithdrawn: withdrawQuantity,
@@ -161,7 +161,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
             locationName: location.name,
             storageDuration: totalMonths,
             storageCost: storageCost,
-            labourCharge: batch.labourCharge || 0,
+            labourCharge: inflow.labourCharge || 0,
             insuranceCharge: insuranceCharge,
         };
         
@@ -184,7 +184,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         }
 
         if (withdrawQuantity === totalQuantity) {
-            deleteDocumentNonBlocking(batchRef);
+            deleteDocumentNonBlocking(inflowRef);
             toast({
                 title: "Full Outflow Successful!",
                 description: `${withdrawQuantity} bags for ${customer.name} removed.`,
@@ -194,7 +194,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         } else {
             let remainingWithdrawal = withdrawQuantity;
             const newAllocations: AreaAllocation[] = [];
-            const sortedAllocations = [...batch.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
+            const sortedAllocations = [...inflow.areaAllocations].sort((a, b) => a.areaId.localeCompare(b.areaId));
 
             for (const alloc of sortedAllocations) {
                 if (remainingWithdrawal <= 0) {
@@ -213,7 +213,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                 areaAllocations: newAllocations,
                 labourCharge: 0,
             };
-            updateDocumentNonBlocking(batchRef, updatedData);
+            updateDocumentNonBlocking(inflowRef, updatedData);
             
             toast({
                 title: withdrawQuantity > 0 ? "Partial Outflow Successful!" : "Bill Settled!",
@@ -227,7 +227,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
         setIsOpen(false);
     }
 
-    if (!batch) return null;
+    if (!inflow) return null;
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -259,7 +259,7 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                         </div>
                         <div>
                             <p className="font-medium text-muted-foreground">Date Added</p>
-                            <p className="font-semibold">{format(toDate(batch.dateAdded), "MMM d, yyyy")}</p>
+                            <p className="font-semibold">{format(toDate(inflow.dateAdded), "MMM d, yyyy")}</p>
                         </div>
                     </div>
                 }
@@ -302,10 +302,10 @@ export function OutflowDialog({ isOpen, setIsOpen, batch, cropType, locations, a
                         <p className="text-muted-foreground">Total Cost (Qty x Rate):</p>
                         <p className="font-semibold">{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
-                    {batch.labourCharge && batch.labourCharge > 0 && (
+                    {inflow.labourCharge && inflow.labourCharge > 0 && (
                         <div className="flex justify-between items-baseline">
                             <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
-                            <p className="font-semibold">{batch.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
+                            <p className="font-semibold">{inflow.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                         </div>
                     )}
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">

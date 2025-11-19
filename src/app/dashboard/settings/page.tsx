@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -115,7 +116,7 @@ export default function SettingsPage() {
     try {
       const batch = writeBatch(firestore);
       
-      const collectionsToDelete = ["cropBatches", "outflows", "payments", "customers", "cropTypes"];
+      const collectionsToDelete = ["inflows", "outflows", "payments", "customers", "cropTypes"];
       for (const collectionName of collectionsToDelete) {
         const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
         const snapshot = await getDocs(q);
@@ -159,7 +160,7 @@ export default function SettingsPage() {
     setIsProcessing(true);
     try {
       const batch = writeBatch(firestore);
-      const collectionsToDelete = ["cropBatches", "outflows", "payments"];
+      const collectionsToDelete = ["inflows", "outflows", "payments"];
       for (const collectionName of collectionsToDelete) {
         const q = query(collection(firestore, collectionName), where("ownerId", "==", user.uid));
         const snapshot = await getDocs(q);

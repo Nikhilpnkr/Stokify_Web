@@ -9,15 +9,15 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } fro
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
-import type { CropBatch, StorageLocation, Customer, Outflow } from "@/lib/data";
+import type { Inflow, StorageLocation, Customer, Outflow } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
 
-  const cropBatchesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+  const inflowsQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
   const storageLocationsQuery = useMemoFirebase(() =>
@@ -33,25 +33,25 @@ export default function DashboardPage() {
     [firestore, user]
   );
 
-  const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
+  const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
   const { totalQuantity, totalOutstandingBalance, chartData } = useMemo(() => {
-    if (!rawBatches || !locations) {
+    if (!rawInflows || !locations) {
       return { totalQuantity: 0, totalOutstandingBalance: 0, chartData: [] };
     }
 
-    const totalQty = rawBatches.reduce((acc, b) => {
-        const batchQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
-        return acc + batchQty;
+    const totalQty = rawInflows.reduce((acc, b) => {
+        const inflowQty = b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0;
+        return acc + inflowQty;
     }, 0);
 
     const outstanding = outflows?.reduce((acc, o) => acc + o.balanceDue, 0) || 0;
 
     const dataForChart = locations.map(location => {
-      const used = rawBatches
+      const used = rawInflows
         .filter(b => b.storageLocationId === location.id)
         .reduce((acc, b) => acc + (b.areaAllocations?.reduce((s, a) => s + a.quantity, 0) || 0), 0);
       return {
@@ -62,9 +62,9 @@ export default function DashboardPage() {
     });
 
     return { totalQuantity: totalQty, totalOutstandingBalance: outstanding, chartData: dataForChart };
-  }, [rawBatches, locations, outflows]);
+  }, [rawInflows, locations, outflows]);
   
-  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCustomers || isLoadingOutflows;
+  const isLoading = isLoadingInflows || isLoadingLocations || isLoadingCustomers || isLoadingOutflows;
   
   const chartConfig = {
     capacity: {
@@ -123,11 +123,11 @@ export default function DashboardPage() {
                 </Card>
                 <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Crop Batches</CardTitle>
+                    <CardTitle className="text-sm font-medium">Active Crop Inflows</CardTitle>
                     <div className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{rawBatches?.length || 0}</div>
+                    <div className="text-2xl font-bold">{rawInflows?.length || 0}</div>
                     <p className="text-xs text-muted-foreground">Currently in storage</p>
                 </CardContent>
                 </Card>

@@ -5,7 +5,7 @@ import html2canvas from "html2canvas";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Invoice, InvoiceData } from "@/components/invoice";
 import { PaymentReceipt } from "@/components/payment-receipt";
-import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData, CropBatch, StorageArea } from "./data";
+import type { Outflow, Payment, Customer, StorageLocation, CropType, PaymentReceiptData, Inflow, StorageArea } from "./data";
 import { getAuth } from "firebase/auth";
 import { format } from "date-fns";
 
@@ -17,10 +17,10 @@ function toDate(dateValue: any): Date {
     return new Date(dateValue);
 }
 
-export async function generateInflowPdf(batch: CropBatch & { cropType: CropType }, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
+export async function generateInflowPdf(inflow: Inflow & { cropType: CropType }, customer: Customer, location: StorageLocation, allAreas: StorageArea[]) {
   const user = getAuth().currentUser;
 
-  if (!user || !batch.cropType) {
+  if (!user || !inflow.cropType) {
     console.error("User not authenticated or cropType missing");
     return;
   }
@@ -29,8 +29,8 @@ export async function generateInflowPdf(batch: CropBatch & { cropType: CropType 
 
   const invoiceData: InvoiceData = {
     type: 'Inflow',
-    receiptNumber: `IN${format(new Date(), 'yyyyMMdd')}${batch.id.slice(0, 4).toUpperCase()}`,
-    date: toDate(batch.dateAdded),
+    receiptNumber: `IN${format(new Date(), 'yyyyMMdd')}${inflow.id.slice(0, 4).toUpperCase()}`,
+    date: toDate(inflow.dateAdded),
     paymentMethod: 'Pending',
     customer: {
       name: customer.name,
@@ -40,17 +40,17 @@ export async function generateInflowPdf(batch: CropBatch & { cropType: CropType 
       name: user.displayName || 'N/A',
       email: user.email || 'N/A'
     },
-    items: batch.areaAllocations.map(alloc => ({
-        description: batch.cropType.name,
+    items: inflow.areaAllocations.map(alloc => ({
+        description: inflow.cropType.name,
         quantity: alloc.quantity,
         unit: 'bags',
         storageArea: getAreaName(alloc.areaId),
-        total: (batch.labourCharge || 0) * (alloc.quantity / batch.quantity), // Distribute labour charge pro-rata
+        total: (inflow.labourCharge || 0) * (alloc.quantity / inflow.quantity), // Distribute labour charge pro-rata
     })),
     location: location,
-    labourCharge: batch.labourCharge,
-    total: batch.labourCharge,
-    notes: `This receipt confirms the inflow of ${batch.quantity} bags of ${batch.cropType.name}.`,
+    labourCharge: inflow.labourCharge,
+    total: inflow.labourCharge,
+    notes: `This receipt confirms the inflow of ${inflow.quantity} bags of ${inflow.cropType.name}.`,
   };
 
   const invoiceElement = document.createElement("div");

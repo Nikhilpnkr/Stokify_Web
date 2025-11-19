@@ -12,7 +12,7 @@ import { AddLocationDialog } from "@/components/add-location-dialog";
 import { EditLocationDialog } from "@/components/edit-location-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { StorageLocation, CropBatch, StorageArea } from "@/lib/data";
+import type { StorageLocation, Inflow, StorageArea } from "@/lib/data";
 import { Input } from "@/components/ui/input";
 
 function EmptyState({ onAdd, isSearching }: { onAdd: () => void, isSearching: boolean }) {
@@ -47,13 +47,13 @@ export default function LocationsPage() {
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const cropBatchesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+  const inflowsQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
 
   const { data: allLocations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
-  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
+  const { data: inflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
 
   useEffect(() => {
     async function fetchAllAreas() {
@@ -86,19 +86,19 @@ export default function LocationsPage() {
   }, [allLocations, searchTerm]);
 
   const locationsWithUsage = useMemo(() => {
-    if (!locations || !batches || isLoadingAreas) return [];
+    if (!locations || !inflows || isLoadingAreas) return [];
     return locations.map(location => {
       const locationAreas = allAreas.filter(area => area.storageLocationId === location.id);
       const totalCapacity = locationAreas.reduce((acc, area) => acc + area.capacity, 0);
 
-      const used = batches
+      const used = inflows
         .filter(b => b.storageLocationId === location.id)
         .reduce((acc, b) => acc + (b.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0), 0);
       
       const percentage = totalCapacity > 0 ? (used / totalCapacity) * 100 : 0;
       return { ...location, used, percentage, capacity: totalCapacity };
     });
-  }, [locations, batches, allAreas, isLoadingAreas]);
+  }, [locations, inflows, allAreas, isLoadingAreas]);
 
   const handleEditClick = (e: React.MouseEvent, location: StorageLocation) => {
     e.stopPropagation();
@@ -111,7 +111,7 @@ export default function LocationsPage() {
   };
 
 
-  const isLoading = isLoadingLocations || isLoadingBatches || isLoadingAreas;
+  const isLoading = isLoadingLocations || isLoadingInflows || isLoadingAreas;
 
   return (
     <>

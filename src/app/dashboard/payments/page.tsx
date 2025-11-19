@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, Search, CreditCard, Calendar, User, FileDown } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { Payment, Customer, Outflow, StorageLocation, CropBatch, CropType, StorageArea } from "@/lib/data";
+import type { Payment, Customer, Outflow, StorageLocation, Inflow, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,11 +37,11 @@ export default function PaymentsPage() {
   );
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
-  const batchesQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+  const inflowsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: batches, isLoading: isLoadingBatches } = useCollection<CropBatch>(batchesQuery);
+  const { data: inflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -82,14 +82,14 @@ export default function PaymentsPage() {
   }, [locations, firestore]);
 
   const enrichedPayments = useMemo(() => {
-    if (!unsortedPayments || !outflows || !customers || !batches || !locations || !cropTypes) return [];
+    if (!unsortedPayments || !outflows || !customers || !inflows || !locations || !cropTypes) return [];
 
     return unsortedPayments.map(payment => {
         const outflow = outflows.find(o => o.id === payment.outflowId);
         const customer = customers.find(c => c.id === payment.customerId);
-        const batch = outflow ? batches.find(b => b.id === outflow.cropBatchId) : undefined;
-        const location = batch ? locations.find(l => l.id === batch.storageLocationId) : undefined;
-        const cropType = batch ? cropTypes.find(ct => ct.name === batch.cropType) : undefined;
+        const inflow = outflow ? inflows.find(b => b.id === outflow.inflowId) : undefined;
+        const location = inflow ? locations.find(l => l.id === inflow.storageLocationId) : undefined;
+        const cropType = inflow ? cropTypes.find(ct => ct.name === inflow.cropType) : undefined;
 
         return {
             ...payment,
@@ -104,10 +104,10 @@ export default function PaymentsPage() {
         return payment.customerName.toLowerCase().includes(search) || payment.outflowId.toLowerCase().includes(search);
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  }, [unsortedPayments, outflows, customers, batches, locations, cropTypes, searchTerm]);
+  }, [unsortedPayments, outflows, customers, inflows, locations, cropTypes, searchTerm]);
 
 
-  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
 
   return (
     <>

@@ -8,11 +8,11 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, formatDistanceToNow } from "date-fns";
-import { AddBatchDialog } from "@/components/add-batch-dialog";
+import { AddInflowDialog } from "@/components/add-inflow-dialog";
 import { OutflowDialog } from "@/components/outflow-dialog";
 import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { CropBatch, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
+import type { Inflow, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
 import { generateInflowPdf } from "@/lib/pdf";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -32,17 +32,17 @@ function toDate(dateValue: any): Date {
     return date;
 }
 
-export default function InventoryPage() {
+export default function InflowsPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState<any | null>(null);
+  const [selectedInflow, setSelectedInflow] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const cropBatchesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropBatches'), where('ownerId', '==', user.uid)) : null,
+  const inflowsQuery = useMemoFirebase(() =>
+    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
   const storageLocationsQuery = useMemoFirebase(() =>
@@ -62,7 +62,7 @@ export default function InventoryPage() {
     [firestore, user]
   );
 
-  const { data: rawBatches, isLoading: isLoadingBatches } = useCollection<CropBatch>(cropBatchesQuery);
+  const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
@@ -92,42 +92,42 @@ export default function InventoryPage() {
     if(locations) fetchAllAreas();
   }, [locations, firestore]);
 
-  const batches = useMemo(() => {
-    if (!rawBatches || !outflows || !customers || !locations || !cropTypes) return [];
+  const inflows = useMemo(() => {
+    if (!rawInflows || !outflows || !customers || !locations || !cropTypes) return [];
     
-    return rawBatches.map(batch => {
-      const outflow = outflows.find(o => o.cropBatchId === batch.id);
-      const customer = customers.find(c => c.id === batch.customerId);
-      const location = locations.find(l => l.id === batch.storageLocationId);
-      const cropType = cropTypes.find(ct => ct.name === batch.cropType);
+    return rawInflows.map(inflow => {
+      const outflow = outflows.find(o => o.inflowId === inflow.id);
+      const customer = customers.find(c => c.id === inflow.customerId);
+      const location = locations.find(l => l.id === inflow.storageLocationId);
+      const cropType = cropTypes.find(ct => ct.name === inflow.cropType);
       
       return {
-        ...batch,
+        ...inflow,
         customer,
         location,
         cropType: cropType,
-        quantity: batch.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
+        quantity: inflow.areaAllocations?.reduce((sum, alloc) => sum + alloc.quantity, 0) || 0,
         outflow,
       }
-    }).filter(batch => {
-        return (batch.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-               (batch.cropType?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    }).filter(inflow => {
+        return (inflow.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+               (inflow.cropType?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
     }).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
-  }, [rawBatches, outflows, customers, locations, cropTypes, searchTerm]);
+  }, [rawInflows, outflows, customers, locations, cropTypes, searchTerm]);
 
   const getAreaNames = (allocations: {areaId: string, quantity: number}[]) => {
     if (!allAreas || allAreas.length === 0) return '...';
     return allocations.map(alloc => allAreas.find(a => a.id === alloc.areaId)?.name).filter(Boolean).join(', ') || 'N/A';
   }
 
-  const handleOutflowClick = (batch: any) => {
-    setSelectedBatch(batch);
+  const handleOutflowClick = (inflow: any) => {
+    setSelectedInflow(inflow);
     setIsOutflowDialogOpen(true);
   };
   
-  const handleDownloadInflowReceipt = (batch: (typeof batches)[0]) => {
-    if (batch.customer && batch.location && batch.cropType) {
-      generateInflowPdf(batch, batch.customer, batch.location, allAreas);
+  const handleDownloadInflowReceipt = (inflow: (typeof inflows)[0]) => {
+    if (inflow.customer && inflow.location && inflow.cropType) {
+      generateInflowPdf(inflow, inflow.customer, inflow.location, allAreas);
     } else {
       toast({
         variant: "destructive",
@@ -137,18 +137,18 @@ export default function InventoryPage() {
     }
   };
 
-  const isLoading = isLoadingBatches || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
+  const isLoading = isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
 
   return (
     <>
       <PageHeader
-        title="Inventory"
-        description="A list of all crop batches currently in storage."
+        title="Inflows"
+        description="A list of all crop inflows currently in storage."
         action={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setIsAddDialogOpen(true)} disabled={!user}>
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add New Batch
+                Add New Inflow
             </Button>
           </div>
         }
@@ -159,7 +159,7 @@ export default function InventoryPage() {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <div>
                 <CardTitle>Current Inventory</CardTitle>
-                <CardDescription>A list of all crop batches currently in storage. Click the receipt icon to process outflow.</CardDescription>
+                <CardDescription>A list of all crop inflows currently in storage. Click the receipt icon to process outflow.</CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -177,35 +177,35 @@ export default function InventoryPage() {
             <div className="flex h-64 items-center justify-center">
               <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
             </div>
-          ) : batches && batches.length > 0 ? (
+          ) : inflows && inflows.length > 0 ? (
             <>
               {/* Mobile View: Card List */}
               <div className="grid gap-4 md:hidden">
-                {batches.map((batch) => (
-                  <Card key={batch.id} className="bg-muted/30">
+                {inflows.map((inflow) => (
+                  <Card key={inflow.id} className="bg-muted/30">
                     <CardHeader>
                       <div className="flex justify-between items-start">
                         <div>
-                           <CardTitle>{batch.customer?.name || '...'}</CardTitle>
-                           <CardDescription>{batch.cropType?.name}</CardDescription>
+                           <CardTitle>{inflow.customer?.name || '...'}</CardTitle>
+                           <CardDescription>{inflow.cropType?.name}</CardDescription>
                         </div>
                         <div className="text-right">
-                          <p className="text-xl font-bold">{batch.quantity.toLocaleString()} bags</p>
+                          <p className="text-xl font-bold">{inflow.quantity.toLocaleString()} bags</p>
                           <p className="text-xs text-muted-foreground">In Stock</p>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /><span>{batch.customer?.mobileNumber || '...'}</span></div>
-                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>{batch.location?.name} ({getAreaNames(batch.areaAllocations)})</span></div>
-                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(toDate(batch.dateAdded), "MMM d, yyyy")}</span></div>
+                      <div className="flex items-center gap-2"><Smartphone className="h-4 w-4" /><span>{inflow.customer?.mobileNumber || '...'}</span></div>
+                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /><span>{inflow.location?.name} ({getAreaNames(inflow.areaAllocations)})</span></div>
+                      <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(toDate(inflow.dateAdded), "MMM d, yyyy")}</span></div>
                     </CardContent>
                     <CardFooter className="flex justify-between">
-                        <Button variant="outline" size="sm" onClick={() => handleOutflowClick(batch)} title="Process Outflow">
+                        <Button variant="outline" size="sm" onClick={() => handleOutflowClick(inflow)} title="Process Outflow">
                             <Receipt className="h-5 w-5 mr-2" />
                             Outflow
                         </Button>
-                        <Button variant="secondary" size="sm" onClick={() => handleDownloadInflowReceipt(batch)} title="Download Inflow Receipt">
+                        <Button variant="secondary" size="sm" onClick={() => handleDownloadInflowReceipt(inflow)} title="Download Inflow Receipt">
                             <FileDown className="h-5 w-5 mr-2" />
                             Receipt
                         </Button>
@@ -229,29 +229,29 @@ export default function InventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {batches.map((batch) => (
-                      <TableRow key={batch.id}>
-                        <TableCell className="font-medium">{batch.customer?.name || '...'}</TableCell>
-                        <TableCell>{batch.customer?.mobileNumber || '...'}</TableCell>
-                        <TableCell>{batch.cropType?.name}</TableCell>
-                        <TableCell>{batch.location?.name || '...'}</TableCell>
-                        <TableCell>{getAreaNames(batch.areaAllocations)}</TableCell>
-                        <TableCell className="text-right">{batch.quantity.toLocaleString()}</TableCell>
+                    {inflows.map((inflow) => (
+                      <TableRow key={inflow.id}>
+                        <TableCell className="font-medium">{inflow.customer?.name || '...'}</TableCell>
+                        <TableCell>{inflow.customer?.mobileNumber || '...'}</TableCell>
+                        <TableCell>{inflow.cropType?.name}</TableCell>
+                        <TableCell>{inflow.location?.name || '...'}</TableCell>
+                        <TableCell>{getAreaNames(inflow.areaAllocations)}</TableCell>
+                        <TableCell className="text-right">{inflow.quantity.toLocaleString()}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span>{format(toDate(batch.dateAdded), "MMM d, yyyy")}</span>
+                            <span>{format(toDate(inflow.dateAdded), "MMM d, yyyy")}</span>
                             <span className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(toDate(batch.dateAdded), { addSuffix: true })}
+                              {formatDistanceToNow(toDate(inflow.dateAdded), { addSuffix: true })}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="flex justify-center items-center gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleOutflowClick(batch)} title="Process Outflow">
+                            <Button variant="ghost" size="icon" onClick={() => handleOutflowClick(inflow)} title="Process Outflow">
                                 <Receipt className="h-5 w-5" />
-                                <span className="sr-only">Process Outflow for {batch.customer?.name}</span>
+                                <span className="sr-only">Process Outflow for {inflow.customer?.name}</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDownloadInflowReceipt(batch)} title="Download Inflow Receipt">
+                            <Button variant="ghost" size="icon" onClick={() => handleDownloadInflowReceipt(inflow)} title="Download Inflow Receipt">
                                 <FileDown className="h-5 w-5" />
                                 <span className="sr-only">Download Inflow Receipt</span>
                             </Button>
@@ -265,25 +265,25 @@ export default function InventoryPage() {
             </>
           ) : (
             <div className="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-                <p className="text-sm text-muted-foreground">{searchTerm ? "No batches match your search." : "No crop batches found."}</p>
+                <p className="text-sm text-muted-foreground">{searchTerm ? "No inflows match your search." : "No crop inflows found."}</p>
             </div>
           )}
         </CardContent>
       </Card>
-      <AddBatchDialog
+      <AddInflowDialog
         isOpen={isAddDialogOpen}
         setIsOpen={setIsAddDialogOpen}
         locations={locations || []}
         cropTypes={cropTypes || []}
         customers={customers || []}
-        allBatches={rawBatches || []}
+        allInflows={rawInflows || []}
       />
-      {selectedBatch && (
+      {selectedInflow && (
         <OutflowDialog
             isOpen={isOutflowDialogOpen}
             setIsOpen={setIsOutflowDialogOpen}
-            batch={selectedBatch}
-            cropType={selectedBatch.cropType}
+            inflow={selectedInflow}
+            cropType={selectedInflow.cropType}
             locations={locations || []}
             allAreas={allAreas}
         />

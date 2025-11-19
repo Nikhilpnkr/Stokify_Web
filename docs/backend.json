@@ -1,23 +1,23 @@
 
 {
   "entities": {
-    "CropBatch": {
+    "Inflow": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CropBatch",
+      "title": "Inflow",
       "type": "object",
-      "description": "Represents a batch of crops stored in a storage location, potentially across multiple areas.",
+      "description": "Represents an inflow of crops stored in a storage location, potentially across multiple areas.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the CropBatch entity."
+          "description": "Unique identifier for the Inflow entity."
         },
         "cropType": {
           "type": "string",
-          "description": "Type of crop in this batch (e.g., wheat, corn, rice)."
+          "description": "Type of crop in this inflow."
         },
         "areaAllocations": {
           "type": "array",
-          "description": "An array detailing how the batch quantity is distributed across multiple storage areas.",
+          "description": "An array detailing how the inflow quantity is distributed across multiple storage areas.",
           "items": {
             "type": "object",
             "properties": {
@@ -33,24 +33,24 @@
         },
         "storageLocationId": {
           "type": "string",
-          "description": "Reference to StorageLocation. (Relationship: StorageLocation 1:N CropBatch)"
+          "description": "Reference to StorageLocation. (Relationship: StorageLocation 1:N Inflow)"
         },
         "dateAdded": {
           "type": "string",
-          "description": "Date and time when the crop batch was added to storage.",
+          "description": "Date and time when the crop inflow was added to storage.",
           "format": "date-time"
         },
         "ownerId": {
           "type": "string",
-          "description": "The UID of the user who owns this crop batch."
+          "description": "The UID of the user who owns this crop inflow."
         },
         "customerId": {
           "type": "string",
-          "description": "The ID of the customer who owns this batch."
+          "description": "The ID of the customer who owns this inflow."
         },
         "labourCharge": {
             "type": "number",
-            "description": "Total labour charge for the inflow of this batch."
+            "description": "Total labour charge for this inflow."
         }
       },
       "required": [
@@ -248,9 +248,9 @@
           "type": "string",
           "description": "Unique identifier for the Outflow transaction."
         },
-        "cropBatchId": {
+        "inflowId": {
           "type": "string",
-          "description": "The ID of the CropBatch this outflow is from."
+          "description": "The ID of the Inflow this outflow is from."
         },
         "customerId": {
           "type": "string",
@@ -296,7 +296,7 @@
       },
       "required": [
         "id",
-        "cropBatchId",
+        "inflowId",
         "customerId",
         "ownerId",
         "date",
@@ -381,9 +381,9 @@
         "description": "Stores specific areas within a storage location."
       },
       {
-        "path": "/cropBatches/{cropBatchId}",
-        "schema": { "$ref": "#/entities/CropBatch" },
-        "description": "Stores crop batch information owned by a user."
+        "path": "/inflows/{inflowId}",
+        "schema": { "$ref": "#/entities/Inflow" },
+        "description": "Stores crop inflow information owned by a user."
       },
        {
         "path": "/outflows/{outflowId}",
@@ -411,6 +411,6 @@
         "description": "Stores customer information managed by a user."
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage crop batches and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information, now with a 'role' for tiered access. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A `customers` collection is added to store information about the clients who own the crops. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse. A new top-level `outflows` collection is added to track individual withdrawal transactions and payments, providing a clear separation between inventory and financial records. A `payments` collection is now added to store individual payment records, providing a clear audit trail for all financial transactions."
+    "reasoning": "The Firestore structure is designed to manage crop inflows and storage locations for the CropSafe application. It prioritizes Authorization Independence by storing all necessary authorization data directly within the documents, avoiding hierarchical dependencies and complex `get()` calls in security rules. Access control is implemented by leveraging an 'ownerId' field on each document. This structure supports secure `list` operations by ensuring that the security rules can query based on this 'ownerId'. A `users` collection is included to store user profile information, now with a 'role' for tiered access. A `cropTypes` collection is added to allow users to manage their own custom crop classifications, including custom storage rates. A `customers` collection is added to store information about the clients who own the crops. A subcollection for `areas` is added to each `storageLocation` to manage specific zones within a warehouse. A new top-level `outflows` collection is added to track individual withdrawal transactions and payments, providing a clear separation between inventory and financial records. A `payments` collection is now added to store individual payment records, providing a clear audit trail for all financial transactions."
   }
 }
