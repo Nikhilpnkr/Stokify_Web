@@ -233,7 +233,7 @@ export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, custo
     
     addDocumentNonBlocking(newDocRef, newInflow);
 
-    const fullInflowForPdf = { ...newInflow, cropType: selectedCropType, quantity: totalQuantity };
+    const fullInflowForPdf = { ...newInflow, quantity: totalQuantity, cropType: selectedCropType };
 
     toast({
       title: "Success! Inflow Added.",
