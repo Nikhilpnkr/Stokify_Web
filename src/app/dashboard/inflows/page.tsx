@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Loader2, Receipt, FileDown, MapPin, Calendar, Smartphone, Search } from "lucide-react";
+import { PlusCircle, Loader2, Receipt, FileDown, MapPin, Calendar, Smartphone, Search, Archive } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -142,7 +142,7 @@ export default function InflowsPage() {
   return (
     <>
       <PageHeader
-        title="Inflows"
+        title="Inventory"
         description="A list of all crop inflows currently in storage."
         action={
           <div className="flex items-center gap-2">
@@ -265,7 +265,8 @@ export default function InflowsPage() {
             </>
           ) : (
             <div className="h-64 flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-                <p className="text-sm text-muted-foreground">{searchTerm ? "No inflows match your search." : "No crop inflows found."}</p>
+                <Archive className="h-10 w-10 text-muted-foreground" />
+                <p className="mt-4 text-sm text-muted-foreground">{searchTerm ? "No inflows match your search." : "No crop inflows found."}</p>
             </div>
           )}
         </CardContent>
@@ -291,3 +292,5 @@ export default function InflowsPage() {
     </>
   );
 }
+
+    

@@ -49,13 +49,13 @@ import { doc } from "firebase/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/inflows", label: "Inflows", icon: Archive },
-  { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
-  { href: "/dashboard/reports", label: "Reports", icon: BarChart },
-  { href: "/dashboard/crops", label: "Crops", icon: Wheat },
-  { href: "/dashboard/customers", label: "Customers", icon: Users },
+  { href: "/dashboard/inflows", label: "Inventory", icon: Archive },
   { href: "/dashboard/transactions", label: "Transactions", icon: Receipt },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
+  { href: "/dashboard/customers", label: "Customers", icon: Users },
+  { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
+  { href: "/dashboard/crops", label: "Crops", icon: Wheat },
+  { href: "/dashboard/reports", label: "Reports", icon: BarChart },
 ];
 
 const bottomNavItems = [
@@ -222,3 +222,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
+    

@@ -5,16 +5,28 @@ import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, FileDown, Calendar, User, Wheat, ShoppingBag, Banknote, FileText, Search } from "lucide-react";
+import { Loader2, FileDown, Calendar, User, Search, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
 import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { Outflow, Customer, StorageLocation, CropType, StorageArea } from "@/lib/data";
+import type { Outflow, Inflow, Customer, StorageLocation, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { generateInvoicePdf } from "@/lib/pdf";
+import { generateInvoicePdf, generateInflowPdf } from "@/lib/pdf";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PayDuesDialog } from "@/components/pay-dues-dialog";
+
+type Transaction = (Inflow | Outflow) & { type: 'Inflow' | 'Outflow' };
+
+function toDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    if (dateValue && typeof dateValue.seconds === 'number' && typeof dateValue.nanoseconds === 'number') {
+        return new Date(dateValue.seconds * 1000 + dateValue.nanoseconds / 1000000);
+    }
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return new Date();
+    return date;
+}
 
 export default function TransactionsPage() {
   const { firestore, user } = useFirebase();
@@ -26,30 +38,32 @@ export default function TransactionsPage() {
     user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: unsortedOutflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
-
+  const inflowsQuery = useMemoFirebase(() => 
+    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
+    [firestore, user]
+  );
   const customersQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
-
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
-
   const cropTypesQuery = useMemoFirebase(() =>
     user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
     [firestore, user]
   );
-  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
+  const { data: outflows } = useCollection<Outflow>(outflowsQuery);
+  const { data: inflows } = useCollection<Inflow>(inflowsQuery);
+  const { data: customers } = useCollection<Customer>(customersQuery);
+  const { data: locations } = useCollection<StorageLocation>(locationsQuery);
+  const { data: cropTypes } = useCollection<CropType>(cropTypesQuery);
+  
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(true);
-
-  // Fetch all areas from all locations
+  
   useEffect(() => {
     async function fetchAllAreas() {
       if (!locations || locations.length === 0 || !firestore) {
@@ -72,29 +86,38 @@ export default function TransactionsPage() {
     if(locations) fetchAllAreas();
   }, [locations, firestore]);
   
-  const enrichedOutflows = useMemo(() => {
-    if (!unsortedOutflows || !customers || !locations || !cropTypes) return [];
+  const transactions = useMemo((): Transaction[] => {
+    if (!outflows || !inflows || !customers || !locations || !cropTypes) return [];
 
-    return unsortedOutflows.map(outflow => {
+    const enrichedInflows = inflows.map(inflow => {
+        const customer = customers.find(c => c.id === inflow.customerId);
+        return {
+            ...inflow,
+            type: 'Inflow' as const,
+            date: inflow.dateAdded,
+            customerName: customer?.name || 'N/A',
+            cropTypeName: inflow.cropType,
+            quantity: inflow.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0),
+        }
+    });
+
+    const enrichedOutflows = outflows.map(outflow => {
         const customer = customers.find(c => c.id === outflow.customerId);
-        // Use the denormalized locationName to find the location object
-        const location = locations.find(l => l.name === outflow.locationName);
-        // Use the denormalized cropTypeName to find the cropType object
-        const cropType = cropTypes.find(ct => ct.name === outflow.cropTypeName);
-
         return {
             ...outflow,
+            type: 'Outflow' as const,
             customerName: customer?.name || 'N/A',
-            customer, // include the full customer object
-            location, // include the full location object
-            cropType, // include the full cropType object
         };
-    }).filter(outflow => {
-      const search = searchTerm.toLowerCase();
-      return outflow.customerName.toLowerCase().includes(search) || outflow.cropTypeName.toLowerCase().includes(search);
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
 
-  }, [unsortedOutflows, customers, locations, cropTypes, searchTerm]);
+    const combined = [...enrichedInflows, ...enrichedOutflows];
+
+    return combined.filter(t => {
+      const search = searchTerm.toLowerCase();
+      return t.customerName.toLowerCase().includes(search) || t.cropTypeName.toLowerCase().includes(search);
+    }).sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime());
+
+  }, [outflows, inflows, customers, locations, cropTypes, searchTerm]);
 
 
   const handlePayDuesClick = (outflow: Outflow) => {
@@ -102,21 +125,28 @@ export default function TransactionsPage() {
     setIsPayDuesOpen(true);
   }
 
-  const isLoading = isLoadingOutflows || isLoadingCustomers || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = !outflows || !inflows || !customers || !locations || !cropTypes || isLoadingAreas;
+  
+  const getFullData = (transaction: Transaction) => {
+    const customer = customers?.find(c => c.id === transaction.customerId);
+    const location = locations?.find(l => l.id === ('storageLocationId' in transaction ? transaction.storageLocationId : undefined) || l.name === ('locationName' in transaction ? transaction.locationName : undefined));
+    const cropType = cropTypes?.find(ct => ct.name === transaction.cropTypeName);
+    return { customer, location, cropType };
+  }
 
   return (
     <>
       <PageHeader
         title="Transaction History"
-        description="A complete log of all outflow transactions."
+        description="A complete log of all inflow and outflow transactions."
       />
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
               <div>
-                <CardTitle>All Outflows</CardTitle>
+                <CardTitle>All Transactions</CardTitle>
                 <CardDescription>
-                  {enrichedOutflows?.length || 0} transactions found.
+                  {transactions?.length || 0} transactions found.
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
@@ -135,46 +165,69 @@ export default function TransactionsPage() {
             <div className="flex h-64 items-center justify-center">
                 <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
             </div>
-            ) : enrichedOutflows && enrichedOutflows.length > 0 ? (
+            ) : transactions && transactions.length > 0 ? (
             <>
                 {/* Mobile View */}
                 <div className="grid gap-4 md:hidden">
-                    {enrichedOutflows.map((outflow) => (
-                        <Card key={outflow.id} className="bg-muted/30">
+                    {transactions.map((t) => {
+                        const { customer, location, cropType } = getFullData(t);
+                        return (
+                        <Card key={t.id} className="bg-muted/30">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <CardTitle className="text-base">{outflow.customerName}</CardTitle>
-                                        <CardDescription>{outflow.cropTypeName}</CardDescription>
+                                        <CardTitle className="text-base">{t.customerName}</CardTitle>
+                                        <CardDescription>{t.cropTypeName}</CardDescription>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-lg font-bold">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
-                                        {outflow.balanceDue > 0 ? (
-                                            <Badge variant="destructive">Due: {outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</Badge>
-                                        ) : (
-                                            <Badge variant="secondary">Paid</Badge>
-                                        )}
-                                    </div>
+                                    <Badge variant={t.type === 'Inflow' ? 'secondary' : 'outline'}>
+                                        {t.type === 'Inflow' ? <ArrowUpCircle className="mr-2"/> : <ArrowDownCircle className="mr-2"/>}
+                                        {t.type}
+                                    </Badge>
                                 </div>
                             </CardHeader>
-                            <CardContent className="space-y-2 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2"><ShoppingBag className="h-4 w-4" /><span>{outflow.quantityWithdrawn.toLocaleString()} bags withdrawn</span></div>
-                                <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /><span>{format(new Date(outflow.date), "MMM d, yyyy")}</span></div>
+                            <CardContent className="space-y-2 text-sm">
+                                <div className="flex justify-between font-semibold">
+                                    <span>Quantity:</span>
+                                    <span>{('quantity' in t ? t.quantity : t.quantityWithdrawn).toLocaleString()} bags</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Date:</span>
+                                    <span>{format(toDate(t.date), "MMM d, yyyy")}</span>
+                                </div>
+                                {t.type === 'Outflow' && (
+                                     <div className="flex justify-between items-center border-t pt-2 mt-2">
+                                        <span className="text-base font-bold">Total Bill:</span>
+                                        <span className="text-lg font-bold">{t.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</span>
+                                    </div>
+                                )}
+                                {t.type === 'Outflow' && t.balanceDue > 0 && (
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-base font-bold text-destructive">Balance Due:</span>
+                                        <span className="text-lg font-bold text-destructive">{t.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</span>
+                                    </div>
+                                )}
                             </CardContent>
                              <CardFooter className="flex flex-col items-stretch gap-2">
-                                <Button variant="outline" size="sm" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType, allAreas)} title="Download Outflow Invoice" className="w-full" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
-                                    <FileDown className="h-4 w-4 mr-2" />
-                                    Download Invoice
-                                </Button>
-                                {outflow.balanceDue > 0 && (
-                                    <Button size="sm" onClick={() => handlePayDuesClick(outflow)} className="w-full">
-                                        <Banknote className="h-4 w-4 mr-2" />
+                                {t.type === 'Inflow' && customer && location && cropType && (
+                                    <Button variant="outline" size="sm" className="w-full" onClick={() => generateInflowPdf({...t, cropType}, customer, location, allAreas)}>
+                                        <FileDown className="h-4 w-4 mr-2" />
+                                        Download Receipt
+                                    </Button>
+                                )}
+                                {t.type === 'Outflow' && customer && location && cropType && (
+                                    <Button variant="outline" size="sm" onClick={() => generateInvoicePdf(t, customer, location, cropType, allAreas)} title="Download Outflow Invoice" className="w-full">
+                                        <FileDown className="h-4 w-4 mr-2" />
+                                        Download Invoice
+                                    </Button>
+                                )}
+                                {t.type === 'Outflow' && t.balanceDue > 0 && (
+                                    <Button size="sm" onClick={() => handlePayDuesClick(t)} className="w-full">
                                         Pay Dues
                                     </Button>
                                 )}
                             </CardFooter>
                         </Card>
-                    ))}
+                    )})}
                 </div>
 
                 {/* Desktop View */}
@@ -183,60 +236,80 @@ export default function TransactionsPage() {
                         <TableHeader>
                         <TableRow>
                             <TableHead>Date</TableHead>
+                            <TableHead>Type</TableHead>
                             <TableHead>Customer</TableHead>
                             <TableHead>Crop Type</TableHead>
                             <TableHead className="text-right">Quantity</TableHead>
-                            <TableHead className="text-right">Total Bill</TableHead>
-                            <TableHead className="text-right">Amount Paid</TableHead>
-                            <TableHead className="text-right">Balance Due</TableHead>
+                            <TableHead className="text-right">Bill / Status</TableHead>
                             <TableHead className="text-center">Action</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {enrichedOutflows.map((outflow) => (
-                            <TableRow key={outflow.id}>
-                                <TableCell>
-                                    <div className="flex flex-col">
-                                        <span>{format(new Date(outflow.date), "MMM d, yyyy")}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                            {formatDistanceToNow(new Date(outflow.date), { addSuffix: true })}
-                                        </span>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="font-medium">{outflow.customerName}</TableCell>
-                                <TableCell>{outflow.cropTypeName}</TableCell>
-                                <TableCell className="text-right">{outflow.quantityWithdrawn.toLocaleString()} bags</TableCell>
-                                <TableCell className="text-right">{outflow.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</TableCell>
-                                <TableCell className="text-right">{outflow.amountPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</TableCell>
-                                <TableCell className="text-right">
-                                    {outflow.balanceDue > 0 ? (
-                                        <Badge variant="destructive">{outflow.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</Badge>
-                                    ) : (
-                                        <Badge variant="secondary">Paid</Badge>
-                                    )}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <div className="flex justify-center gap-1">
-                                    {outflow.balanceDue > 0 && (
-                                      <Button variant="secondary" size="sm" onClick={() => handlePayDuesClick(outflow)} title="Pay Dues">
-                                          Pay
-                                      </Button>
-                                    )}
-                                    <Button variant="ghost" size="icon" onClick={() => outflow.customer && outflow.location && outflow.cropType && generateInvoicePdf(outflow, outflow.customer, outflow.location, outflow.cropType, allAreas)} title="Download Outflow Invoice" disabled={!outflow.customer || !outflow.location || !outflow.cropType}>
-                                        <FileDown className="h-5 w-5" />
-                                        <span className="sr-only">Download Outflow Invoice</span>
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                            </TableRow>
-                            ))}
+                            {transactions.map((t) => {
+                                const { customer, location, cropType } = getFullData(t);
+                                return (
+                                <TableRow key={t.id}>
+                                    <TableCell>
+                                        <div className="flex flex-col">
+                                            <span>{format(toDate(t.date), "MMM d, yyyy")}</span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {formatDistanceToNow(toDate(t.date), { addSuffix: true })}
+                                            </span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={t.type === 'Inflow' ? 'secondary' : 'outline'} className="whitespace-nowrap">
+                                            {t.type === 'Inflow' ? <ArrowUpCircle className="mr-2"/> : <ArrowDownCircle className="mr-2"/>}
+                                            {t.type}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-medium">{t.customerName}</TableCell>
+                                    <TableCell>{t.cropTypeName}</TableCell>
+                                    <TableCell className="text-right">{('quantity' in t ? t.quantity : t.quantityWithdrawn).toLocaleString()} bags</TableCell>
+                                    <TableCell className="text-right">
+                                        {t.type === 'Outflow' ? (
+                                            <div>
+                                                <div className="font-semibold">{t.totalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</div>
+                                                {t.balanceDue > 0 ? (
+                                                    <Badge variant="destructive" className="mt-1">Due: {t.balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="mt-1">Paid</Badge>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <Badge variant="outline">In Stock</Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                      <div className="flex justify-center gap-1">
+                                        {t.type === 'Outflow' && t.balanceDue > 0 && (
+                                          <Button variant="secondary" size="sm" onClick={() => handlePayDuesClick(t)} title="Pay Dues">
+                                              Pay
+                                          </Button>
+                                        )}
+                                        {t.type === 'Inflow' && customer && location && cropType && (
+                                            <Button variant="ghost" size="icon" onClick={() => generateInflowPdf({...t, cropType}, customer, location, allAreas)} title="Download Inflow Receipt">
+                                                <FileDown className="h-5 w-5" />
+                                                <span className="sr-only">Download Inflow Receipt</span>
+                                            </Button>
+                                        )}
+                                        {t.type === 'Outflow' && customer && location && cropType && (
+                                            <Button variant="ghost" size="icon" onClick={() => generateInvoicePdf(t, customer, location, cropType, allAreas)} title="Download Outflow Invoice">
+                                                <FileDown className="h-5 w-5" />
+                                                <span className="sr-only">Download Outflow Invoice</span>
+                                            </Button>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                </TableRow>
+                            )})}
                         </TableBody>
                     </Table>
                 </div>
             </>
             ) : (
             <div className="h-64 flex w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-muted-foreground/30 p-12 text-center">
-                <FileText className="h-10 w-10 text-muted-foreground" />
+                <User className="h-10 w-10 text-muted-foreground" />
                 <p className="mt-4 text-sm text-muted-foreground">{searchTerm ? "No transactions match your search." : "No transactions found."}</p>
             </div>
             )}
@@ -250,3 +323,5 @@ export default function TransactionsPage() {
     </>
   );
 }
+
+    
