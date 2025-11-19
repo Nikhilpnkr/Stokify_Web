@@ -41,13 +41,20 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       // Redirect will be handled by the useEffect
     } catch (error: any) {
-      console.error(error);
+      let description = "An unknown error occurred. Please try again.";
+      if (error.code === 'auth/invalid-credential') {
+        description = "Invalid email or password. Please check your credentials and try again.";
+      } else {
+        description = error.message;
+      }
+      
       toast({
         variant: "destructive",
         title: "Sign in failed",
-        description: error.message || "An unknown error occurred.",
+        description: description,
       });
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   };
   
@@ -94,6 +101,11 @@ export default function LoginPage() {
                 required 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSignIn();
+                  }
+                }}
               />
             </div>
             <Button onClick={handleSignIn} disabled={isLoading} className="w-full">
