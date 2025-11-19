@@ -13,7 +13,7 @@ service cloud.firestore {
     match /storageLocations/{locationId} {
         allow read, write: if resource.data.ownerId == request.auth.uid;
         allow create: if request.resource.data.ownerId == request.auth.uid;
-        allow list: if request.query.where.get('ownerId') == request.auth.uid;
+        allow list: if request.query.filters.size() == 1 && request.query.filters[0].field.stringValue() == 'ownerId' && request.query.filters[0].value.stringValue() == request.auth.uid;
 
         // A user can interact with areas if they own the parent location.
         match /areas/{areaId} {
