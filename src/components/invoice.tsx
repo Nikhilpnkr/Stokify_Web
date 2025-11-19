@@ -128,6 +128,20 @@ const styles = {
         marginTop: '10px',
         borderRadius: '5px'
     },
+    signatureSection: {
+        marginTop: '80px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontSize: '14px'
+    },
+    signatureBox: {
+        width: '45%',
+        textAlign: 'center',
+    } as React.CSSProperties,
+    signatureLine: {
+        borderTop: '1px solid #333',
+        paddingTop: '8px',
+    },
     footer: {
         marginTop: '50px',
         paddingTop: '20px',
@@ -192,7 +206,7 @@ export function Invoice({ data }: InvoiceProps) {
         <div style={styles.container}>
             <header style={styles.header}>
                 <h1 style={styles.locationName}>{data.location.name}</h1>
-                <h2 style={styles.receiptTitle}>{data.type === 'Inflow' ? 'Delivery Warehouse Receipt' : 'Outflow Invoice'}</h2>
+                <h2 style={styles.receiptTitle}>{data.type === 'Inflow' ? 'Inflow Invoice' : 'Outflow Invoice'}</h2>
             </header>
 
             <section style={styles.metaSection}>
@@ -293,6 +307,18 @@ export function Invoice({ data }: InvoiceProps) {
                 </section>
             )}
 
+            <section style={styles.signatureSection}>
+                <div style={styles.signatureBox}>
+                    <div style={styles.signatureLine}>
+                        Customer Signature
+                    </div>
+                </div>
+                <div style={styles.signatureBox}>
+                    <div style={styles.signatureLine}>
+                        Manager Signature
+                    </div>
+                </div>
+            </section>
 
             <footer style={styles.footer}>
                 <p>Thank you for choosing Stokify for your storage needs.</p>
