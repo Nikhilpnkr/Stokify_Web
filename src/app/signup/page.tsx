@@ -74,7 +74,6 @@ export default function SignUpPage() {
 
       // Redirect will be handled by the useEffect
     } catch (error: any) {
-      console.error(error);
       toast({
         variant: "destructive",
         title: "Sign up failed",
