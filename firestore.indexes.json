@@ -1,78 +1,68 @@
-
 {
   "indexes": [
+    {
+      "collectionGroup": "inflows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "customerId", "order": "ASCENDING" },
+        { "fieldPath": "ownerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "inflows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "storageLocationId", "order": "ASCENDING" },
+        { "fieldPath": "ownerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "outflows",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "customerId", "order": "ASCENDING" },
+        { "fieldPath": "balanceDue", "order": "ASCENDING" },
+        { "fieldPath": "ownerId", "order": "ASCENDING" }
+      ]
+    },
     {
       "collectionGroup": "customers",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "mobileNumber",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "ownerId",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "name", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "outflows",
+      "collectionGroup": "customers",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "ownerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "outflows",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "customerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "balanceDue",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "ownerId",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "mobileNumber", "order": "ASCENDING" }
       ]
     },
     {
       "collectionGroup": "inflows",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "storageLocationId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "ownerId",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "dateAdded", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "inflows",
+      "collectionGroup": "outflows",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "customerId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "ownerId",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "payments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerId", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
       ]
     }
   ],
