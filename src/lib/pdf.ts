@@ -117,7 +117,6 @@ export async function generateInvoicePdf(outflow: Outflow, customer: Customer, l
       total: outflow.storageCost,
     }],
     location: location,
-    labourCharge: outflow.labourCharge,
     subTotal: outflow.storageCost,
     total: outflow.totalBill,
     amountPaid: outflow.amountPaid,
@@ -209,6 +208,6 @@ export async function generatePaymentReceiptPdf(payment: Payment, outflow: Outfl
   } catch (error) {
     console.error("Error generating PDF:", error);
   } finally {
-    document.body.removeChild(receiptElement);
+    document.body.removeChild(invoiceElement);
   }
 }

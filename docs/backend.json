@@ -291,7 +291,6 @@
         },
         "storageDuration": { "type": "number" },
         "storageCost": { "type": "number" },
-        "labourCharge": { "type": "number" },
         "insuranceCharge": { "type": "number" }
       },
       "required": [
@@ -306,7 +305,6 @@
         "balanceDue",
         "storageDuration",
         "storageCost",
-        "labourCharge",
         "insuranceCharge",
         "cropTypeName",
         "locationName"

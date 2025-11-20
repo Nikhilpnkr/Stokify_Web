@@ -101,9 +101,9 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
     const { storageCost, finalBill, insuranceCharge } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
         const insurance = (cropType?.insurance || 0) * withdrawQuantity;
-        const bill = storage + (inflow?.labourCharge || 0);
+        const bill = storage; // Labour charge removed from here
         return { storageCost: storage, finalBill: bill, insuranceCharge: insurance };
-    }, [costPerBag, withdrawQuantity, inflow, cropType]);
+    }, [costPerBag, withdrawQuantity, cropType]);
 
     useEffect(() => {
         if (isOpen && inflow) {
@@ -161,7 +161,6 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
             locationName: location.name,
             storageDuration: totalMonths,
             storageCost: storageCost,
-            labourCharge: inflow.labourCharge || 0,
             insuranceCharge: insuranceCharge,
         };
         
@@ -211,7 +210,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
             
             const updatedData = { 
                 areaAllocations: newAllocations,
-                labourCharge: 0,
+                // Labour charge is part of the inflow and does not need to be reset on partial outflow.
             };
             updateDocumentNonBlocking(inflowRef, updatedData);
             
@@ -299,15 +298,10 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
                         </p>
                     </div>
                     <div className="flex justify-between items-baseline">
-                        <p className="text-muted-foreground">Total Cost (Qty x Rate):</p>
+                        <p className="text-muted-foreground">Total Storage Cost (Qty x Rate):</p>
                         <p className="font-semibold">{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
-                    {inflow.labourCharge && inflow.labourCharge > 0 && (
-                        <div className="flex justify-between items-baseline">
-                            <p className="font-medium text-muted-foreground">Inflow Labour Charge:</p>
-                            <p className="font-semibold">{inflow.labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
-                        </div>
-                    )}
+                    
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                         <p className="text-lg font-bold">Final Bill:</p>
                         <p className="text-2xl font-bold text-primary">{finalBill.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>

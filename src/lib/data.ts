@@ -78,7 +78,6 @@ export type Outflow = {
   // Fields to reconstruct invoice
   storageDuration: number;
   storageCost: number;
-  labourCharge: number;
   insuranceCharge: number;
 };
 
