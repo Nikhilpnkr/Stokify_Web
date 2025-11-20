@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where, getDocs } from "firebase/firestore";
-import type { Customer, Inflow, StorageLocation, StorageArea, CropType, Outflow } from "@/lib/data";
+import type { Customer, Inflow, StorageLocation, StorageArea, CropType, Outflow, UserProfile } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, User, Phone, Calendar, Archive, Banknote } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -23,6 +23,11 @@ export default function CustomerDetailPage() {
 
   const [selectedInflow, setSelectedInflow] = useState<Inflow | null>(null);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
+
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   
   // Document reference for the specific customer
   const customerRef = useMemoFirebase(() =>
@@ -44,16 +49,26 @@ export default function CustomerDetailPage() {
   );
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
-  const locationsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const locationsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'storageLocations');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
 
-  const cropTypesQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const cropTypesQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'cropTypes');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
   const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
 
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
@@ -275,5 +290,3 @@ export default function CustomerDetailPage() {
     </>
   );
 }
-
-    

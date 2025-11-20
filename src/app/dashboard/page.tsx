@@ -7,31 +7,55 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import type { Inflow, StorageLocation, Customer, Outflow } from "@/lib/data";
+import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
+import type { Inflow, StorageLocation, Customer, Outflow, UserProfile } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const { firestore } = useFirebase();
   const { user } = useUser();
 
-  const inflowsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const storageLocationsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const customersQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-   const outflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const inflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'inflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const storageLocationsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'storageLocations');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const customersQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'customers');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+   const outflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'outflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
 
   const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);

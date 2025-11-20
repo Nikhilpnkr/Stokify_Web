@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Users, Loader2, Phone, User as UserIcon, PlusCircle, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import type { Customer, Outflow } from "@/lib/data";
+import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
+import type { Customer, Outflow, UserProfile } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { AddCustomerDialog } from "@/components/add-customer-dialog";
 import { Input } from "@/components/ui/input";
@@ -37,15 +37,29 @@ export default function CustomersPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  const customersQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const outflowsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const customersQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'customers');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const outflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'outflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+        return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
 
   const { data: allCustomers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);

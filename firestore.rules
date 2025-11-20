@@ -45,16 +45,15 @@ service cloud.firestore {
 
     // LOCATIONS & AREAS
     match /storageLocations/{locationId} {
-      // Allow read for single docs if owner/admin/manager
       allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      // Allow list if the query is properly constrained by ownerId (for users) or if admin/manager
       allow list: if isSignedIn() && (hasRole('admin') || hasRole('manager') || request.query.where.ownerId == request.auth.uid);
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
 
       match /areas/{areaId} {
-        // Inherit permissions from parent location for single doc access
         allow get: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin') || hasRole('manager'));
-        allow list, write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin'));
+        // For list and write, we check ownership of the *parent* location.
+        // For list, non-admins should still filter by ownerId on the parent collection query.
+        allow list, write: if isSignedIn() && (hasRole('admin') || hasRole('manager') || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
       }
     }
     

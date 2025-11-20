@@ -10,9 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, formatDistanceToNow } from "date-fns";
 import { AddInflowDialog } from "@/components/add-inflow-dialog";
 import { OutflowDialog } from "@/components/outflow-dialog";
-import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import type { Inflow, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
+import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import type { Inflow, StorageLocation, CropType, Customer, StorageArea, Outflow, UserProfile } from "@/lib/data";
 import { generateInflowPdf } from "@/lib/pdf";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -41,26 +41,55 @@ export default function InflowsPage() {
   const [selectedInflow, setSelectedInflow] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const inflowsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const storageLocationsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const cropTypesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const customersQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-   const outflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const inflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'inflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const storageLocationsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'storageLocations');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const cropTypesQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'cropTypes');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const customersQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'customers');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+  
+   const outflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'outflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
 
   const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(storageLocationsQuery);
@@ -292,5 +321,3 @@ export default function InflowsPage() {
     </>
   );
 }
-
-    

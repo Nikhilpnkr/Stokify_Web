@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Archive, Wheat, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import type { Inflow, StorageLocation, CropType, StorageArea } from "@/lib/data";
+import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import type { Inflow, StorageLocation, CropType, StorageArea, UserProfile } from "@/lib/data";
 import { addDays, format, startOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -25,18 +25,37 @@ export default function ReportsPage() {
     to: new Date(),
   });
 
-  const locationsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const inflowsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const cropTypesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const locationsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'storageLocations');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const inflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'inflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const cropTypesQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'cropTypes');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
 
   const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
   const { data: allInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);

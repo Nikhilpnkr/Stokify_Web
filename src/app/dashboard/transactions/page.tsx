@@ -6,9 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, FileDown, Calendar, User, Search, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import type { Outflow, Inflow, Customer, StorageLocation, CropType, StorageArea } from "@/lib/data";
+import { useCollection, useFirebase, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import type { Outflow, Inflow, Customer, StorageLocation, CropType, StorageArea, UserProfile } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { generateInvoicePdf, generateInflowPdf } from "@/lib/pdf";
@@ -34,26 +34,55 @@ export default function TransactionsPage() {
   const [selectedOutflow, setSelectedOutflow] = useState<Outflow | null>(null);
   const [isPayDuesOpen, setIsPayDuesOpen] = useState(false);
 
-  const outflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'outflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const inflowsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const customersQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'customers'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const locationsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const cropTypesQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'cropTypes'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const outflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'outflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const inflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'inflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const customersQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'customers');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const locationsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'storageLocations');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const cropTypesQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'cropTypes');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
 
   const { data: outflows } = useCollection<Outflow>(outflowsQuery);
   const { data: inflows } = useCollection<Inflow>(inflowsQuery);
@@ -323,5 +352,3 @@ export default function TransactionsPage() {
     </>
   );
 }
-
-    

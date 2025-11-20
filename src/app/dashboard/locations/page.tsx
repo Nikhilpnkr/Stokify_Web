@@ -10,9 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Progress } from "@/components/ui/progress";
 import { AddLocationDialog } from "@/components/add-location-dialog";
 import { EditLocationDialog } from "@/components/edit-location-dialog";
-import { useCollection, useFirebase, useUser, useMemoFirebase } from "@/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import type { StorageLocation, Inflow, StorageArea } from "@/lib/data";
+import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, getDocs, doc } from "firebase/firestore";
+import type { StorageLocation, Inflow, StorageArea, UserProfile } from "@/lib/data";
 import { Input } from "@/components/ui/input";
 
 function EmptyState({ onAdd, isSearching }: { onAdd: () => void, isSearching: boolean }) {
@@ -43,14 +43,28 @@ export default function LocationsPage() {
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(true);
 
-  const locationsQuery = useMemoFirebase(() => 
-    user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
-  const inflowsQuery = useMemoFirebase(() =>
-    user ? query(collection(firestore, 'inflows'), where('ownerId', '==', user.uid)) : null,
-    [firestore, user]
-  );
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const locationsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'storageLocations');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+      return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
+
+  const inflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile) return null;
+    const baseQuery = collection(firestore, 'inflows');
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+        return baseQuery;
+    }
+    return query(baseQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile]);
 
   const { data: allLocations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
   const { data: inflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
