@@ -2,20 +2,22 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where, getDocs } from "firebase/firestore";
-import type { Customer, Inflow, StorageLocation, StorageArea, CropType } from "@/lib/data";
+import type { Customer, Inflow, StorageLocation, StorageArea, CropType, Outflow } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
-import { Loader2, User, Phone, MapPin, Calendar, Archive } from "lucide-react";
+import { Loader2, User, Phone, Calendar, Archive, Banknote } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, formatDistanceToNow } from "date-fns";
 import { OutflowDialog } from "@/components/outflow-dialog";
+import { Button } from "@/components/ui/button";
 
 
 export default function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
+  const router = useRouter();
   const { firestore, user } = useFirebase();
 
   const [selectedInflow, setSelectedInflow] = useState<Inflow | null>(null);
@@ -34,6 +36,12 @@ export default function CustomerDetailPage() {
     [firestore, user, customerId]
   );
   const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
+  
+  const outflowsQuery = useMemoFirebase(() =>
+    (user && customerId) ? query(collection(firestore, 'outflows'), where('customerId', '==', customerId), where('ownerId', '==', user.uid)) : null,
+    [firestore, user, customerId]
+  );
+  const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
   const locationsQuery = useMemoFirebase(() => 
     user ? query(collection(firestore, 'storageLocations'), where('ownerId', '==', user.uid)) : null,
@@ -81,6 +89,11 @@ export default function CustomerDetailPage() {
     })).sort((a, b) => new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime());
   }, [rawInflows]);
 
+  const totalBalanceDue = useMemo(() => {
+    if (!outflows) return 0;
+    return outflows.reduce((acc, outflow) => acc + outflow.balanceDue, 0);
+  }, [outflows]);
+
   const getLocationName = (locationId: string) => locations?.find(l => l.id === locationId)?.name || '...';
   const getAreaNames = (allocations: {areaId: string, quantity: number}[]) => {
     if (!allAreas || allAreas.length === 0) return '...';
@@ -91,8 +104,12 @@ export default function CustomerDetailPage() {
     setSelectedInflow(inflow);
     setIsOutflowDialogOpen(true);
   };
+  
+  const handlePayDues = () => {
+    router.push(`/dashboard/customers/${customerId}/pay`);
+  };
 
-  const isLoading = isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes;
+  const isLoading = isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes || isLoadingOutflows;
 
   if (isLoading) {
     return (
@@ -118,23 +135,47 @@ export default function CustomerDetailPage() {
       />
       
       <div className="grid gap-6">
-        {/* Customer Details Card */}
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-start">
-                    <CardTitle className="flex items-center gap-2 text-xl">
-                        <User className="h-6 w-6 text-primary" />
-                        <span>Customer Details</span>
-                    </CardTitle>
-                </div>
-                 <div className="pt-2 space-y-1 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>{customer.mobileNumber}</span>
+        {/* Customer Details Cards */}
+        <div className="grid md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2">
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <CardTitle className="flex items-center gap-2 text-xl">
+                            <User className="h-6 w-6 text-primary" />
+                            <span>Customer Details</span>
+                        </CardTitle>
                     </div>
-                </div>
-            </CardHeader>
-        </Card>
+                     <div className="pt-2 space-y-1 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          <span>{customer.mobileNumber}</span>
+                        </div>
+                    </div>
+                </CardHeader>
+            </Card>
+            <Card className={cn("flex flex-col justify-between", totalBalanceDue > 0 ? "bg-destructive/10 border-destructive" : "")}>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                        <Banknote className="h-6 w-6 text-primary"/>
+                        <span>Outstanding Dues</span>
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-3xl font-bold">
+                        {totalBalanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp
+                    </p>
+                </CardContent>
+                {totalBalanceDue > 0 && (
+                    <CardFooter>
+                        <Button className="w-full" onClick={handlePayDues}>
+                            <Banknote className="mr-2 h-4 w-4" />
+                            Pay Dues
+                        </Button>
+                    </CardFooter>
+                )}
+            </Card>
+        </div>
+
 
         {/* Inflows Section */}
         <Card>
