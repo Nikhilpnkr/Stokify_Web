@@ -38,21 +38,29 @@ export default function CustomerDetailPage() {
 
   // Query for all crop inflows for this customer
   const inflowsQuery = useMemoFirebase(() => 
-    (user && customerId) ? query(collection(firestore, 'inflows'), where('customerId', '==', customerId), where('ownerId', '==', user.uid)) : null,
-    [firestore, user, customerId]
+    (user && customerId && userProfile) ? (
+      userProfile.role === 'admin'
+        ? query(collection(firestore, 'inflows'), where('customerId', '==', customerId))
+        : query(collection(firestore, 'inflows'), where('customerId', '==', customerId), where('ownerId', '==', user.uid))
+    ) : null,
+    [firestore, user, userProfile, customerId]
   );
   const { data: rawInflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
   
   const outflowsQuery = useMemoFirebase(() =>
-    (user && customerId) ? query(collection(firestore, 'outflows'), where('customerId', '==', customerId), where('ownerId', '==', user.uid)) : null,
-    [firestore, user, customerId]
+    (user && customerId && userProfile) ? (
+      userProfile.role === 'admin'
+        ? query(collection(firestore, 'outflows'), where('customerId', '==', customerId))
+        : query(collection(firestore, 'outflows'), where('customerId', '==', customerId), where('ownerId', '==', user.uid))
+    ) : null,
+    [firestore, user, userProfile, customerId]
   );
   const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
   const locationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'storageLocations');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -63,7 +71,7 @@ export default function CustomerDetailPage() {
   const cropTypesQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'cropTypes');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));

@@ -33,7 +33,7 @@ export default function ReportsPage() {
   const locationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'storageLocations');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -42,7 +42,7 @@ export default function ReportsPage() {
   const inflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'inflows');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -51,7 +51,7 @@ export default function ReportsPage() {
   const cropTypesQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'cropTypes');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));

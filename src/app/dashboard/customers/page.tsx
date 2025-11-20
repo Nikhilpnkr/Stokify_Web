@@ -45,7 +45,7 @@ export default function CustomersPage() {
   const customersQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'customers');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -54,7 +54,7 @@ export default function CustomersPage() {
   const outflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'outflows');
-    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+    if (userProfile.role === 'admin') {
         return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));

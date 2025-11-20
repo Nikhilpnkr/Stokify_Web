@@ -45,27 +45,21 @@ service cloud.firestore {
 
     // LOCATIONS & AREAS
     match /storageLocations/{locationId} {
-      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      allow list: if isSignedIn() && (hasRole('admin') || hasRole('manager') || request.query.where.ownerId == request.auth.uid);
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin'));
+      allow list: if isSignedIn() && (hasRole('admin') || request.query.where.ownerId == request.auth.uid);
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
 
       match /areas/{areaId} {
-        allow get: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin') || hasRole('manager'));
-        // For list and write, we check ownership of the *parent* location.
-        // For list, non-admins should still filter by ownerId on the parent collection query.
-        allow list, write: if isSignedIn() && (hasRole('admin') || hasRole('manager') || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
+        allow get: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin'));
+        allow list, write: if isSignedIn() && (hasRole('admin') || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
       }
     }
     
     // CUSTOMERS, CROP TYPES, INFLOWS, OUTFLOWS, PAYMENTS
-    // This pattern applies to all user-owned data collections
     match /{collection}/{docId} 
         where collection in ['customers', 'cropTypes', 'inflows', 'outflows', 'payments'] {
-      // Allow single document reads if owner/admin/manager
-      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      // Allow list if the query constrains by ownerId, or if user is admin/manager
-      allow list: if isSignedIn() && (hasRole('admin') || hasRole('manager') || request.query.where.ownerId == request.auth.uid);
-      // Allow write if owner/admin
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin'));
+      allow list: if isSignedIn() && (hasRole('admin') || request.query.where.ownerId == request.auth.uid);
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
     }
   }
