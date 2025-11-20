@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, formatDistanceToNow } from "date-fns";
 import { OutflowDialog } from "@/components/outflow-dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 
 export default function CustomerDetailPage() {
@@ -274,3 +275,5 @@ export default function CustomerDetailPage() {
     </>
   );
 }
+
+    
