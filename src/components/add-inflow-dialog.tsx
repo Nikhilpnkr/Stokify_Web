@@ -61,6 +61,7 @@ export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, custo
   const { firestore, user } = useFirebase();
   const [areasWithUsage, setAreasWithUsage] = useState<any[]>([]);
   const [isNewCustomer, setIsNewCustomer] = useState(true);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   const formSchema = z.object({
     customerId: z.string(),
@@ -357,7 +358,7 @@ export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, custo
                     render={({ field }) => (
                         <FormItem className="flex flex-col pt-2">
                         <FormLabel>Date Added</FormLabel>
-                        <Popover>
+                        <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
                             <PopoverTrigger asChild>
                             <FormControl>
                                 <Button
@@ -380,7 +381,10 @@ export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, custo
                             <Calendar
                                 mode="single"
                                 selected={field.value}
-                                onSelect={field.onChange}
+                                onSelect={(date) => {
+                                    field.onChange(date);
+                                    setIsDatePickerOpen(false);
+                                }}
                                 disabled={(date) =>
                                 date > new Date() || date < new Date("1900-01-01")
                                 }
