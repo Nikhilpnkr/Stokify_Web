@@ -291,7 +291,8 @@
         },
         "storageDuration": { "type": "number" },
         "storageCost": { "type": "number" },
-        "insuranceCharge": { "type": "number" }
+        "insuranceCharge": { "type": "number" },
+        "labourCharge": { "type": "number" }
       },
       "required": [
         "id",

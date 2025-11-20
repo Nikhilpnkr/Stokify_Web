@@ -31,7 +31,6 @@ import {
   Receipt,
   CreditCard,
   Archive,
-  Wrench,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -56,7 +55,6 @@ const navItems = [
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/locations", label: "Locations", icon: Warehouse },
   { href: "/dashboard/crops", label: "Crops", icon: Wheat },
-  { href: "/dashboard/labour", label: "Labour", icon: Wrench },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart },
 ];
 

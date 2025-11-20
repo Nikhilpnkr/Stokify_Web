@@ -79,6 +79,7 @@ export type Outflow = {
   storageDuration: number;
   storageCost: number;
   insuranceCharge: number;
+  labourCharge?: number;
 };
 
 export type Payment = {

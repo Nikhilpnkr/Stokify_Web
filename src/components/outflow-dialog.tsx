@@ -98,12 +98,21 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         return { initialCostPerBag: calculatedCost, totalMonths: months };
     }, [inflow, cropType]);
 
+    const labourCharge = useMemo(() => {
+        if (!inflow || !inflow.labourCharge) return 0;
+        // The labour charge is a one-time fee applied at inflow,
+        // so we return the full amount regardless of withdrawal quantity.
+        return inflow.labourCharge;
+    }, [inflow]);
+
     const { storageCost, finalBill, insuranceCharge } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
         const insurance = (cropType?.insurance || 0) * withdrawQuantity;
-        const bill = storage; // Labour charge removed from here
+        // Only add the labour charge if this is a full withdrawal, to avoid double-charging
+        const labour = withdrawQuantity === totalQuantity ? (inflow?.labourCharge || 0) : 0;
+        const bill = storage + labour;
         return { storageCost: storage, finalBill: bill, insuranceCharge: insurance };
-    }, [costPerBag, withdrawQuantity, cropType]);
+    }, [costPerBag, withdrawQuantity, cropType, totalQuantity, inflow]);
 
     useEffect(() => {
         if (isOpen && inflow) {
@@ -146,6 +155,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         const newOutflowRef = doc(collection(firestore, "outflows"));
 
         const balanceDue = finalBill - amountPaid;
+        const labour = withdrawQuantity === totalQuantity ? (inflow?.labourCharge || 0) : 0;
 
         const newOutflow: Omit<Outflow, 'id'> & { id: string } = {
             id: newOutflowRef.id,
@@ -162,6 +172,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
             storageDuration: totalMonths,
             storageCost: storageCost,
             insuranceCharge: insuranceCharge,
+            labourCharge: labour,
         };
         
         addDocumentNonBlocking(newOutflowRef, newOutflow);
@@ -210,7 +221,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
             
             const updatedData = { 
                 areaAllocations: newAllocations,
-                // Labour charge is part of the inflow and does not need to be reset on partial outflow.
+                labourCharge: 0, // Set labour charge to 0 on the original inflow after a partial outflow to prevent double-charging
             };
             updateDocumentNonBlocking(inflowRef, updatedData);
             
@@ -260,6 +271,13 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
                             <p className="font-medium text-muted-foreground">Date Added</p>
                             <p className="font-semibold">{format(toDate(inflow.dateAdded), "MMM d, yyyy")}</p>
                         </div>
+                         {labourCharge > 0 && (
+                            <div className="col-span-2">
+                                <p className="font-medium text-muted-foreground">Initial Labour Charge</p>
+                                <p className="font-semibold">{labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2 })} Rp</p>
+                                <p className="text-xs text-muted-foreground">This one-time charge is added to the bill on final outflow.</p>
+                            </div>
+                        )}
                     </div>
                 }
 
@@ -301,6 +319,12 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
                         <p className="text-muted-foreground">Total Storage Cost (Qty x Rate):</p>
                         <p className="font-semibold">{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
+                    {withdrawQuantity === totalQuantity && labourCharge > 0 && (
+                        <div className="flex justify-between items-baseline">
+                            <p className="text-muted-foreground">Labour Charge:</p>
+                            <p className="font-semibold">{labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
+                        </div>
+                    )}
                     
                     <div className="flex justify-between items-center mt-2 pt-2 border-t">
                         <p className="text-lg font-bold">Final Bill:</p>
