@@ -93,8 +93,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         
         if (months === 0) calculatedCost = halfYearlyRate; // Minimum charge is for 6 months
         
-        calculatedCost += cropType.insurance || 0;
-
+        // This is only the storage cost. Insurance is added separately.
         return { initialCostPerBag: calculatedCost, totalMonths: months };
     }, [inflow, cropType]);
 
@@ -105,13 +104,13 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         return inflow.labourCharge;
     }, [inflow]);
 
-    const { storageCost, finalBill, insuranceCharge } = useMemo(() => {
+    const { storageCost, insuranceCharge, finalBill } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
         const insurance = (cropType?.insurance || 0) * withdrawQuantity;
         // Only add the labour charge if this is a full withdrawal, to avoid double-charging
         const labour = withdrawQuantity === totalQuantity ? (inflow?.labourCharge || 0) : 0;
-        const bill = storage + labour;
-        return { storageCost: storage, finalBill: bill, insuranceCharge: insurance };
+        const bill = storage + insurance + labour;
+        return { storageCost: storage, insuranceCharge: insurance, finalBill: bill };
     }, [costPerBag, withdrawQuantity, cropType, totalQuantity, inflow]);
 
     useEffect(() => {
@@ -303,7 +302,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
                         <p className="font-semibold">{totalMonths} months</p>
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="costPerBag">Cost per Bag (Storage + Insurance)</Label>
+                        <Label htmlFor="costPerBag">Cost per Bag (Storage)</Label>
                         <Input
                             id="costPerBag"
                             type="number"
@@ -312,12 +311,16 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
                             onChange={(e) => setCostPerBag(Number(e.target.value))}
                         />
                         <p className="text-xs text-muted-foreground">
-                            Calculated rate: {initialCostPerBag.toFixed(2)} Rp
+                            Calculated rate: {initialCostPerBag.toFixed(2)} Rp. Insurance per bag: {cropType?.insurance || 0} Rp.
                         </p>
                     </div>
                     <div className="flex justify-between items-baseline">
                         <p className="text-muted-foreground">Total Storage Cost (Qty x Rate):</p>
                         <p className="font-semibold">{storageCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
+                    </div>
+                    <div className="flex justify-between items-baseline">
+                        <p className="text-muted-foreground">Total Insurance (Qty x Rate):</p>
+                        <p className="font-semibold">{insuranceCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
                     {withdrawQuantity === totalQuantity && labourCharge > 0 && (
                         <div className="flex justify-between items-baseline">
@@ -398,3 +401,5 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         </Dialog>
     );
 }
+
+    
