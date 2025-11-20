@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
@@ -54,7 +54,7 @@ export default function PayDuesPage() {
   }, [dueOutflows, selectedOutflows]);
   
   // Effect to update amountToPay whenever selected dues change
-  useMemo(() => {
+  useEffect(() => {
     setAmountToPay(totalSelectedDues);
   }, [totalSelectedDues]);
 
@@ -245,4 +245,3 @@ export default function PayDuesPage() {
     </>
   );
 }
-
