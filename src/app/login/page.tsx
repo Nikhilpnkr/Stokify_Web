@@ -53,9 +53,11 @@ export default function LoginPage() {
       // Redirect will be handled by the useEffect
     } catch (error: any) {
       let description = "An unknown error occurred. Please try again.";
+      // Provide a more user-friendly message for the most common error.
       if (error.code === 'auth/invalid-credential') {
         description = "Invalid email or password. Please check your credentials and try again.";
       } else {
+        // For other errors, show the specific Firebase message.
         description = error.message;
       }
       
