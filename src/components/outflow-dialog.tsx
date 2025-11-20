@@ -114,8 +114,8 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
 
     useEffect(() => {
         if (isOpen && inflow) {
-            const inflowTotal = inflow.areaAllocations.reduce((sum, alloc) => sum + alloc.quantity, 0);
-            setWithdrawQuantity(inflowTotal);
+            setWithdrawQuantity(0); // Default to 0
+            setAmountPaid(0); // Default to 0
             setCostPerBag(initialCostPerBag);
             setPaymentMethod('Cash');
             setNotes('');
@@ -127,9 +127,6 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         }
     }, [isOpen, inflow, initialCostPerBag]);
 
-    useEffect(() => {
-        setAmountPaid(finalBill);
-    }, [finalBill]);
 
     async function handleOutflow() {
         if (!firestore || !inflow || !user || !cropType || !location || !customer) return;
@@ -401,5 +398,6 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
     );
 }
 
+    
     
     
