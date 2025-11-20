@@ -107,11 +107,10 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
     const { storageCost, insuranceCharge, finalBill } = useMemo(() => {
         const storage = costPerBag * withdrawQuantity;
         const insurance = (cropType?.insurance || 0) * withdrawQuantity;
-        // Only add the labour charge if this is a full withdrawal, to avoid double-charging
-        const labour = withdrawQuantity === totalQuantity ? (inflow?.labourCharge || 0) : 0;
+        const labour = inflow?.labourCharge || 0; // Always include the full one-time labour charge
         const bill = storage + insurance + labour;
         return { storageCost: storage, insuranceCharge: insurance, finalBill: bill };
-    }, [costPerBag, withdrawQuantity, cropType, totalQuantity, inflow]);
+    }, [costPerBag, withdrawQuantity, cropType, inflow]);
 
     useEffect(() => {
         if (isOpen && inflow) {
@@ -154,7 +153,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
         const newOutflowRef = doc(collection(firestore, "outflows"));
 
         const balanceDue = finalBill - amountPaid;
-        const labour = withdrawQuantity === totalQuantity ? (inflow?.labourCharge || 0) : 0;
+        const labour = inflow.labourCharge || 0;
 
         const newOutflow: Omit<Outflow, 'id'> & { id: string } = {
             id: newOutflowRef.id,
@@ -322,7 +321,7 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
                         <p className="text-muted-foreground">Total Insurance (Qty x Rate):</p>
                         <p className="font-semibold">{insuranceCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
                     </div>
-                    {withdrawQuantity === totalQuantity && labourCharge > 0 && (
+                    {labourCharge > 0 && (
                         <div className="flex justify-between items-baseline">
                             <p className="text-muted-foreground">Labour Charge:</p>
                             <p className="font-semibold">{labourCharge.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Rp</p>
@@ -402,4 +401,5 @@ export function OutflowDialog({ isOpen, setIsOpen, inflow, cropType, locations, 
     );
 }
 
+    
     
