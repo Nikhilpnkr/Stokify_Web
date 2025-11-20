@@ -79,7 +79,7 @@ export function PayDuesDialog({ isOpen, setIsOpen, outflow }: PayDuesDialogProps
             date: new Date().toISOString(),
             amount: amountToPay,
             paymentMethod,
-            notes,
+            ...(notes && { notes }),
         };
 
         // Create a new payment document
