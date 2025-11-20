@@ -12,8 +12,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    function getUserData() {
+      // It's safer to check for existence before accessing .data
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isRequestingUser(userId) {
@@ -21,12 +23,10 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      // Check if the user is signed in and if their role in the /users/{uid} document matches.
-      return isSignedIn() && getUserData(request.auth.uid).role == role;
+      return isSignedIn() && getUserData().role == role;
     }
 
     function isOwner(docData) {
-      // Check if the user is signed in and if their UID matches the ownerId of the document.
       return isSignedIn() && request.auth.uid == docData.ownerId;
     }
     
@@ -43,45 +43,30 @@ service cloud.firestore {
       allow read, write: if isRequestingUser(userId) || hasRole('admin');
     }
 
-    // LOCATIONS: Only owners or admins can manage locations and their sub-areas.
-    // Managers can view any location.
+    // LOCATIONS & AREAS
     match /storageLocations/{locationId} {
-      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      // Allow read for single docs if owner/admin/manager
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      // Allow list if the query is properly constrained by ownerId (for users) or if admin/manager
+      allow list: if isSignedIn() && (hasRole('admin') || hasRole('manager') || request.query.where.ownerId == request.auth.uid);
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
 
-      // Areas subcollection inherits ownership from parent location.
       match /areas/{areaId} {
-        allow read: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin') || hasRole('manager'));
-        allow write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin'));
+        // Inherit permissions from parent location for single doc access
+        allow get: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin') || hasRole('manager'));
+        allow list, write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin'));
       }
     }
     
-    // CUSTOMERS: Owners and Admins can manage their customers. Managers can view.
-    match /customers/{customerId} {
-      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
-    }
-    
-    // CROP TYPES: Owners and Admins can manage their crop types. Managers can view.
-    match /cropTypes/{cropTypeId} {
-      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
-    }
-    
-    // INFLOWS, OUTFLOWS, PAYMENTS: Transactional data.
-    // Owners/Admins can manage them. Managers can view.
-    match /inflows/{inflowId} {
-      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
-    }
-    
-    match /outflows/{outflowId} {
-      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
-      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
-    }
-    
-    match /payments/{paymentId} {
-      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+    // CUSTOMERS, CROP TYPES, INFLOWS, OUTFLOWS, PAYMENTS
+    // This pattern applies to all user-owned data collections
+    match /{collection}/{docId} 
+        where collection in ['customers', 'cropTypes', 'inflows', 'outflows', 'payments'] {
+      // Allow single document reads if owner/admin/manager
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      // Allow list if the query constrains by ownerId, or if user is admin/manager
+      allow list: if isSignedIn() && (hasRole('admin') || hasRole('manager') || request.query.where.ownerId == request.auth.uid);
+      // Allow write if owner/admin
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
     }
   }
