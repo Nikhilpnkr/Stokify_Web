@@ -100,7 +100,7 @@ export default function PayDuesPage() {
             date: new Date().toISOString(),
             amount: paymentForThisOutflow,
             paymentMethod,
-            notes: notes || `Payment for invoice #${outflow.id.slice(0, 6)}`,
+            ...(notes && { notes }),
         };
         addDocumentNonBlocking(newPaymentRef, newPayment);
         
