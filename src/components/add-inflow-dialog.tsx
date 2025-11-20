@@ -168,7 +168,7 @@ export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, custo
   const totalLabourCharge = (totalQuantity * (watchedLabourCharge || 0));
 
   useEffect(() => {
-    if(isOpen) {
+    if (isOpen) {
         form.reset({
             customerId: 'new_customer',
             customerName: "",
@@ -242,16 +242,31 @@ export function AddInflowDialog({ isOpen, setIsOpen, locations, cropTypes, custo
       duration: 10000,
     });
     setIsOpen(false);
-    form.reset();
   }
 
   const handleLocationChange = (locationId: string) => {
     form.setValue("locationId", locationId);
     form.setValue('areaAllocations', [{ areaId: "", quantity: 0 }]);
   }
+  
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+        form.reset({
+            customerId: 'new_customer',
+            customerName: "",
+            customerMobile: "",
+            cropTypeId: "",
+            locationId: "",
+            dateAdded: new Date(),
+            areaAllocations: [{ areaId: "", quantity: 0 }],
+            labourChargePerBag: 0,
+        });
+    }
+    setIsOpen(open);
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg w-full m-4">
         <DialogHeader>
           <DialogTitle>Add New Crop Inflow</DialogTitle>
