@@ -1,9 +1,88 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all documents to all users
-    match /{document=**} {
-      allow read, write: if true;
+
+    // =========================================================
+    // Helper Functions
+    // =========================================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isRequestingUser(userId) {
+        return request.auth.uid == userId;
+    }
+
+    function hasRole(role) {
+      // Check if the user is signed in and if their role in the /users/{uid} document matches.
+      return isSignedIn() && getUserData(request.auth.uid).role == role;
+    }
+
+    function isOwner(docData) {
+      // Check if the user is signed in and if their UID matches the ownerId of the document.
+      return isSignedIn() && request.auth.uid == docData.ownerId;
+    }
+    
+    function isOwnerOrAdmin(docData) {
+      return isOwner(docData) || hasRole('admin');
+    }
+
+    // =========================================================
+    // Collection Rules
+    // =========================================================
+
+    // USERS: Users can read/write their own profile. Admins can read/write any profile.
+    match /users/{userId} {
+      allow read, write: if isRequestingUser(userId) || hasRole('admin');
+    }
+
+    // LOCATIONS: Only owners or admins can manage locations and their sub-areas.
+    // Managers can view any location.
+    match /storageLocations/{locationId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
+
+      // Areas subcollection inherits ownership from parent location.
+      match /areas/{areaId} {
+        allow read: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin') || hasRole('manager'));
+        allow write: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin'));
+      }
+    }
+    
+    // CUSTOMERS: Owners and Admins can manage their customers. Managers can view.
+    match /customers/{customerId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
+    }
+    
+    // CROP TYPES: Owners and Admins can manage their crop types. Managers can view.
+    match /cropTypes/{cropTypeId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
+    }
+    
+    // INFLOWS, OUTFLOWS, PAYMENTS: Transactional data.
+    // Owners/Admins can manage them. Managers can view.
+    match /inflows/{inflowId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
+    }
+    
+    match /outflows/{outflowId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
+    }
+    
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
     }
   }
 }
