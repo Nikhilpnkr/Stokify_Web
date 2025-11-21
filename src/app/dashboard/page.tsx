@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const inflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'inflows');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const storageLocationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'storageLocations');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -42,7 +42,7 @@ export default function DashboardPage() {
   const customersQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'customers');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -51,7 +51,7 @@ export default function DashboardPage() {
    const outflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'outflows');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
