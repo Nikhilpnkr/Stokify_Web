@@ -6,9 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, Search, CreditCard, Calendar, User, FileDown } from "lucide-react";
-import { useCollection, useFirebase, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import type { Payment, Customer, Outflow, StorageLocation, Inflow, CropType, StorageArea, UserProfile } from "@/lib/data";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { Payment, Customer, Outflow, StorageLocation, Inflow, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,13 +16,8 @@ import { Button } from "@/components/ui/button";
 import { generatePaymentReceiptPdf, generateInvoicePdf } from "@/lib/pdf";
 
 export default function PaymentsPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const [searchTerm, setSearchTerm] = useState("");
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const paymentsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -137,7 +132,7 @@ export default function PaymentsPage() {
   }, [unsortedPayments, outflows, customers, inflows, locations, cropTypes, searchTerm]);
 
 
-  const isLoading = isLoadingProfile || isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isProfileLoading || isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
 
   return (
     <>

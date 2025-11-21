@@ -6,9 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2, FileDown, Calendar, User, Search, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
-import { useCollection, useFirebase, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import type { Outflow, Inflow, Customer, StorageLocation, CropType, StorageArea, UserProfile } from "@/lib/data";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { Outflow, Inflow, Customer, StorageLocation, CropType, StorageArea } from "@/lib/data";
 import { format, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { generateInvoicePdf, generateInflowPdf } from "@/lib/pdf";
@@ -29,15 +29,10 @@ function toDate(dateValue: any): Date {
 }
 
 export default function TransactionsPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOutflow, setSelectedOutflow] = useState<Outflow | null>(null);
   const [isPayDuesOpen, setIsPayDuesOpen] = useState(false);
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const outflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -154,7 +149,7 @@ export default function TransactionsPage() {
     setIsPayDuesOpen(true);
   }
 
-  const isLoading = isLoadingProfile || isLoadingOutflows || isLoadingInflows || isLoadingCustomers || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isProfileLoading || isLoadingOutflows || isLoadingInflows || isLoadingCustomers || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
   
   const getFullData = (transaction: Transaction) => {
     const customer = customers?.find(c => c.id === transaction.customerId);

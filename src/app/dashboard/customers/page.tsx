@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Users, Loader2, Phone, User as UserIcon, PlusCircle, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
-import type { Customer, Outflow, UserProfile } from "@/lib/data";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import type { Customer, Outflow } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { AddCustomerDialog } from "@/components/add-customer-dialog";
 import { Input } from "@/components/ui/input";
@@ -31,16 +31,10 @@ function EmptyState({ onAdd, isSearching }: { onAdd: () => void, isSearching: bo
 }
 
 export default function CustomersPage() {
-  const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const router = useRouter();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const customersQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -90,7 +84,7 @@ export default function CustomersPage() {
     router.push(`/dashboard/customers/${customerId}`);
   };
 
-  const isLoading = isLoadingCustomers || isLoadingOutflows || isLoadingProfile;
+  const isLoading = isLoadingCustomers || isLoadingOutflows || isProfileLoading;
 
   return (
     <>

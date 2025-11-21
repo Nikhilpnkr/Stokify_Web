@@ -10,9 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, formatDistanceToNow } from "date-fns";
 import { AddInflowDialog } from "@/components/add-inflow-dialog";
 import { OutflowDialog } from "@/components/outflow-dialog";
-import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import type { Inflow, StorageLocation, CropType, Customer, StorageArea, Outflow, UserProfile } from "@/lib/data";
+import type { Inflow, StorageLocation, CropType, Customer, StorageArea, Outflow } from "@/lib/data";
 import { generateInflowPdf } from "@/lib/pdf";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -33,18 +33,12 @@ function toDate(dateValue: any): Date {
 }
 
 export default function InflowsPage() {
-  const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
   const [selectedInflow, setSelectedInflow] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const inflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -166,7 +160,7 @@ export default function InflowsPage() {
     }
   };
 
-  const isLoading = isLoadingProfile || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
+  const isLoading = isProfileLoading || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
 
   return (
     <>

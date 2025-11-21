@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import type { Customer, Outflow, Payment, UserProfile } from "@/lib/data";
+import type { Customer, Outflow, Payment } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, User, Phone, Banknote } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import { generatePaymentReceiptPdf } from "@/lib/pdf";
 export default function PayDuesPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const router = useRouter();
-  const { firestore, user } = useFirebase();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const { toast } = useToast();
 
   const [selectedOutflows, setSelectedOutflows] = useState<Record<string, boolean>>({});
@@ -30,11 +30,6 @@ export default function PayDuesPage() {
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Card' | 'Online'>('Cash');
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const customerRef = useMemoFirebase(() =>
     customerId ? doc(firestore, 'customers', customerId) : null,
@@ -143,7 +138,7 @@ export default function PayDuesPage() {
   }
 
 
-  const isLoading = isLoadingProfile || isLoadingCustomer || isLoadingOutflows;
+  const isLoading = isProfileLoading || isLoadingCustomer || isLoadingOutflows;
 
   if (isLoading) {
     return (

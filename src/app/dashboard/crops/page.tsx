@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Loader2, Trash2, Edit, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking, useDoc } from "@/firebase";
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
-import type { CropType, UserProfile } from "@/lib/data";
+import type { CropType } from "@/lib/data";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -26,16 +26,11 @@ const cropTypeFormSchema = z.object({
 });
 
 export default function CropTypesManagerPage() {
-  const { firestore, user } = useFirebase();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const { toast } = useToast();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [cropTypeToDelete, setCropTypeToDelete] = useState<CropType | null>(null);
   const [editingCropTypeId, setEditingCropTypeId] = useState<string | null>(null);
-  
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
   
   const cropTypesQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -134,7 +129,7 @@ export default function CropTypesManagerPage() {
     setCropTypeToDelete(null);
   }
 
-  const isLoading = isLoadingProfile || isLoadingCropTypes;
+  const isLoading = isProfileLoading || isLoadingCropTypes;
 
   return (
     <>

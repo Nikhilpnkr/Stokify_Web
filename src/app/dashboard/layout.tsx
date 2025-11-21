@@ -42,10 +42,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth, useUser, useDoc, useMemoFirebase, useFirebase } from "@/firebase";
+import { useAuth, useUser, useFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
-import type { UserProfile } from "@/lib/data";
-import { doc } from "firebase/firestore";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -121,15 +119,10 @@ function UserNav() {
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user, isUserLoading, firestore } = useFirebase();
+  const { user, isUserLoading, isProfileLoading } = useFirebase();
 
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-  // While checking for user auth, show a full-screen loader.
-  if (isUserLoading) {
+  // While checking for user auth OR profile, show a full-screen loader.
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

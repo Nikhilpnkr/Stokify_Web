@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where, getDocs } from "firebase/firestore";
-import type { Customer, Inflow, StorageLocation, StorageArea, CropType, Outflow, UserProfile } from "@/lib/data";
+import type { Customer, Inflow, StorageLocation, StorageArea, CropType, Outflow } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, User, Phone, Calendar, Archive, Banknote } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -19,15 +19,10 @@ import { cn } from "@/lib/utils";
 export default function CustomerDetailPage() {
   const { customerId } = useParams<{ customerId: string }>();
   const router = useRouter();
-  const { firestore, user } = useFirebase();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
 
   const [selectedInflow, setSelectedInflow] = useState<Inflow | null>(null);
   const [isOutflowDialogOpen, setIsOutflowDialogOpen] = useState(false);
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
   
   // Document reference for the specific customer
   const customerRef = useMemoFirebase(() =>
@@ -133,7 +128,7 @@ export default function CustomerDetailPage() {
     router.push(`/dashboard/customers/${customerId}/pay`);
   };
 
-  const isLoading = isLoadingProfile || isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes || isLoadingOutflows;
+  const isLoading = isProfileLoading || isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes || isLoadingOutflows;
 
   if (isLoading) {
     return (

@@ -7,22 +7,15 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
-import type { Inflow, StorageLocation, Customer, Outflow, UserProfile } from "@/lib/data";
-import { Button } from "@/components/ui/button";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import type { Inflow, StorageLocation, Customer, Outflow } from "@/lib/data";
 
 export default function DashboardPage() {
-  const { firestore } = useFirebase();
-  const { user } = useUser();
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
 
   const inflowsQuery = useMemoFirebase(() => {
-    if (!user || !userProfile) return null;
+    if (!user || !userProfile) return null; // Wait for user and profile
     const baseQuery = collection(firestore, 'inflows');
     if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
@@ -88,7 +81,7 @@ export default function DashboardPage() {
     return { totalQuantity: totalQty, totalOutstandingBalance: outstanding, chartData: dataForChart };
   }, [rawInflows, locations, outflows]);
   
-  const isLoading = isLoadingProfile || isLoadingInflows || isLoadingLocations || isLoadingCustomers || isLoadingOutflows;
+  const isLoading = isProfileLoading || isLoadingInflows || isLoadingLocations || isLoadingCustomers || isLoadingOutflows;
   
   const chartConfig = {
     capacity: {

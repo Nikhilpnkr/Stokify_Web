@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, Archive, Wheat, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import type { Inflow, StorageLocation, CropType, StorageArea, UserProfile } from "@/lib/data";
-import { addDays, format, startOfMonth } from "date-fns";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { Inflow, StorageLocation, CropType, StorageArea } from "@/lib/data";
+import { format, startOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -18,17 +18,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 
 export default function ReportsPage() {
-  const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const [date, setDate] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: new Date(),
   });
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const locationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -145,7 +139,7 @@ export default function ReportsPage() {
     return { totalInflows, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData };
   }, [filteredInflows, locations, cropTypes, allAreas, isLoadingAreas]);
   
-  const isLoading = isLoadingProfile || isLoadingLocations || isLoadingInflows || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isProfileLoading || isLoadingLocations || isLoadingInflows || isLoadingCropTypes || isLoadingAreas;
 
   const chartConfig = {
     capacity: {

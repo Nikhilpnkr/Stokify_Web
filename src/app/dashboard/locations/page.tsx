@@ -10,9 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Progress } from "@/components/ui/progress";
 import { AddLocationDialog } from "@/components/add-location-dialog";
 import { EditLocationDialog } from "@/components/edit-location-dialog";
-import { useCollection, useFirebase, useUser, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, getDocs, doc } from "firebase/firestore";
-import type { StorageLocation, Inflow, StorageArea, UserProfile } from "@/lib/data";
+import { useCollection, useFirebase, useMemoFirebase } from "@/firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import type { StorageLocation, Inflow, StorageArea } from "@/lib/data";
 import { Input } from "@/components/ui/input";
 
 function EmptyState({ onAdd, isSearching }: { onAdd: () => void, isSearching: boolean }) {
@@ -32,8 +32,7 @@ function EmptyState({ onAdd, isSearching }: { onAdd: () => void, isSearching: bo
 }
 
 export default function LocationsPage() {
-  const { firestore } = useFirebase();
-  const { user } = useUser();
+  const { firestore, user, userProfile, isProfileLoading } = useFirebase();
   const router = useRouter();
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -42,11 +41,6 @@ export default function LocationsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(true);
-
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const locationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -125,7 +119,7 @@ export default function LocationsPage() {
   };
 
 
-  const isLoading = isLoadingProfile || isLoadingLocations || isLoadingInflows || isLoadingAreas;
+  const isLoading = isProfileLoading || isLoadingLocations || isLoadingInflows || isLoadingAreas;
 
   return (
     <>

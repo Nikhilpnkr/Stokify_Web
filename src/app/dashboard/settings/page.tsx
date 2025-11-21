@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useUser, useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { doc, collection, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { updateProfile, deleteUser } from "firebase/auth";
@@ -28,18 +28,14 @@ const profileFormSchema = z.object({
 });
 
 export default function SettingsPage() {
-  const { auth, firestore, user } = useFirebase();
+  const { auth, firestore, user, userProfile, isProfileLoading } = useFirebase();
   const { toast } = useToast();
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
   const [isDeleteDataOpen, setIsDeleteDataOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState(false);
 
-  const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
-  , [firestore, user]);
-
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
+  const userProfileRef = doc(firestore, 'users', user!.uid);
 
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
@@ -206,7 +202,7 @@ export default function SettingsPage() {
     }
   }
 
-  const isLoading = isLoadingProfile || form.formState.isSubmitting;
+  const isLoading = isProfileLoading || form.formState.isSubmitting;
 
   return (
     <>
