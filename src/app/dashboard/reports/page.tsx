@@ -28,12 +28,12 @@ export default function ReportsPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const locationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'storageLocations');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -42,7 +42,7 @@ export default function ReportsPage() {
   const inflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'inflows');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -51,7 +51,7 @@ export default function ReportsPage() {
   const cropTypesQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'cropTypes');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -145,7 +145,7 @@ export default function ReportsPage() {
     return { totalInflows, totalQuantity, potentialRevenue, totalCapacity, spaceUtilization, chartData };
   }, [filteredInflows, locations, cropTypes, allAreas, isLoadingAreas]);
   
-  const isLoading = isLoadingLocations || isLoadingInflows || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isLoadingProfile || isLoadingLocations || isLoadingInflows || isLoadingCropTypes || isLoadingAreas;
 
   const chartConfig = {
     capacity: {

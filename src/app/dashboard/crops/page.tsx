@@ -35,12 +35,12 @@ export default function CropTypesManagerPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
   
   const cropTypesQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'cropTypes');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -134,6 +134,7 @@ export default function CropTypesManagerPage() {
     setCropTypeToDelete(null);
   }
 
+  const isLoading = isLoadingProfile || isLoadingCropTypes;
 
   return (
     <>
@@ -234,7 +235,7 @@ export default function CropTypesManagerPage() {
                     <CardDescription>A list of all your currently defined crop types and their rates.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {isLoadingCropTypes ? (
+                    {isLoading ? (
                     <div className="flex justify-center items-center h-full pt-16">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>

@@ -40,7 +40,7 @@ export default function CustomersPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const customersQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -90,7 +90,7 @@ export default function CustomersPage() {
     router.push(`/dashboard/customers/${customerId}`);
   };
 
-  const isLoading = isLoadingCustomers || isLoadingOutflows;
+  const isLoading = isLoadingCustomers || isLoadingOutflows || isLoadingProfile;
 
   return (
     <>

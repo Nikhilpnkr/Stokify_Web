@@ -27,7 +27,7 @@ export default function CustomerDetailPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
   
   // Document reference for the specific customer
   const customerRef = useMemoFirebase(() =>
@@ -133,7 +133,7 @@ export default function CustomerDetailPage() {
     router.push(`/dashboard/customers/${customerId}/pay`);
   };
 
-  const isLoading = isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes || isLoadingOutflows;
+  const isLoading = isLoadingProfile || isLoadingCustomer || isLoadingInflows || isLoadingLocations || isLoadingAreas || isLoadingCropTypes || isLoadingOutflows;
 
   if (isLoading) {
     return (

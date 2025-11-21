@@ -5,7 +5,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useFirebase, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import type { Customer, Outflow, Payment } from "@/lib/data";
+import type { Customer, Outflow, Payment, UserProfile } from "@/lib/data";
 import { PageHeader } from "@/components/page-header";
 import { Loader2, User, Phone, Banknote } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -31,16 +31,28 @@ export default function PayDuesPage() {
   const [notes, setNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
+
   const customerRef = useMemoFirebase(() =>
     customerId ? doc(firestore, 'customers', customerId) : null,
     [firestore, customerId]
   );
   const { data: customer, isLoading: isLoadingCustomer } = useDoc<Customer>(customerRef);
 
-  const outflowsQuery = useMemoFirebase(() =>
-    (user && customerId) ? query(collection(firestore, 'outflows'), where('customerId', '==', customerId), where('balanceDue', '>', 0), where('ownerId', '==', user.uid)) : null,
-    [firestore, user, customerId]
-  );
+  const outflowsQuery = useMemoFirebase(() => {
+    if (!user || !userProfile || !customerId) return null;
+    const baseQuery = collection(firestore, 'outflows');
+    const userSpecificQuery = query(baseQuery, where('customerId', '==', customerId), where('balanceDue', '>', 0));
+
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
+        return userSpecificQuery;
+    }
+    return query(userSpecificQuery, where('ownerId', '==', user.uid));
+  }, [firestore, user, userProfile, customerId]);
+  
   const { data: dueOutflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
 
   const totalSelectedDues = useMemo(() => {
@@ -131,7 +143,7 @@ export default function PayDuesPage() {
   }
 
 
-  const isLoading = isLoadingCustomer || isLoadingOutflows;
+  const isLoading = isLoadingProfile || isLoadingCustomer || isLoadingOutflows;
 
   if (isLoading) {
     return (

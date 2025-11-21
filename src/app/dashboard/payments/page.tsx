@@ -22,7 +22,7 @@ export default function PaymentsPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const paymentsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -137,7 +137,7 @@ export default function PaymentsPage() {
   }, [unsortedPayments, outflows, customers, inflows, locations, cropTypes, searchTerm]);
 
 
-  const isLoading = isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
+  const isLoading = isLoadingProfile || isLoadingPayments || isLoadingCustomers || isLoadingOutflows || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
 
   return (
     <>
@@ -263,5 +263,3 @@ export default function PaymentsPage() {
     </>
   );
 }
-
-    

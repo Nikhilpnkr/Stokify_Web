@@ -44,7 +44,7 @@ export default function InflowsPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const inflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -166,7 +166,7 @@ export default function InflowsPage() {
     }
   };
 
-  const isLoading = isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
+  const isLoading = isLoadingProfile || isLoadingInflows || isLoadingLocations || isLoadingCropTypes || isLoadingCustomers || isLoadingAreas || isLoadingOutflows;
 
   return (
     <>

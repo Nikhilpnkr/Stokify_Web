@@ -37,7 +37,7 @@ export default function TransactionsPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const outflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
@@ -84,11 +84,11 @@ export default function TransactionsPage() {
     return query(baseQuery, where('ownerId', '==', user.uid));
   }, [firestore, user, userProfile]);
 
-  const { data: outflows } = useCollection<Outflow>(outflowsQuery);
-  const { data: inflows } = useCollection<Inflow>(inflowsQuery);
-  const { data: customers } = useCollection<Customer>(customersQuery);
-  const { data: locations } = useCollection<StorageLocation>(locationsQuery);
-  const { data: cropTypes } = useCollection<CropType>(cropTypesQuery);
+  const { data: outflows, isLoading: isLoadingOutflows } = useCollection<Outflow>(outflowsQuery);
+  const { data: inflows, isLoading: isLoadingInflows } = useCollection<Inflow>(inflowsQuery);
+  const { data: customers, isLoading: isLoadingCustomers } = useCollection<Customer>(customersQuery);
+  const { data: locations, isLoading: isLoadingLocations } = useCollection<StorageLocation>(locationsQuery);
+  const { data: cropTypes, isLoading: isLoadingCropTypes } = useCollection<CropType>(cropTypesQuery);
   
   const [allAreas, setAllAreas] = useState<StorageArea[]>([]);
   const [isLoadingAreas, setIsLoadingAreas] = useState(true);
@@ -154,7 +154,7 @@ export default function TransactionsPage() {
     setIsPayDuesOpen(true);
   }
 
-  const isLoading = !outflows || !inflows || !customers || !locations || !cropTypes || isLoadingAreas;
+  const isLoading = isLoadingProfile || isLoadingOutflows || isLoadingInflows || isLoadingCustomers || isLoadingLocations || isLoadingCropTypes || isLoadingAreas;
   
   const getFullData = (transaction: Transaction) => {
     const customer = customers?.find(c => c.id === transaction.customerId);
@@ -352,5 +352,3 @@ export default function TransactionsPage() {
     </>
   );
 }
-
-    

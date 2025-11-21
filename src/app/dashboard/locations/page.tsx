@@ -46,12 +46,12 @@ export default function LocationsPage() {
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const locationsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'storageLocations');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
       return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -60,7 +60,7 @@ export default function LocationsPage() {
   const inflowsQuery = useMemoFirebase(() => {
     if (!user || !userProfile) return null;
     const baseQuery = collection(firestore, 'inflows');
-    if (userProfile.role === 'admin') {
+    if (userProfile.role === 'admin' || userProfile.role === 'manager') {
         return baseQuery;
     }
     return query(baseQuery, where('ownerId', '==', user.uid));
@@ -125,7 +125,7 @@ export default function LocationsPage() {
   };
 
 
-  const isLoading = isLoadingLocations || isLoadingInflows || isLoadingAreas;
+  const isLoading = isLoadingProfile || isLoadingLocations || isLoadingInflows || isLoadingAreas;
 
   return (
     <>
