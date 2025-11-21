@@ -30,10 +30,6 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == docData.ownerId;
     }
     
-    function isOwnerOrAdmin(docData) {
-      return isOwner(docData) || hasRole('admin');
-    }
-
     // =========================================================
     // Collection Rules
     // =========================================================
@@ -45,22 +41,32 @@ service cloud.firestore {
 
     // LOCATIONS & AREAS
     match /storageLocations/{locationId} {
-      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin'));
-      allow list: if isSignedIn() && (hasRole('admin') || request.query.where.ownerId == request.auth.uid);
+      // GET: Allow if user is owner or admin/manager
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      // LIST: Allow for admins/managers, or if user is querying by their own ownerId
+      allow list: if isSignedIn() && ((hasRole('admin') || hasRole('manager')) || request.query.where.ownerId == request.auth.uid);
+      // WRITE: Allow if user is owner or admin
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
 
       match /areas/{areaId} {
-        allow get: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin'));
-        allow list, write: if isSignedIn() && (hasRole('admin') || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
+         // GET: Inherits ownership from parent location. Admins/Managers can read.
+        allow get: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/storageLocations/$(locationId)).data) || hasRole('admin') || hasRole('manager'));
+        // LIST/WRITE: Admins/Managers can list/write, or if user is owner of the parent location.
+        allow list, write: if isSignedIn() && ((hasRole('admin') || hasRole('manager')) || get(/databases/$(database)/documents/storageLocations/$(locationId)).data.ownerId == request.auth.uid);
       }
     }
     
     // CUSTOMERS, CROP TYPES, INFLOWS, OUTFLOWS, PAYMENTS
     match /{collection}/{docId} 
         where collection in ['customers', 'cropTypes', 'inflows', 'outflows', 'payments'] {
-      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin'));
-      allow list: if isSignedIn() && (hasRole('admin') || request.query.where.ownerId == request.auth.uid);
+      // GET: Allow if user is owner or admin/manager
+      allow get: if isSignedIn() && (isOwner(resource.data) || hasRole('admin') || hasRole('manager'));
+      // LIST: Allow for admins/managers, or if user is querying by their own ownerId
+      allow list: if isSignedIn() && ((hasRole('admin') || hasRole('manager')) || request.query.where.ownerId == request.auth.uid);
+      // WRITE: Allow if user is owner or admin
       allow write: if isSignedIn() && (isOwner(request.resource.data) || hasRole('admin'));
     }
   }
 }
+
+    
